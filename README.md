@@ -1,74 +1,67 @@
-# Leonaderi Interactive Portfolio
+# Leonaderi Interactive Portfolio World
 
-Pixel-art portfolio as an explorable game world (Pokemon FireRed inspired, but with original/legal assets).
+Playable, Pokemon-like pixel portfolio website with modular content architecture.
 
-## Vision
-- Visitors spawn as a character in a retro town.
-- They can explore buildings, talk to NPCs, read signs, and open external links.
-- LinkedIn, GitHub, company website, projects, and future socials (YouTube/Twitter) are represented as in-world places.
-- Desktop controls: `WASD` + arrow keys.
-- Mobile controls: virtual joystick + interact button.
+Live page: <https://duozokker.github.io/leonaderi.com/>
 
-## Current Stage
-This repository is prepared for implementation:
-- modern web stack bootstrapped
-- modular architecture and content glossary ready
-- comprehensive docs for asset strategy, licensing, gameplay UX, and GitHub Pages deployment
-- CI-ready GitHub Pages workflow included
+## What Is Implemented
+- 2D explorable overworld with retro pixel styling
+- Character spawn + movement (`WASD` / arrows)
+- Mouse hover tooltips for houses, NPCs, and signs
+- Interaction via `E`, `Enter`, `Space`, or click
+- Mobile controls (on-screen D-pad + interact button)
+- Modular content registry for houses/NPCs/signs in `src/content/glossary.ts`
+- Dialog windows with pixel preview and contextual actions
+- Confirm-before-redirect flow for external links
+- Company HQ, LinkedIn, GitHub, projects, social buildings, coming-soon + ruins states
+- GitHub Pages deployment workflow
 
-## Tech Stack
-- React + TypeScript + Vite
-- Phaser 3 integration planned (next implementation phase)
-- Tiled maps for world building
-- Data-driven content model (`src/content/glossary.ts`)
-
-## Project Structure
-```txt
-.
-├─ .github/workflows/
-│  └─ deploy-pages.yml
-├─ docs/
-│  ├─ 01-product-pitch.md
-│  ├─ 02-implementation-plan.md
-│  ├─ 03-architecture.md
-│  ├─ 04-content-glossary.md
-│  ├─ 05-assets-and-licensing.md
-│  ├─ 06-easter-eggs.md
-│  ├─ 07-github-pages-deploy.md
-│  ├─ 08-portfolio-best-practices.md
-│  └─ 09-reference-projects.md
-├─ src/
-│  ├─ content/
-│  │  ├─ glossary.ts
-│  │  └─ types.ts
-│  ├─ game/
-│  │  ├─ entities/
-│  │  ├─ scenes/
-│  │  └─ systems/
-│  ├─ App.tsx
-│  └─ ...
-├─ AGENTS.md
-└─ README.md
-```
-
-## Development
+## Quick Start
 ```bash
 npm install
 npm run dev
 ```
 
-## Build
+Build + preview:
 ```bash
 npm run build
 npm run preview
 ```
 
-## Next Steps
-1. Install and wire Phaser 3.
-2. Build first playable overworld map with collisions.
-3. Add intro modal, dialog system, and link-confirm flow.
-4. Implement mobile controls and accessibility checks.
-5. Deploy on GitHub Pages and bind custom domain.
+## Configure Your Real Links
+Edit only this file:
+- `src/content/profile.ts`
 
-## Important IP Note
-Do not use original Pokemon FireRed sprites directly in production without explicit permission from the rights holder. Use original or CC0-friendly assets and tune color palette + art direction to achieve a similar mood legally.
+Then adjust content or add new houses in:
+- `src/content/glossary.ts`
+
+## Project Structure
+```txt
+src/
+├─ content/
+│  ├─ glossary.ts      # All locations + dialogs + actions
+│  ├─ profile.ts       # Central social/company URLs
+│  └─ types.ts         # Typed data model
+├─ game/
+│  ├─ core/eventBus.ts
+│  ├─ scenes/OverworldScene.ts
+│  ├─ systems/mobileInputState.ts
+│  └─ entities/interactable.ts
+├─ ui/
+│  ├─ components/
+│  └─ hooks/
+└─ App.tsx
+```
+
+## Deployment
+GitHub Pages deploy workflow:
+- `.github/workflows/deploy-pages.yml`
+
+Custom domain setup guide:
+- `docs/07-github-pages-deploy.md`
+
+## Asset + IP Note
+Use CC0 or properly licensed assets. Avoid shipping direct Pokemon/Nintendo sprite IP without explicit permission.
+See:
+- `docs/05-assets-and-licensing.md`
+- `assets/ASSET_LICENSES.md`

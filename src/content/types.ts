@@ -11,6 +11,8 @@ export type PoiKind =
 
 export type PoiActionType = 'open_link' | 'open_modal' | 'coming_soon'
 
+export type EntryVisualType = 'house' | 'npc' | 'sign' | 'plaza'
+
 export interface PoiAction {
   id: string
   label: string
@@ -24,9 +26,14 @@ export interface PoiDialog {
   body: string
 }
 
-export interface PoiLocation {
-  district: string
-  mapObjectId?: string
+export interface WorldPlacement {
+  x: number
+  y: number
+  width: number
+  height: number
+  interactRadius: number
+  visual: EntryVisualType
+  solid: boolean
 }
 
 export interface PoiEntry {
@@ -39,7 +46,7 @@ export interface PoiEntry {
   spriteHint: string
   dialog: PoiDialog
   tags: string[]
-  location: PoiLocation
+  district: string
+  world: WorldPlacement
   actions: PoiAction[]
 }
-

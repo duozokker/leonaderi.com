@@ -1,143 +1,277 @@
-.app-shell {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 2rem 1rem 3rem;
+.app-root {
+  min-height: 100vh;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.hero {
-  background: #f5efdf;
-  border: 4px solid #2f2d27;
-  box-shadow: 8px 8px 0 #2f2d27;
-  padding: 1rem 1.2rem;
+.game-shell {
+  position: relative;
+  width: min(1200px, 100%);
+  aspect-ratio: 16 / 9;
+  border: 6px solid #2f2d27;
+  box-shadow: 12px 12px 0 #2f2d27;
+  overflow: hidden;
+  background: #1a1a1a;
 }
 
-.hero h1 {
-  margin: 0.3rem 0 0.7rem;
-  font-size: 1.8rem;
+.phaser-container {
+  width: 100%;
+  height: 100%;
 }
 
-.hero p {
-  margin: 0;
-  max-width: 70ch;
-}
-
-.eyebrow {
-  margin: 0;
-  font-size: 0.8rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.meta-grid {
-  margin-top: 1.4rem;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.9rem;
-}
-
-.panel {
-  background: #fff9ea;
+.hud-shell {
+  position: absolute;
+  left: 0.75rem;
+  right: 0.75rem;
+  top: 0.75rem;
+  z-index: 100;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding: 0.55rem 0.65rem;
+  background: rgba(239, 247, 225, 0.94);
   border: 3px solid #2f2d27;
-  padding: 0.9rem;
 }
 
-.panel h2 {
-  margin: 0;
-  font-size: 1rem;
-}
-
-.panel p {
-  margin: 0.7rem 0 0;
-}
-
-.districts {
-  margin-top: 1.6rem;
-}
-
-.districts h2 {
-  margin-bottom: 0.8rem;
-}
-
-.district-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.9rem;
-}
-
-.district-card {
-  border: 3px solid #2f2d27;
-  background: #edf5e9;
-  padding: 0.8rem;
-}
-
-.district-card h3 {
-  margin: 0;
-  font-size: 1rem;
-}
-
-.district-card ul {
-  list-style: none;
-  margin: 0.7rem 0 0;
-  padding: 0;
-  display: grid;
-  gap: 0.5rem;
-}
-
-.district-card li {
-  border: 2px solid #2f2d27;
-  background: #ffffff;
-  padding: 0.45rem;
-  display: grid;
-  gap: 0.25rem;
-}
-
-.district-card strong {
+.hud-shell strong {
   font-size: 0.95rem;
 }
 
-.district-card small {
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #5b5a53;
+.hud-shell p {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
 }
 
-.status {
-  display: inline-block;
-  width: fit-content;
-  text-transform: uppercase;
-  font-size: 0.72rem;
-  padding: 0.12rem 0.28rem;
+.pixel-btn {
+  border: 3px solid #2f2d27;
+  background: #f5efdf;
+  color: #141414;
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: 700;
+  padding: 0.45rem 0.7rem;
+  cursor: pointer;
+  transition: transform 120ms ease, filter 120ms ease;
+}
+
+.pixel-btn:hover {
+  filter: brightness(0.95);
+}
+
+.pixel-btn:active {
+  transform: translateY(1px);
+}
+
+.pixel-btn.primary {
+  background: #88c970;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(19, 28, 32, 0.72);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.modal-card {
+  width: min(880px, 100%);
+  background: #f6f0de;
+  border: 5px solid #2f2d27;
+  box-shadow: 10px 10px 0 #2f2d27;
+  padding: 1rem;
+}
+
+.modal-card h2 {
+  margin: 0 0 0.7rem;
+  font-size: 1.35rem;
+}
+
+.modal-card p {
+  margin: 0.45rem 0;
+}
+
+.intro-card {
+  max-width: 920px;
+}
+
+.intro-grid {
+  margin-top: 0.8rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
+}
+
+.intro-grid > div {
   border: 2px solid #2f2d27;
+  background: #ffffff;
+  padding: 0.7rem;
 }
 
-.status-live {
-  background: #9fe39b;
+.entry-card {
+  max-width: 980px;
 }
 
-.status-wip {
-  background: #ffe18f;
+.entry-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 1rem;
 }
 
-.status-coming_soon {
-  background: #d9d7d1;
+.entry-preview {
+  border: 3px solid #2f2d27;
+  background: linear-gradient(180deg, #f8f8f8 0%, #ebebeb 100%);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 0.7rem;
 }
 
-.status-ruins {
-  background: #b5ada3;
+.entry-preview-house {
+  width: 140px;
+  height: 100px;
+  border: 4px solid #2f2d27;
+  background: var(--accent, #8f8f8f);
+  clip-path: polygon(0 25%, 50% 0, 100% 25%, 100% 100%, 0 100%);
 }
 
-.footer-note {
-  margin-top: 1rem;
+.status-chip {
+  display: inline-block;
+  background: #2f2d27;
+  color: #f8f8f8;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.status-chip-inline {
+  margin: 0.2rem 0 0.5rem;
+}
+
+.entry-description {
+  font-size: 0.94rem;
+}
+
+.entry-tags {
+  color: #48626d;
+  font-size: 0.85rem;
+}
+
+.entry-note {
+  border: 2px dashed #2f2d27;
+  background: #fff;
+  padding: 0.45rem 0.55rem;
   font-size: 0.9rem;
-  color: #4b4a44;
 }
 
-@media (max-width: 880px) {
-  .meta-grid {
+.modal-actions {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
+
+.modal-actions.wrap {
+  flex-wrap: wrap;
+}
+
+.mobile-controls {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0.7rem;
+  z-index: 130;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  pointer-events: none;
+}
+
+.dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 56px);
+  grid-template-rows: repeat(3, 56px);
+  gap: 0.25rem;
+  pointer-events: auto;
+}
+
+.mobile-btn {
+  border: 3px solid #2f2d27;
+  background: rgba(244, 237, 214, 0.94);
+  color: #121212;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  touch-action: none;
+  pointer-events: auto;
+}
+
+.mobile-btn.interact {
+  min-width: 132px;
+  min-height: 62px;
+  font-size: 0.96rem;
+}
+
+.mobile-btn.reset {
+  font-size: 0.8rem;
+}
+
+.dpad-empty {
+  pointer-events: none;
+}
+
+.confirm-card {
+  max-width: 620px;
+}
+
+@media (max-width: 980px) {
+  .entry-layout {
     grid-template-columns: 1fr;
   }
 
-  .district-grid {
+  .entry-preview {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-root {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .game-shell {
+    width: 100%;
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
+    box-shadow: none;
+    aspect-ratio: auto;
+    height: 100dvh;
+  }
+
+  .hud-shell {
+    left: 0.4rem;
+    right: 0.4rem;
+    top: 0.4rem;
+    padding: 0.4rem;
+  }
+
+  .hud-shell strong {
+    font-size: 0.82rem;
+  }
+
+  .hud-shell p {
+    font-size: 0.72rem;
+  }
+
+  .intro-grid {
     grid-template-columns: 1fr;
   }
 }

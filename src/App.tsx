@@ -1,67 +1,138 @@
+import { useEffect, useMemo, useState } from 'react'
+import type { PoiAction, PoiEntry } from './content/types'
+import { gameEventBus } from './game/core/eventBus'
+import { PhaserGame } from './game/PhaserGame'
+import { ConfirmModal } from './ui/components/ConfirmModal'
+import { EntryModal } from './ui/components/EntryModal'
+import { IntroModal } from './ui/components/IntroModal'
+import { MobileControls } from './ui/components/MobileControls'
+import { TopHud } from './ui/components/TopHud'
+import { useTouchDevice } from './ui/hooks/useTouchDevice'
 import './App.css'
-import { portfolioGlossary } from './content/glossary'
+
+interface ConfirmState {
+  open: boolean
+  title: string
+  message: string
+  href: string
+}
+
+const defaultConfirmState: ConfirmState = {
+  open: false,
+  title: '',
+  message: '',
+  href: '',
+}
+
+function getActionModalMessage(entry: PoiEntry, action: PoiAction): string {
+  if (action.id === 'company-services') {
+    return 'Service-Ideen: Fullstack Apps, Produkt-Design, technische Umsetzung und iterative Optimierung.'
+  }
+
+  if (action.id === 'projects-list') {
+    return 'Projektformate: Fun prototypes, AI tools, automation builds und schnelle MVP-Experimente.'
+  }
+
+  if (action.id === 'guide-controls') {
+    return 'Tipp: Laufe erst zur Career Street (LinkedIn + GitHub), danach zum Company HQ und in das Project Lab.'
+  }
+
+  if (action.id === 'quest-modal') {
+    return 'Quest gestartet: Besuche Company HQ, GitHub Werkstatt und Fun Projects Lab.'
+  }
+
+  if (action.type === 'coming_soon') {
+    return `${entry.name} ist aktuell noch nicht veroeffentlicht.`
+  }
+
+  return `${action.label} ausgewaehlt.`
+}
 
 function App() {
-  const grouped = portfolioGlossary.reduce<Record<string, typeof portfolioGlossary>>(
-    (acc, entry) => {
-      const district = entry.location.district
-      if (!acc[district]) {
-        acc[district] = []
-      }
-      acc[district].push(entry)
-      return acc
-    },
-    {},
-  )
+  const isTouchDevice = useTouchDevice()
+  const [introOpen, setIntroOpen] = useState(true)
+  const [hoverLabel, setHoverLabel] = useState<string | null>(null)
+  const [activeEntry, setActiveEntry] = useState<PoiEntry | null>(null)
+  const [entryNote, setEntryNote] = useState<string | null>(null)
+  const [confirmState, setConfirmState] = useState<ConfirmState>(defaultConfirmState)
+
+  useEffect(() => {
+    const offEntryOpen = gameEventBus.on('entry:open', ({ entry }) => {
+      setActiveEntry(entry)
+      setEntryNote(null)
+    })
+
+    const offEntryHover = gameEventBus.on('entry:hover', ({ label }) => {
+      setHoverLabel(label)
+    })
+
+    return () => {
+      offEntryOpen()
+      offEntryHover()
+    }
+  }, [])
+
+  const uiBlocked = useMemo(() => {
+    return introOpen || !!activeEntry || confirmState.open
+  }, [introOpen, activeEntry, confirmState.open])
+
+  useEffect(() => {
+    gameEventBus.emit('ui:block', { blocked: uiBlocked })
+  }, [uiBlocked])
+
+  const closeEntryModal = (): void => {
+    setActiveEntry(null)
+    setEntryNote(null)
+  }
+
+  const handleEntryAction = (entry: PoiEntry, action: PoiAction): void => {
+    if (action.type === 'open_link' && action.href) {
+      setConfirmState({
+        open: true,
+        title: `Externer Link: ${entry.name}`,
+        message: action.confirmMessage ?? `Moechtest du ${entry.name} oeffnen?`,
+        href: action.href,
+      })
+      return
+    }
+
+    setEntryNote(getActionModalMessage(entry, action))
+  }
+
+  const closeConfirm = (): void => {
+    setConfirmState(defaultConfirmState)
+  }
+
+  const proceedConfirm = (): void => {
+    const href = confirmState.href
+    if (href) {
+      window.open(href, '_blank', 'noopener,noreferrer')
+    }
+
+    setConfirmState(defaultConfirmState)
+    setActiveEntry(null)
+    setEntryNote(null)
+  }
 
   return (
-    <main className="app-shell">
-      <header className="hero">
-        <p className="eyebrow">Interactive Portfolio Blueprint</p>
-        <h1>Leonaderi Pixel Town</h1>
-        <p>
-          Setup ist fertig. Naechster Schritt ist die Phaser-Integration und die erste spielbare Map.
-          Alle Orte und Links sind bereits als Glossar vorbereitet.
-        </p>
-      </header>
-
-      <section className="meta-grid">
-        <article className="panel">
-          <h2>Stack</h2>
-          <p>React + TypeScript + Vite, geplant mit Phaser 3 und Tiled Maps.</p>
-        </article>
-        <article className="panel">
-          <h2>Status</h2>
-          <p>Plan, Architektur, Assets, Deploy und Content-Modell sind dokumentiert.</p>
-        </article>
-        <article className="panel">
-          <h2>Docs</h2>
-          <p>Siehe `docs/` fuer Pitch, Roadmap, Assets, Easter Eggs und GitHub Pages Setup.</p>
-        </article>
+    <main className="app-root">
+      <section className="game-shell">
+        <PhaserGame />
+        <TopHud hoverLabel={hoverLabel} onOpenIntro={() => setIntroOpen(true)} />
+        <MobileControls visible={isTouchDevice} />
       </section>
 
-      <section className="districts">
-        <h2>Glossary Preview</h2>
-        <div className="district-grid">
-          {Object.entries(grouped).map(([district, entries]) => (
-            <article className="district-card" key={district}>
-              <h3>{district}</h3>
-              <ul>
-                {entries.map((entry) => (
-                  <li key={entry.id}>
-                    <span className={`status status-${entry.status}`}>{entry.status}</span>
-                    <strong>{entry.name}</strong>
-                    <small>{entry.kind}</small>
-                  </li>
-                ))}
-              </ul>
-            </article>
-          ))}
-        </div>
-      </section>
-      <div className="footer-note">
-        Pokemon-inspirierte Optik: ja. Direkte Pokemon-IP-Assets: nein.
-      </div>
+      <EntryModal entry={activeEntry} note={entryNote} onClose={closeEntryModal} onAction={handleEntryAction} />
+
+      <ConfirmModal
+        open={confirmState.open}
+        title={confirmState.title}
+        message={confirmState.message}
+        onCancel={closeConfirm}
+        onConfirm={proceedConfirm}
+      />
+
+      {introOpen ? <IntroModal onClose={() => setIntroOpen(false)} /> : null}
     </main>
   )
 }
