@@ -1,13 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
 :root {
-  font-family: 'Courier New', Courier, monospace;
-  line-height: 1.4;
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  line-height: 1.45;
   font-weight: 400;
-  color: #222;
-  background: #d8e7c8;
+  color: #1b1b1b;
+  background: #cfe3be;
   font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: auto;
 }
 
 * {
@@ -19,7 +21,8 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background:
-    linear-gradient(0deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.45)),
+    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.45), transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.35), transparent 45%),
     repeating-linear-gradient(
       45deg,
       #c7dbb1,
@@ -36,5 +39,5 @@ body {
 h1,
 h2,
 h3 {
-  line-height: 1.2;
+  line-height: 1.3;
 }

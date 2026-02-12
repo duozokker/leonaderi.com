@@ -1,54 +1,40 @@
 # Assets and Licensing
 
 ## Art Direction Target
-- GBA-era top-down pixel look.
-- Warm retro palette.
-- Clear silhouettes for houses and NPCs.
-- Pokemon vibe without Pokemon IP.
+- Retro handheld / early-gen inspired top-down pixel look.
+- Cozy farm-town atmosphere.
+- Crisp silhouettes and readable 16x16 terrain transitions.
+- No direct Nintendo/Pokemon copyrighted assets.
 
 ## Can We Use FireRed Sprites Directly?
-Short answer: do not ship with original FireRed sprites unless you have explicit permission from the rights holders.
+Short answer: no, unless you have explicit written permission from the rights holders.
 
-Safer strategy:
-- use CC0/public-domain assets
-- edit palette and details to your own identity
-- keep a license log in the repo
+Safe strategy:
+- Use generated or properly licensed assets.
+- Keep prompt and metadata history for reproducibility.
+- Track every imported/generated file in `assets/ASSET_LICENSES.md`.
 
-## Recommended Legal Asset Sources
+## Selected Asset Strategy (Current)
+- Primary world terrain: PixelLab generated topdown Wang tilesets
+- Player + NPC visuals: PixelLab generated 4-direction character rotations
+- Decor (sign/tree): PixelLab generated decor tiles
 
-### 1) Kenney (CC0)
-- Main support/license info: <https://kenney.nl/support>
-- RPG Urban Pack: <https://kenney.nl/assets/rpg-urban-pack>
-- Roguelike RPG Pack: <https://kenney.nl/assets/roguelike-rpg-pack>
-
-Notes:
-- Kenney states assets are public domain (CC0), including commercial use.
-
-### 2) OpenGameArt (choose CC0 packs)
-- Top Down Game Assets (CC0): <https://opengameart.org/content/top-down-game-assets>
-- Top Down Tileset (CC0): <https://opengameart.org/content/top-down-tileset>
-- Tiny Top Down Pack (CC0): <https://opengameart.org/content/tiny-top-down-pack>
-
-Notes:
-- Always verify each individual asset page license before using.
-
-### 3) Palette Resources
-- Lospec palette list: <https://lospec.com/palette-list>
+Rationale:
+- Consistent style language across world, characters, and props
+- Modular pipeline (easy regeneration/replacement)
+- Works with Phaser and tile-based architecture
 
 ## Production Asset Policy
-- Every imported pack must be logged in `assets/ASSET_LICENSES.md`.
-- Add source URL + license + author + date.
-- Keep raw packs in a separate `assets/raw` folder, edited exports in `assets/game`.
-- Never mix unverified ripped sprites into the production branch.
+- Every imported/generated pack must be logged in `assets/ASSET_LICENSES.md`.
+- Keep generation metadata JSON with the PNG output.
+- Keep prompts documented for repeatable style updates.
+- Re-check PixelLab account terms before commercial launch.
 
 ## Tooling
-- Tiled for map layout: <https://doc.mapeditor.org/en/stable/manual/introduction/>
-- Phaser tilemap loading docs: <https://docs.phaser.io/api-documentation/class/loader-loaderplugin>
+- Phaser docs: <https://docs.phaser.io/>
+- PixelLab API parameters: <https://api.pixellab.ai/v2/llms.txt>
 
 ## IP Risk Checklist Before Launch
 - No Nintendo/Pokemon copyrighted sprites.
-- No trademarked logos unless allowed (or use plain text labels).
-- All sprite packs tracked with license evidence.
-
-## Related Policy Reference
-- Nintendo game content guidelines: <https://www.nintendo.co.jp/networkservice_guideline/en/index.html>
+- No trademarked logos without permission.
+- Asset sources and license notes documented in-repo.

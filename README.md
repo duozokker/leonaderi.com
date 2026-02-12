@@ -6,6 +6,7 @@ Live page: <https://duozokker.github.io/leonaderi.com/>
 
 ## What Is Implemented
 - 2D explorable overworld with retro pixel styling
+- PixelLab autotile terrain overlays (water shoreline + dirt path transitions)
 - Character spawn + movement (`WASD` / arrows)
 - Mouse hover tooltips for houses, NPCs, and signs
 - Interaction via `E`, `Enter`, `Space`, or click
@@ -64,4 +65,5 @@ Custom domain setup guide:
 Use CC0 or properly licensed assets. Avoid shipping direct Pokemon/Nintendo sprite IP without explicit permission.
 See:
 - `docs/05-assets-and-licensing.md`
+- `docs/10-pixellab-prompt-cookbook.md`
 - `assets/ASSET_LICENSES.md`

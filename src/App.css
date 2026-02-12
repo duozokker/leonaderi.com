@@ -36,21 +36,22 @@
 }
 
 .hud-shell strong {
-  font-size: 0.95rem;
+  font-size: 0.72rem;
 }
 
 .hud-shell p {
   margin: 0.2rem 0 0;
-  font-size: 0.78rem;
+  font-size: 0.52rem;
+  line-height: 1.6;
 }
 
 .pixel-btn {
   border: 3px solid #2f2d27;
   background: #f5efdf;
   color: #141414;
-  font-family: 'Courier New', Courier, monospace;
+  font-family: 'Press Start 2P', 'Courier New', monospace;
   font-weight: 700;
-  padding: 0.45rem 0.7rem;
+  padding: 0.5rem 0.74rem;
   cursor: pointer;
   transition: transform 120ms ease, filter 120ms ease;
 }
@@ -87,11 +88,14 @@
 
 .modal-card h2 {
   margin: 0 0 0.7rem;
-  font-size: 1.35rem;
+  font-size: 0.88rem;
+  line-height: 1.55;
 }
 
 .modal-card p {
   margin: 0.45rem 0;
+  font-size: 0.58rem;
+  line-height: 1.8;
 }
 
 .intro-card {
@@ -145,7 +149,7 @@
   background: #2f2d27;
   color: #f8f8f8;
   padding: 0.2rem 0.45rem;
-  font-size: 0.78rem;
+  font-size: 0.5rem;
   text-transform: uppercase;
 }
 
@@ -159,14 +163,15 @@
 
 .entry-tags {
   color: #48626d;
-  font-size: 0.85rem;
+  font-size: 0.5rem;
 }
 
 .entry-note {
   border: 2px dashed #2f2d27;
   background: #fff;
   padding: 0.45rem 0.55rem;
-  font-size: 0.9rem;
+  font-size: 0.55rem;
+  line-height: 1.7;
 }
 
 .modal-actions {
@@ -205,8 +210,8 @@
   border: 3px solid #2f2d27;
   background: rgba(244, 237, 214, 0.94);
   color: #121212;
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 1rem;
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  font-size: 0.68rem;
   font-weight: 700;
   touch-action: none;
   pointer-events: auto;
@@ -215,7 +220,7 @@
 .mobile-btn.interact {
   min-width: 132px;
   min-height: 62px;
-  font-size: 0.96rem;
+  font-size: 0.58rem;
 }
 
 .mobile-btn.reset {
@@ -264,11 +269,11 @@
   }
 
   .hud-shell strong {
-    font-size: 0.82rem;
+    font-size: 0.64rem;
   }
 
   .hud-shell p {
-    font-size: 0.72rem;
+    font-size: 0.47rem;
   }
 
   .intro-grid {

@@ -1,40 +1,35 @@
 # Asset License Ledger
 
-Track every third-party visual/audio asset used in this project.
+Track every visual/audio asset used in this project.
 
-## Template
-```md
-- Name:
-  - Source URL:
-  - Author:
-  - License:
-  - Commercial use: yes/no
+## Current Imported Sources
+- Name: PixelLab Generated Topdown Tilesets
+  - Source URL: https://pixellab.ai/
+  - Author: Generated via PixelLab prompts for this project
+  - License: Per PixelLab account terms for generated assets
+  - Commercial use: verify in your PixelLab account/license terms before launch
   - Notes:
-  - Imported on:
-```
+    - `public/assets/game/pixellab/water_grass_tileset.png`
+    - `public/assets/game/pixellab/grass_path_tileset.png`
+    - metadata JSON files stored alongside PNGs
+  - Imported on: 2026-02-12
 
-## Current Planned Sources
-- Name: Kenney RPG Urban Pack
-  - Source URL: https://kenney.nl/assets/rpg-urban-pack
-  - Author: Kenney
-  - License: CC0 / Public Domain (per Kenney support page)
-  - Commercial use: yes
-  - Notes: Candidate for town houses and urban props.
-  - Imported on: pending
+- Name: PixelLab Generated Character Set (Player + NPC)
+  - Source URL: https://pixellab.ai/
+  - Author: Generated via PixelLab character pipeline
+  - License: Per PixelLab account terms for generated assets
+  - Commercial use: verify in your PixelLab account/license terms before launch
+  - Notes:
+    - `public/assets/game/pixellab/characters/player/*.png`
+    - `public/assets/game/pixellab/characters/npc/*.png`
+  - Imported on: 2026-02-12
 
-- Name: Kenney Roguelike RPG Pack
-  - Source URL: https://kenney.nl/assets/roguelike-rpg-pack
-  - Author: Kenney
-  - License: CC0 / Public Domain (per Kenney support page)
-  - Commercial use: yes
-  - Notes: Candidate for characters and dungeon-style props.
-  - Imported on: pending
-
-- Name: Top Down Game Assets
-  - Source URL: https://opengameart.org/content/top-down-game-assets
-  - Author: LetargicDev
-  - License: CC0 (verify before import)
-  - Commercial use: yes
-  - Notes: Additional top-down elements.
-  - Imported on: pending
-
+- Name: PixelLab Generated Decor Tiles
+  - Source URL: https://pixellab.ai/
+  - Author: Generated via PixelLab isometric tile generator
+  - License: Per PixelLab account terms for generated assets
+  - Commercial use: verify in your PixelLab account/license terms before launch
+  - Notes:
+    - `public/assets/game/pixellab/decor/sign_tile.png`
+    - `public/assets/game/pixellab/decor/tree_tile.png`
+  - Imported on: 2026-02-12
