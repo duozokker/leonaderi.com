@@ -1,0 +1,36 @@
+:root {
+  font-family: 'Courier New', Courier, monospace;
+  line-height: 1.4;
+  font-weight: 400;
+  color: #222;
+  background: #d8e7c8;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    linear-gradient(0deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.45)),
+    repeating-linear-gradient(
+      45deg,
+      #c7dbb1,
+      #c7dbb1 12px,
+      #bdd1a7 12px,
+      #bdd1a7 24px
+    );
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.2;
+}
