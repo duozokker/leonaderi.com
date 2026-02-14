@@ -47,3 +47,11 @@ Original prompt: verbessere den weiter! der ist immer noch buggy und viele sache
   - Added minimap overlay with viewport rectangle.
   - Added richer render_game_to_text payload (history and top layers).
 - Playwright run: output/worldbuilder-loop/loop-2 (shots + state, no errors file).
+- Loop 3 completed:
+  - Added frameSelection (F) and fitMap (Shift+F / toolbar).
+  - Added per-layer visibility toggles (objects/colliders/triggers/npcs/minimap).
+  - Added per-layer lock toggles to prevent accidental drag edits.
+  - Added camera grab-pan with middle mouse hold + move.
+  - Added keyboard camera panning (arrows, Shift for faster panning).
+  - Updated state telemetry to include layer visibility/lock.
+- Playwright run: output/worldbuilder-loop/loop-3 (shots + state, no errors file).

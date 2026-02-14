@@ -185,6 +185,18 @@ textarea {
   font-size: 0.8rem;
 }
 
+.wb-layer-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.wb-layer-toggles .wb-inline-check {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
 .wb-stage {
   border: 1px solid #334155;
   background: #0b1220;
