@@ -39,3 +39,11 @@ Original prompt: verbessere den weiter! der ist immer noch buggy und viele sache
 - Add undo/redo stack persisted in session.
 - Final verification pass done after setting strict worldbuilder dev port to 5188.
 - Playwright artifacts: output/worldbuilder-loop/final-pass (shots + state; no errors files).
+- Loop 2 completed:
+  - Added object layer system improvements: render order now uses renderGroup + depth.
+  - Added object layer inspector controls: depth nudge buttons, depth=y helper, render group, visibility, blocking toggle.
+  - Added Undo/Redo controls + keyboard shortcuts (Cmd/Ctrl+Z, Shift+Z, Y).
+  - Added camera UX: Fit Map button, Arrow-key panning, middle-mouse grab pan, clamped camera bounds.
+  - Added minimap overlay with viewport rectangle.
+  - Added richer render_game_to_text payload (history and top layers).
+- Playwright run: output/worldbuilder-loop/loop-2 (shots + state, no errors file).
