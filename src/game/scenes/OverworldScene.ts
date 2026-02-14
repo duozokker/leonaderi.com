@@ -37,6 +37,13 @@ const HITBOX_MIN_SIZE = 6
 const DEBUG_HITBOX_STORAGE_KEY = 'map-hitbox-overrides'
 const DEBUG_OFFSET_STORAGE_KEY = 'map-object-offset'
 
+declare global {
+  interface Window {
+    render_game_to_text?: () => string
+    advanceTime?: (ms: number) => Promise<void>
+  }
+}
+
 export class OverworldScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite
   private playerBody!: Phaser.Physics.Arcade.Body
@@ -111,6 +118,7 @@ export class OverworldScene extends Phaser.Scene {
     P: Phaser.Input.Keyboard.Key
   }
   private eventBusDisposers: Array<() => void> = []
+  private debugFrameCounter = 0
 
   constructor() {
     super('OverworldScene')
@@ -190,6 +198,7 @@ export class OverworldScene extends Phaser.Scene {
     this.setupOffsetDebugUi()
     this.setupUiText()
     this.setupEventBridge()
+    this.setupDebugHooks()
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.teardownScene, this)
     this.events.once(Phaser.Scenes.Events.DESTROY, this.teardownScene, this)
     this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _go: unknown, _dx: number, dy: number) => {
@@ -201,6 +210,7 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   update(): void {
+    this.debugFrameCounter += 1
     this.handleOffsetDebugInput()
 
     if (this.adminRuntime.open && this.adminRuntime.mode === 'full-map') {
@@ -753,6 +763,47 @@ export class OverworldScene extends Phaser.Scene {
       dispose()
     }
     this.eventBusDisposers = []
+    if (typeof window !== 'undefined') {
+      delete window.render_game_to_text
+      delete window.advanceTime
+    }
+  }
+
+  private setupDebugHooks(): void {
+    if (typeof window === 'undefined') return
+
+    window.render_game_to_text = () => JSON.stringify({
+      scene: 'OverworldScene',
+      frameCounter: this.debugFrameCounter,
+      uiBlocked: this.uiBlocked,
+      adminOpen: this.adminRuntime.open,
+      adminMode: this.adminRuntime.mode,
+      player: {
+        x: Number(this.player.x.toFixed(2)),
+        y: Number(this.player.y.toFixed(2)),
+        facing: this.playerFacing,
+        velocityX: Number(this.playerBody.velocity.x.toFixed(2)),
+        velocityY: Number(this.playerBody.velocity.y.toFixed(2)),
+      },
+      camera: {
+        x: Number(this.cameras.main.scrollX.toFixed(2)),
+        y: Number(this.cameras.main.scrollY.toFixed(2)),
+        zoom: Number(this.cameras.main.zoom.toFixed(2)),
+      },
+      nearestInteractable: this.nearestInteractable?.entry.id ?? null,
+      activeInteractables: this.interactables.length,
+      map: {
+        width: MAP_WIDTH,
+        height: MAP_HEIGHT,
+        tileSize: MAP_TILE_SIZE,
+      },
+      coordinateSystem: 'origin: top-left, +x right, +y down',
+    })
+
+    window.advanceTime = async (ms: number) => {
+      this.debugFrameCounter += Math.max(1, Math.round(ms / (1000 / 60)))
+      await Promise.resolve()
+    }
   }
 
   // ─── INTERACTABLES ─────────────────────────────────────────────

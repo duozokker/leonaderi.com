@@ -167,3 +167,13 @@ Original prompt: verbessere den weiter! der ist immer noch buggy und viele sache
   - Phaser depth sorting docs
   - Tiled editor docs
   - React Flow docs and map editor repos (RPG Paper Maker, Tiled)
+- Runtime observability pass:
+  - Added `window.render_game_to_text` in `OverworldScene` with scene/player/camera/admin state.
+  - Added lightweight `window.advanceTime` hook for automation compatibility.
+  - Debug hooks are now cleaned up on scene teardown.
+- Additional verification:
+  - Playwright (portfolio) rerun: `output/portfolio-loop/loop-3` now emits runtime state JSON files.
+  - Playwright (worldbuilder) rerun: `output/worldbuilder-loop/loop-16`.
+  - Manual checks via browser automation:
+    - Intro open/close via Hilfe and Escape confirmed.
+    - Worldbuilder shortcut `G` cycles view mode (snapshot confirms Rendered state).
