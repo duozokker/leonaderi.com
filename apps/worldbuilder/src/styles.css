@@ -210,6 +210,11 @@ textarea {
   font-size: 0.8rem;
 }
 
+.wb-bookmarks {
+  display: inline-flex;
+  gap: 0.25rem;
+}
+
 .wb-stage {
   border: 1px solid #334155;
   background: #0b1220;

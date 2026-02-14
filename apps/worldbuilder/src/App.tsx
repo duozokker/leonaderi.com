@@ -51,6 +51,7 @@ declare global {
 const seedWorld = AuthoringWorldSchema.parse(seedWorldJson)
 const WORLD_LOCAL_STORAGE_KEY = 'worldbuilder:v2:draft'
 const SESSION_LOCAL_STORAGE_KEY = 'worldbuilder:v2:session'
+const BOOKMARKS_STORAGE_KEY = 'worldbuilder:v2:camera-bookmarks'
 const CAMERA_MIN_PADDING = 24
 
 function clamp(value: number, min: number, max: number): number {
@@ -272,6 +273,22 @@ function App() {
   const [renderedMapImage, setRenderedMapImage] = useState<HTMLImageElement | null>(null)
   const [hoverWorld, setHoverWorld] = useState<{ x: number; y: number } | null>(null)
   const [showCrosshair, setShowCrosshair] = useState(true)
+  const [cameraBookmarks, setCameraBookmarks] = useState<Record<number, { x: number; y: number; zoom: number } | null>>(() => {
+    if (typeof window === 'undefined') return { 1: null, 2: null, 3: null, 4: null }
+    try {
+      const raw = window.localStorage.getItem(BOOKMARKS_STORAGE_KEY)
+      if (!raw) return { 1: null, 2: null, 3: null, 4: null }
+      const parsed = JSON.parse(raw) as Partial<Record<number, { x: number; y: number; zoom: number }>>
+      return {
+        1: parsed[1] ?? null,
+        2: parsed[2] ?? null,
+        3: parsed[3] ?? null,
+        4: parsed[4] ?? null,
+      }
+    } catch {
+      return { 1: null, 2: null, 3: null, 4: null }
+    }
+  })
   const [layerVisibility, setLayerVisibility] = useState({
     objects: true,
     colliders: true,
@@ -1029,6 +1046,26 @@ function App() {
     ))
   }, [clampCameraToBounds, mapHeight, mapWidth])
 
+  const saveCameraBookmark = useCallback((slot: 1 | 2 | 3 | 4) => {
+    setCameraBookmarks((prev) => ({
+      ...prev,
+      [slot]: { x: camera.x, y: camera.y, zoom },
+    }))
+    showStatus('ok', `Bookmark ${slot} gespeichert`)
+  }, [camera, showStatus, zoom])
+
+  const loadCameraBookmark = useCallback((slot: 1 | 2 | 3 | 4) => {
+    const bookmark = cameraBookmarks[slot]
+    if (!bookmark) {
+      showStatus('warn', `Bookmark ${slot} ist leer`)
+      return
+    }
+    const clampedZoom = clampZoom(bookmark.zoom)
+    setZoom(clampedZoom)
+    setCamera(clampCameraToBounds(bookmark.x, bookmark.y, clampedZoom))
+    showStatus('ok', `Bookmark ${slot} geladen`)
+  }, [cameraBookmarks, clampCameraToBounds, showStatus])
+
   const frameSelection = useCallback(() => {
     const padding = 60
     if (selectedObject) {
@@ -1132,11 +1169,12 @@ function App() {
       window.localStorage.setItem(WORLD_LOCAL_STORAGE_KEY, JSON.stringify(world))
       const session: SavedSessionV1 = { tab, zoom, camera, panMode }
       window.localStorage.setItem(SESSION_LOCAL_STORAGE_KEY, JSON.stringify(session))
+      window.localStorage.setItem(BOOKMARKS_STORAGE_KEY, JSON.stringify(cameraBookmarks))
     }, 200)
     return () => {
       if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current)
     }
-  }, [world, tab, zoom, camera, panMode])
+  }, [world, tab, zoom, camera, panMode, cameraBookmarks])
 
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
@@ -1163,6 +1201,16 @@ function App() {
           fitMapView()
         } else {
           frameSelection()
+        }
+        event.preventDefault()
+      }
+
+      if (!isTypingTarget && /^Digit[1-4]$/.test(event.code)) {
+        const slot = Number(event.code.replace('Digit', '')) as 1 | 2 | 3 | 4
+        if (event.shiftKey) {
+          saveCameraBookmark(slot)
+        } else {
+          loadCameraBookmark(slot)
         }
         event.preventDefault()
       }
@@ -1204,7 +1252,7 @@ function App() {
       window.removeEventListener('keydown', keydown)
       window.removeEventListener('keyup', keyup)
     }
-  }, [camera, clampCameraToBounds, fitMapView, frameSelection, redo, selection, undo, zoom])
+  }, [camera, clampCameraToBounds, fitMapView, frameSelection, loadCameraBookmark, redo, saveCameraBookmark, selection, undo, zoom])
 
   useEffect(() => {
     window.render_game_to_text = () => JSON.stringify({
@@ -1227,6 +1275,7 @@ function App() {
       },
       history: { undo: history.length, redo: future.length },
       layers: { visibility: layerVisibility, lock: layerLock },
+      bookmarks: cameraBookmarks,
       topLayers: drawOrderedObjects.slice(-5).map((item) => ({ id: item.id, key: item.key, depth: item.depth })),
       frameCounter,
       coordinateSystem: 'origin: top-left, +x right, +y down',
@@ -1240,7 +1289,7 @@ function App() {
       delete window.render_game_to_text
       delete window.advanceTime
     }
-  }, [tab, selection, zoom, camera, panMode, spaceHeld, middlePanActive, backgroundMode, backgroundBlendOpacity, hoverWorld, showCrosshair, mapWidth, mapHeight, world.map.tileSize, world.objects.length, world.colliders.length, world.triggers.length, world.npcs.length, world.poiIndex.length, frameCounter, history.length, future.length, layerLock, layerVisibility, drawOrderedObjects])
+  }, [tab, selection, zoom, camera, panMode, spaceHeld, middlePanActive, backgroundMode, backgroundBlendOpacity, hoverWorld, showCrosshair, mapWidth, mapHeight, world.map.tileSize, world.objects.length, world.colliders.length, world.triggers.length, world.npcs.length, world.poiIndex.length, frameCounter, history.length, future.length, layerLock, layerVisibility, cameraBookmarks, drawOrderedObjects])
 
   const minimapScale = Math.min(180 / mapWidth, 120 / mapHeight)
   const minimapWidth = mapWidth * minimapScale
@@ -1371,6 +1420,17 @@ function App() {
                   Reset View
                 </button>
                 <span className="wb-history-pill">History {history.length} / Redo {future.length}</span>
+                <div className="wb-bookmarks">
+                  {[1, 2, 3, 4].map((slot) => (
+                    <button
+                      key={slot}
+                      title={`Click: load bookmark ${slot} | Shift+${slot}: save`}
+                      onClick={() => loadCameraBookmark(slot as 1 | 2 | 3 | 4)}
+                    >
+                      B{slot}{cameraBookmarks[slot] ? '*' : ''}
+                    </button>
+                  ))}
+                </div>
                 <label className="wb-inline-check" htmlFor="bg-mode-select">
                   View
                   <select
@@ -1852,7 +1912,7 @@ function App() {
 
         <aside className="wb-sidebar right">
           <h3>Inspector</h3>
-          <p className="wb-legend"><strong>Shortcuts:</strong> Space+Drag oder MiddleMouse+Drag pan, Wheel zoom, Pfeile pan, F fit, Del delete, Cmd/Ctrl+D duplicate, Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z redo.</p>
+          <p className="wb-legend"><strong>Shortcuts:</strong> Space+Drag oder MiddleMouse+Drag pan, Wheel zoom, Pfeile pan, F frame, Shift+F fit, Del delete, Cmd/Ctrl+D duplicate, Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z redo, 1-4 load bookmark, Shift+1-4 save bookmark.</p>
           {selectedObject ? (
             <>
               <h4>Object: {selectedObject.key}</h4>

@@ -74,3 +74,8 @@ Original prompt: verbessere den weiter! der ist immer noch buggy und viele sache
   - Added live cursor world/tile coordinates in toolbar.
   - Added optional crosshair lines on canvas for precise alignment.
 - Playwright runs: output/worldbuilder-loop/loop-5 and loop-6 (shots + state, no errors files).
+- Loop 7 completed:
+  - Added camera bookmarks (slots 1-4): click to load, Shift+1..4 to save, keys 1..4 to load.
+  - Added bookmark persistence via localStorage.
+  - Added toolbar bookmark indicators (B1..B4 with marker when set).
+- Playwright run: output/worldbuilder-loop/loop-7 (shots + state, no errors file).
