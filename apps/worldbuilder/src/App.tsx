@@ -18,6 +18,7 @@ import {
   type AuthoringWorldV1,
 } from '@leonaderi/world-schema'
 import seedWorldJson from '../../../world-data/project.world.v1.json'
+import { validateWorld } from './lib/validation'
 import './styles.css'
 
 type Selection =
@@ -166,43 +167,6 @@ function numberInput(
       }}
     />
   )
-}
-
-function validateWorld(world: AuthoringWorldV1): string[] {
-  const issues: string[] = []
-
-  const triggerIds = new Set(world.triggers.map((item) => item.id))
-  const interactionIds = new Set(world.interactions.map((item) => item.id))
-  const dialogueIds = new Set(world.dialogues.map((item) => item.id))
-  const objectIds = new Set(world.objects.map((item) => item.id))
-
-  for (const trigger of world.triggers) {
-    if (trigger.interactionId && !interactionIds.has(trigger.interactionId)) {
-      issues.push(`Trigger ${trigger.id} hat unbekannte interactionId ${trigger.interactionId}`)
-    }
-  }
-
-  for (const interaction of world.interactions) {
-    if (!triggerIds.has(interaction.triggerId)) {
-      issues.push(`Interaction ${interaction.id} referenziert unbekannten Trigger ${interaction.triggerId}`)
-    }
-    for (const action of interaction.actions) {
-      if (action.type === 'open_dialogue' && !dialogueIds.has(action.dialogueId)) {
-        issues.push(`Interaction ${interaction.id} referenziert unbekannten Dialog ${action.dialogueId}`)
-      }
-    }
-  }
-
-  for (const poi of world.poiIndex) {
-    if (poi.linkedObjectId && !objectIds.has(poi.linkedObjectId)) {
-      issues.push(`POI ${poi.id} hat unbekanntes linkedObjectId ${poi.linkedObjectId}`)
-    }
-    if (poi.linkedInteractionId && !interactionIds.has(poi.linkedInteractionId)) {
-      issues.push(`POI ${poi.id} hat unbekanntes linkedInteractionId ${poi.linkedInteractionId}`)
-    }
-  }
-
-  return issues
 }
 
 type SavedSessionV1 = {
