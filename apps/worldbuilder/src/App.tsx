@@ -273,6 +273,7 @@ function App() {
   const [renderedMapImage, setRenderedMapImage] = useState<HTMLImageElement | null>(null)
   const [hoverWorld, setHoverWorld] = useState<{ x: number; y: number } | null>(null)
   const [showCrosshair, setShowCrosshair] = useState(true)
+  const [showDepthGuides, setShowDepthGuides] = useState(true)
   const [cameraBookmarks, setCameraBookmarks] = useState<Record<number, { x: number; y: number; zoom: number } | null>>(() => {
     if (typeof window === 'undefined') return { 1: null, 2: null, 3: null, 4: null }
     try {
@@ -303,6 +304,9 @@ function App() {
     npcs: false,
   })
   const [entityFilter, setEntityFilter] = useState('')
+  const [selectedObjectIds, setSelectedObjectIds] = useState<string[]>([])
+  const [marqueeRect, setMarqueeRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null)
+  const marqueeAdditiveRef = useRef(false)
 
   useEffect(() => {
     const img = new window.Image()
@@ -371,6 +375,35 @@ function App() {
     () => world.poiIndex.filter((item) => `${item.id} ${item.name}`.toLowerCase().includes(filterNeedle)),
     [world.poiIndex, filterNeedle],
   )
+  const selectedObjects = useMemo(
+    () => world.objects.filter((item) => selectedObjectIds.includes(item.id)),
+    [world.objects, selectedObjectIds],
+  )
+  const selectedObjectPrimaryCollider = useMemo(() => {
+    if (!selectedObject) return null
+    const linked = world.colliders.find(
+      (item) => item.objectId === selectedObject.id && item.shape.type === 'rect',
+    )
+    if (!linked || linked.shape.type !== 'rect') return null
+    return linked
+  }, [selectedObject, world.colliders])
+  const selectedObjectLinkedTriggers = useMemo(
+    () => (selectedObject
+      ? world.triggers.filter((item) => item.objectId === selectedObject.id && item.shape.type === 'rect')
+      : []),
+    [selectedObject, world.triggers],
+  )
+  const normalizedMarquee = useMemo(
+    () => (marqueeRect
+      ? {
+        x: Math.min(marqueeRect.x, marqueeRect.x + marqueeRect.width),
+        y: Math.min(marqueeRect.y, marqueeRect.y + marqueeRect.height),
+        width: Math.abs(marqueeRect.width),
+        height: Math.abs(marqueeRect.height),
+      }
+      : null),
+    [marqueeRect],
+  )
 
   const validationIssues = useMemo(() => validateWorld(world), [world])
 
@@ -379,10 +412,10 @@ function App() {
 
   const snapValue = (value: number) => (snapToGrid ? Math.round(value / world.map.tileSize) * world.map.tileSize : value)
 
-  const clampWorldPoint = (x: number, y: number) => ({
+  const clampWorldPoint = useCallback((x: number, y: number) => ({
     x: clamp(x, 0, mapWidth),
     y: clamp(y, 0, mapHeight),
-  })
+  }), [mapHeight, mapWidth])
 
   const showStatus = useCallback((tone: StatusTone, text: string) => {
     setStatus({ tone, text })
@@ -402,6 +435,49 @@ function App() {
     setWorld(nextWorld)
     refreshJsonBuffer(nextWorld)
   }, [refreshJsonBuffer, world])
+
+  const clearSelection = useCallback(() => {
+    setSelection({ kind: 'none', id: '' })
+    setSelectedObjectIds([])
+  }, [])
+
+  const selectObject = useCallback((id: string, additive = false) => {
+    if (!additive) {
+      setSelectedObjectIds([id])
+      setSelection({ kind: 'object', id })
+      return
+    }
+    let nextIds: string[] = []
+    setSelectedObjectIds((prev) => {
+      nextIds = prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+      return nextIds
+    })
+    if (nextIds.length === 0) {
+      setSelection({ kind: 'none', id: '' })
+    } else {
+      setSelection({ kind: 'object', id: nextIds[nextIds.length - 1] })
+    }
+  }, [])
+
+  const selectEntity = useCallback((next: Selection) => {
+    setSelection(next)
+    if (next.kind !== 'object') {
+      setSelectedObjectIds([])
+    } else if (next.id) {
+      setSelectedObjectIds([next.id])
+    }
+  }, [])
+
+  const selectAllObjects = useCallback(() => {
+    const ids = world.objects.map((item) => item.id)
+    if (ids.length === 0) {
+      clearSelection()
+      return
+    }
+    setSelectedObjectIds(ids)
+    setSelection({ kind: 'object', id: ids[ids.length - 1] })
+    showStatus('ok', `${ids.length} Objekte selektiert`)
+  }, [clearSelection, showStatus, world.objects])
 
   const updateObject = (id: string, patch: Partial<AuthoringWorldV1['objects'][number]>) => {
     updateWorld({
@@ -431,6 +507,44 @@ function App() {
     if (!object) return
     updateObject(id, { depth: object.depth + delta })
   }
+
+  const nudgeSelectedObjects = useCallback((dx: number, dy: number) => {
+    if (selectedObjectIds.length === 0) return
+    updateWorld({
+      ...world,
+      objects: world.objects.map((item) => {
+        if (!selectedObjectIds.includes(item.id)) return item
+        const nextPos = clampWorldPoint(item.x + dx, item.y + dy)
+        return { ...item, x: nextPos.x, y: nextPos.y }
+      }),
+      meta: { ...world.meta, updatedAt: new Date().toISOString() },
+    })
+  }, [clampWorldPoint, selectedObjectIds, updateWorld, world])
+
+  const alignSelectedObjects = useCallback((mode: 'left' | 'right' | 'top' | 'bottom' | 'centerX' | 'centerY') => {
+    if (selectedObjects.length < 2) return
+    const left = Math.min(...selectedObjects.map((item) => item.x - item.width / 2))
+    const right = Math.max(...selectedObjects.map((item) => item.x + item.width / 2))
+    const top = Math.min(...selectedObjects.map((item) => item.y - item.height / 2))
+    const bottom = Math.max(...selectedObjects.map((item) => item.y + item.height / 2))
+    const centerX = (left + right) / 2
+    const centerY = (top + bottom) / 2
+
+    updateWorld({
+      ...world,
+      objects: world.objects.map((item) => {
+        if (!selectedObjectIds.includes(item.id)) return item
+        if (mode === 'left') return { ...item, x: clampWorldPoint(left + item.width / 2, item.y).x }
+        if (mode === 'right') return { ...item, x: clampWorldPoint(right - item.width / 2, item.y).x }
+        if (mode === 'top') return { ...item, y: clampWorldPoint(item.x, top + item.height / 2).y }
+        if (mode === 'bottom') return { ...item, y: clampWorldPoint(item.x, bottom - item.height / 2).y }
+        if (mode === 'centerX') return { ...item, x: clampWorldPoint(centerX, item.y).x }
+        return { ...item, y: clampWorldPoint(item.x, centerY).y }
+      }),
+      meta: { ...world.meta, updatedAt: new Date().toISOString() },
+    })
+    showStatus('ok', `Aligned (${mode})`)
+  }, [clampWorldPoint, selectedObjectIds, selectedObjects, showStatus, updateWorld, world])
 
   const updateColliderRect = (id: string, patch: Partial<{ x: number; y: number; width: number; height: number }>) => {
     updateWorld({
@@ -586,7 +700,7 @@ function App() {
       ],
       meta: { ...world.meta, updatedAt: new Date().toISOString() },
     })
-    setSelection({ kind: 'trigger', id: triggerId })
+    selectEntity({ kind: 'trigger', id: triggerId })
     showStatus('ok', 'Door Trigger erzeugt')
   }
 
@@ -607,7 +721,7 @@ function App() {
         colliders: world.colliders.map((item) => item.id === existing.id ? { ...item, shape: { type: 'rect', rect } } : item),
         meta: { ...world.meta, updatedAt: new Date().toISOString() },
       })
-      setSelection({ kind: 'collider', id: existing.id })
+      selectEntity({ kind: 'collider', id: existing.id })
       showStatus('ok', 'Collider aktualisiert')
       return
     }
@@ -626,13 +740,77 @@ function App() {
       ],
       meta: { ...world.meta, updatedAt: new Date().toISOString() },
     })
-    setSelection({ kind: 'collider', id })
+    selectEntity({ kind: 'collider', id })
     showStatus('ok', 'Collider erzeugt')
+  }
+
+  const nudgeLinkedCollider = (objectId: string, mode: 'topDown' | 'topUp' | 'narrow' | 'wider') => {
+    const linked = world.colliders.find((item) => item.objectId === objectId && item.shape.type === 'rect')
+    if (!linked || linked.shape.type !== 'rect') {
+      showStatus('warn', 'Kein verlinkter Rechteck-Collider gefunden')
+      return
+    }
+
+    const nextRect = { ...linked.shape.rect }
+    if (mode === 'topDown') {
+      nextRect.y += 4
+      nextRect.height = Math.max(4, nextRect.height - 4)
+    } else if (mode === 'topUp') {
+      nextRect.y -= 4
+      nextRect.height += 4
+    } else if (mode === 'narrow') {
+      nextRect.x += 2
+      nextRect.width = Math.max(4, nextRect.width - 4)
+    } else if (mode === 'wider') {
+      nextRect.x -= 2
+      nextRect.width += 4
+    }
+
+    const clamped = clampRectToMap(nextRect, mapWidth, mapHeight)
+    updateWorld({
+      ...world,
+      colliders: world.colliders.map((item) => item.id === linked.id ? { ...item, shape: { type: 'rect', rect: clamped } } : item),
+      meta: { ...world.meta, updatedAt: new Date().toISOString() },
+    })
+    selectEntity({ kind: 'collider', id: linked.id })
+  }
+
+  const applyObjectLayerPreset = (objectId: string, preset: 'backdrop' | 'foot' | 'roof') => {
+    const object = world.objects.find((item) => item.id === objectId)
+    if (!object) return
+
+    if (preset === 'backdrop') {
+      updateObject(object.id, {
+        renderGroup: 'ground',
+        depth: Math.round(object.y - object.height * 0.25),
+        collision: false,
+      })
+      showStatus('ok', 'Preset gesetzt: Backdrop (immer hinter Player)')
+      return
+    }
+
+    if (preset === 'foot') {
+      updateObject(object.id, {
+        renderGroup: 'default',
+        depth: Math.round(object.y),
+      })
+      showStatus('ok', 'Preset gesetzt: Foot-Depth (klassisch)')
+      return
+    }
+
+    updateObject(object.id, {
+      renderGroup: 'foreground',
+      depth: Math.round(object.y + object.height * 0.45),
+      collision: true,
+    })
+    autoColliderFromObject(object.id)
+    showStatus('ok', 'Preset gesetzt: Roof/Occluder (Player laeuft dahinter)')
   }
 
   const parseAndLoadWorld = (source: string, context: string) => {
     const parsed = AuthoringWorldSchema.parse(JSON.parse(source))
     updateWorld(parsed)
+    clearSelection()
     if (!parsed.dialogues.find((item) => item.id === dialogueId)) {
       setDialogueId(parsed.dialogues[0]?.id ?? '')
     }
@@ -743,7 +921,7 @@ function App() {
       objects: [...world.objects, nextObject],
       meta: { ...world.meta, updatedAt: new Date().toISOString() },
     })
-    setSelection({ kind: 'object', id })
+    selectObject(id)
     showStatus('ok', 'Objekt erstellt')
   }
 
@@ -767,7 +945,7 @@ function App() {
       colliders: [...world.colliders, collider],
       meta: { ...world.meta, updatedAt: new Date().toISOString() },
     })
-    setSelection({ kind: 'collider', id })
+    selectEntity({ kind: 'collider', id })
     showStatus('ok', 'Collider erstellt')
   }
 
@@ -813,7 +991,7 @@ function App() {
       ],
       meta: { ...world.meta, updatedAt: new Date().toISOString() },
     })
-    setSelection({ kind: 'trigger', id })
+    selectEntity({ kind: 'trigger', id })
     showStatus('ok', 'Trigger erstellt')
   }
 
@@ -834,7 +1012,7 @@ function App() {
       ],
       meta: { ...world.meta, updatedAt: new Date().toISOString() },
     })
-    setSelection({ kind: 'npc', id })
+    selectEntity({ kind: 'npc', id })
     showStatus('ok', 'NPC erstellt')
   }
 
@@ -850,7 +1028,7 @@ function App() {
     const ok = window.confirm('Seed wirklich wiederherstellen? Nicht gespeicherte Aenderungen gehen verloren.')
     if (!ok) return
     updateWorld(seedWorld)
-    setSelection({ kind: 'none', id: '' })
+    clearSelection()
     setDialogueId(seedWorld.dialogues[0]?.id ?? '')
     showStatus('warn', 'Seed wiederhergestellt')
   }
@@ -862,17 +1040,23 @@ function App() {
   }
 
   const deleteSelection = useCallback(() => {
-    if (selection.kind === 'none' || selection.kind === 'poi') return
-    const ok = window.confirm(`Element ${selection.id} wirklich loeschen?`)
+    const objectIdsToDelete = selectedObjectIds.length > 0 ? selectedObjectIds : (selection.kind === 'object' ? [selection.id] : [])
+    const hasSingleEntity = selection.kind !== 'none' && selection.kind !== 'poi'
+    if (!hasSingleEntity && objectIdsToDelete.length === 0) return
+    const label = objectIdsToDelete.length > 1 ? `${objectIdsToDelete.length} Objekte` : selection.id
+    const ok = window.confirm(`Element ${label} wirklich loeschen?`)
     if (!ok) return
-    if (selection.kind === 'object') {
+    if (objectIdsToDelete.length > 0) {
       updateWorld({
         ...world,
-        objects: world.objects.filter((item) => item.id !== selection.id),
-        colliders: world.colliders.filter((item) => item.objectId !== selection.id),
-        triggers: world.triggers.filter((item) => item.objectId !== selection.id),
+        objects: world.objects.filter((item) => !objectIdsToDelete.includes(item.id)),
+        colliders: world.colliders.filter((item) => !item.objectId || !objectIdsToDelete.includes(item.objectId)),
+        triggers: world.triggers.filter((item) => !item.objectId || !objectIdsToDelete.includes(item.objectId)),
         meta: { ...world.meta, updatedAt: new Date().toISOString() },
       })
+      clearSelection()
+      showStatus('warn', 'Objekt(e) geloescht')
+      return
     }
     if (selection.kind === 'collider') {
       updateWorld({
@@ -897,30 +1081,36 @@ function App() {
         meta: { ...world.meta, updatedAt: new Date().toISOString() },
       })
     }
-    setSelection({ kind: 'none', id: '' })
+    clearSelection()
     showStatus('warn', 'Element geloescht')
-  }, [selection, world, showStatus, updateWorld])
+  }, [selection, world, selectedObjectIds, clearSelection, showStatus, updateWorld])
 
   const duplicateSelection = useCallback(() => {
     const now = Date.now()
-    if (selection.kind === 'object') {
-      const item = world.objects.find((object) => object.id === selection.id)
-      if (!item) return
-      const id = `${item.id}-copy-${now}`
-      const copy = {
-        ...item,
-        id,
-        key: `${item.key}Copy`,
-        x: clamp(item.x + 16, 0, mapWidth),
-        y: clamp(item.y + 16, 0, mapHeight),
-      }
+    if (selectedObjectIds.length > 1 || selection.kind === 'object') {
+      const ids = selectedObjectIds.length > 0 ? selectedObjectIds : [selection.id]
+      const sourceObjects = world.objects.filter((object) => ids.includes(object.id))
+      if (sourceObjects.length === 0) return
+      const idMap = new Map<string, string>()
+      const copies = sourceObjects.map((item, index) => {
+        const id = `${item.id}-copy-${now}-${index}`
+        idMap.set(item.id, id)
+        return {
+          ...item,
+          id,
+          key: `${item.key}Copy${index > 0 ? index + 1 : ''}`,
+          x: clamp(item.x + 16, 0, mapWidth),
+          y: clamp(item.y + 16, 0, mapHeight),
+        }
+      })
       updateWorld({
         ...world,
-        objects: [...world.objects, copy],
+        objects: [...world.objects, ...copies],
         meta: { ...world.meta, updatedAt: new Date().toISOString() },
       })
-      setSelection({ kind: 'object', id })
-      showStatus('ok', 'Objekt dupliziert')
+      setSelectedObjectIds(copies.map((item) => item.id))
+      setSelection({ kind: 'object', id: copies[copies.length - 1].id })
+      showStatus('ok', copies.length > 1 ? `${copies.length} Objekte dupliziert` : 'Objekt dupliziert')
       return
     }
     if (selection.kind === 'collider') {
@@ -948,7 +1138,7 @@ function App() {
         colliders: [...world.colliders, copy],
         meta: { ...world.meta, updatedAt: new Date().toISOString() },
       })
-      setSelection({ kind: 'collider', id })
+      selectEntity({ kind: 'collider', id })
       showStatus('ok', 'Collider dupliziert')
       return
     }
@@ -989,7 +1179,7 @@ function App() {
         interactions: copiedInteraction ? [...world.interactions, copiedInteraction] : world.interactions,
         meta: { ...world.meta, updatedAt: new Date().toISOString() },
       })
-      setSelection({ kind: 'trigger', id })
+      selectEntity({ kind: 'trigger', id })
       showStatus('ok', 'Trigger dupliziert')
       return
     }
@@ -1002,10 +1192,10 @@ function App() {
         npcs: [...world.npcs, { ...item, id, x: clamp(item.x + 16, 0, mapWidth), y: clamp(item.y + 16, 0, mapHeight) }],
         meta: { ...world.meta, updatedAt: new Date().toISOString() },
       })
-      setSelection({ kind: 'npc', id })
+      selectEntity({ kind: 'npc', id })
       showStatus('ok', 'NPC dupliziert')
     }
-  }, [selection, world, mapWidth, mapHeight, showStatus, updateWorld])
+  }, [selection, world, mapWidth, mapHeight, selectedObjectIds, selectEntity, showStatus, updateWorld])
 
   useEffect(() => {
     deleteSelectionRef.current = deleteSelection
@@ -1153,6 +1343,11 @@ function App() {
   useEffect(() => {
     const transformer = transformerRef.current
     if (!transformer) return
+    if (selection.kind === 'object' && selectedObjectIds.length !== 1) {
+      transformer.nodes([])
+      transformer.getLayer()?.batchDraw()
+      return
+    }
     const node = selectedRef.current
     if (!node) {
       transformer.nodes([])
@@ -1161,7 +1356,7 @@ function App() {
     }
     transformer.nodes([node])
     transformer.getLayer()?.batchDraw()
-  }, [selection, world.objects, world.colliders, world.triggers])
+  }, [selection, selectedObjectIds.length, world.objects, world.colliders, world.triggers])
 
   useEffect(() => {
     if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current)
@@ -1189,6 +1384,14 @@ function App() {
       )
 
       if (!isTypingTarget && (event.key === 'ArrowLeft' || event.key === 'ArrowRight' || event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
+        if (event.altKey && selectedObjectIds.length > 0) {
+          const amount = event.shiftKey ? 8 : 1
+          const dx = event.key === 'ArrowLeft' ? -amount : event.key === 'ArrowRight' ? amount : 0
+          const dy = event.key === 'ArrowUp' ? -amount : event.key === 'ArrowDown' ? amount : 0
+          nudgeSelectedObjects(dx, dy)
+          event.preventDefault()
+          return
+        }
         const amount = event.shiftKey ? 64 : 24
         const nextX = event.key === 'ArrowLeft' ? camera.x + amount : event.key === 'ArrowRight' ? camera.x - amount : camera.x
         const nextY = event.key === 'ArrowUp' ? camera.y + amount : event.key === 'ArrowDown' ? camera.y - amount : camera.y
@@ -1220,11 +1423,20 @@ function App() {
         event.preventDefault()
       }
       if (isTypingTarget) return
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'a') {
+        selectAllObjects()
+        event.preventDefault()
+      }
       if (event.key === 'Delete' || event.key === 'Backspace') {
-        if (selection.kind !== 'none' && selection.kind !== 'poi') {
+        if ((selection.kind !== 'none' && selection.kind !== 'poi') || selectedObjectIds.length > 0) {
           deleteSelectionRef.current()
           event.preventDefault()
         }
+      }
+      if (event.key === 'Escape') {
+        clearSelection()
+        setMarqueeRect(null)
+        event.preventDefault()
       }
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'd') {
         duplicateSelectionRef.current()
@@ -1252,12 +1464,13 @@ function App() {
       window.removeEventListener('keydown', keydown)
       window.removeEventListener('keyup', keyup)
     }
-  }, [camera, clampCameraToBounds, fitMapView, frameSelection, loadCameraBookmark, redo, saveCameraBookmark, selection, undo, zoom])
+  }, [camera, clearSelection, clampCameraToBounds, fitMapView, frameSelection, loadCameraBookmark, nudgeSelectedObjects, redo, saveCameraBookmark, selectAllObjects, selection, selectedObjectIds.length, undo, zoom])
 
   useEffect(() => {
     window.render_game_to_text = () => JSON.stringify({
       mode: tab,
       selection,
+      selectedObjectIds,
       zoom,
       camera,
       panMode: panMode || spaceHeld || middlePanActive,
@@ -1265,6 +1478,8 @@ function App() {
       backgroundBlendOpacity,
       hoverWorld,
       showCrosshair,
+      showDepthGuides,
+      marqueeRect: normalizedMarquee,
       map: { width: mapWidth, height: mapHeight, tileSize: world.map.tileSize },
       counts: {
         objects: world.objects.length,
@@ -1289,7 +1504,7 @@ function App() {
       delete window.render_game_to_text
       delete window.advanceTime
     }
-  }, [tab, selection, zoom, camera, panMode, spaceHeld, middlePanActive, backgroundMode, backgroundBlendOpacity, hoverWorld, showCrosshair, mapWidth, mapHeight, world.map.tileSize, world.objects.length, world.colliders.length, world.triggers.length, world.npcs.length, world.poiIndex.length, frameCounter, history.length, future.length, layerLock, layerVisibility, cameraBookmarks, drawOrderedObjects])
+  }, [tab, selection, selectedObjectIds, zoom, camera, panMode, spaceHeld, middlePanActive, backgroundMode, backgroundBlendOpacity, hoverWorld, showCrosshair, showDepthGuides, normalizedMarquee, mapWidth, mapHeight, world.map.tileSize, world.objects.length, world.colliders.length, world.triggers.length, world.npcs.length, world.poiIndex.length, frameCounter, history.length, future.length, layerLock, layerVisibility, cameraBookmarks, drawOrderedObjects])
 
   const minimapScale = Math.min(180 / mapWidth, 120 / mapHeight)
   const minimapWidth = mapWidth * minimapScale
@@ -1320,8 +1535,8 @@ function App() {
           <button data-testid="add-npc-btn" onClick={addNpc}>+ NPC</button>
           <button onClick={undo} disabled={history.length === 0}>Undo</button>
           <button onClick={redo} disabled={future.length === 0}>Redo</button>
-          <button onClick={duplicateSelection} disabled={!selectedObject && !selectedCollider && !selectedTrigger && !selectedNpc}>Duplicate</button>
-          <button onClick={deleteSelection} disabled={!selectedObject && !selectedCollider && !selectedTrigger && !selectedNpc}>Delete</button>
+          <button onClick={duplicateSelection} disabled={selectedObjectIds.length === 0 && !selectedObject && !selectedCollider && !selectedTrigger && !selectedNpc}>Duplicate</button>
+          <button onClick={deleteSelection} disabled={selectedObjectIds.length === 0 && !selectedObject && !selectedCollider && !selectedTrigger && !selectedNpc}>Delete</button>
           <button onClick={resetSeed}>Reset Seed</button>
           <button onClick={clearLocalDraft}>Reset Local Draft</button>
         </div>
@@ -1360,25 +1575,29 @@ function App() {
           <div className="wb-list">
             <h4>Objects</h4>
             {filteredObjects.map((item) => (
-              <button key={item.id} className={selection.kind === 'object' && selection.id === item.id ? 'sel' : ''} onClick={() => setSelection({ kind: 'object', id: item.id })}>
+              <button
+                key={item.id}
+                className={selectedObjectIds.includes(item.id) ? 'sel' : ''}
+                onClick={(event) => selectObject(item.id, event.shiftKey)}
+              >
                 {item.key} <span className="wb-inline-meta">d:{item.depth} {item.visible ? '' : '(hidden)'}</span>
               </button>
             ))}
             <h4>Colliders</h4>
             {filteredColliders.map((item) => (
-              <button key={item.id} className={selection.kind === 'collider' && selection.id === item.id ? 'sel' : ''} onClick={() => setSelection({ kind: 'collider', id: item.id })}>{item.id}</button>
+              <button key={item.id} className={selection.kind === 'collider' && selection.id === item.id ? 'sel' : ''} onClick={() => selectEntity({ kind: 'collider', id: item.id })}>{item.id}</button>
             ))}
             <h4>Triggers</h4>
             {filteredTriggers.map((item) => (
-              <button key={item.id} className={selection.kind === 'trigger' && selection.id === item.id ? 'sel' : ''} onClick={() => setSelection({ kind: 'trigger', id: item.id })}>{item.label}</button>
+              <button key={item.id} className={selection.kind === 'trigger' && selection.id === item.id ? 'sel' : ''} onClick={() => selectEntity({ kind: 'trigger', id: item.id })}>{item.label}</button>
             ))}
             <h4>NPCs</h4>
             {filteredNpcs.map((item) => (
-              <button key={item.id} className={selection.kind === 'npc' && selection.id === item.id ? 'sel' : ''} onClick={() => setSelection({ kind: 'npc', id: item.id })}>{item.id}</button>
+              <button key={item.id} className={selection.kind === 'npc' && selection.id === item.id ? 'sel' : ''} onClick={() => selectEntity({ kind: 'npc', id: item.id })}>{item.id}</button>
             ))}
             <h4>POIs</h4>
             {filteredPois.map((item) => (
-              <button key={item.id} className={selection.kind === 'poi' && selection.id === item.id ? 'sel' : ''} onClick={() => setSelection({ kind: 'poi', id: item.id })}>{item.name}</button>
+              <button key={item.id} className={selection.kind === 'poi' && selection.id === item.id ? 'sel' : ''} onClick={() => selectEntity({ kind: 'poi', id: item.id })}>{item.name}</button>
             ))}
           </div>
         </aside>
@@ -1410,11 +1629,13 @@ function App() {
                 </button>
                 <button onClick={frameSelection}>Frame Selected</button>
                 <button onClick={fitMapView}>Fit Map</button>
+                <button onClick={selectAllObjects}>Select All Objects</button>
+                <button onClick={clearSelection}>Clear Selection</button>
                 <button
                   onClick={() => {
                     setZoom(1)
                     setCamera({ x: 20, y: 20 })
-                    setSelection({ kind: 'none', id: '' })
+                    clearSelection()
                   }}
                 >
                   Reset View
@@ -1461,6 +1682,10 @@ function App() {
                 <label className="wb-inline-check">
                   <input type="checkbox" checked={showCrosshair} onChange={(event) => setShowCrosshair(event.target.checked)} />
                   Crosshair
+                </label>
+                <label className="wb-inline-check">
+                  <input type="checkbox" checked={showDepthGuides} onChange={(event) => setShowDepthGuides(event.target.checked)} />
+                  Depth Guides
                 </label>
                 <span className="wb-history-pill">
                   Cursor {hoverWorld ? `${Math.round(hoverWorld.x)},${Math.round(hoverWorld.y)} (tile ${Math.floor(hoverWorld.x / world.map.tileSize)},${Math.floor(hoverWorld.y / world.map.tileSize)})` : '--'}
@@ -1512,7 +1737,10 @@ function App() {
                 width={stageWidth}
                 height={stageHeight}
                 className="wb-stage"
-                style={{ cursor: middlePanActive || panMode || spaceHeld ? 'grabbing' : 'default' }}
+                style={{ cursor: middlePanActive ? 'grabbing' : (panMode || spaceHeld ? 'grab' : (marqueeRect ? 'crosshair' : 'default')) }}
+                onContextMenu={(event) => {
+                  event.evt.preventDefault()
+                }}
                 onMouseDown={(event) => {
                   if (event.evt.button === 1) {
                     event.evt.preventDefault()
@@ -1530,7 +1758,21 @@ function App() {
                   }
                   const target = event.target
                   if (target === event.target.getStage()) {
-                    setSelection({ kind: 'none', id: '' })
+                    if (event.evt.button !== 0) return
+                    if (panMode || spaceHeld || middlePanActive) return
+                    const stage = event.target.getStage()
+                    const pointer = stage?.getPointerPosition()
+                    if (pointer) {
+                      marqueeAdditiveRef.current = event.evt.shiftKey
+                      setMarqueeRect({
+                        x: (pointer.x - camera.x) / zoom,
+                        y: (pointer.y - camera.y) / zoom,
+                        width: 0,
+                        height: 0,
+                      })
+                    } else {
+                      clearSelection()
+                    }
                   }
                 }}
                 onMouseMove={(event) => {
@@ -1553,15 +1795,69 @@ function App() {
                     zoom,
                   )
                   setCamera(next)
+                  return
+                }}
+                onMouseMoveCapture={(event) => {
+                  if (!marqueeRect) return
+                  const stage = event.target.getStage()
+                  const pointer = stage?.getPointerPosition()
+                  if (!pointer) return
+                  setMarqueeRect((prev) => {
+                    if (!prev) return prev
+                    return {
+                      ...prev,
+                      width: (pointer.x - camera.x) / zoom - prev.x,
+                      height: (pointer.y - camera.y) / zoom - prev.y,
+                    }
+                  })
                 }}
                 onMouseUp={() => {
                   middlePanStartRef.current = null
                   setMiddlePanActive(false)
+                  if (!marqueeRect) return
+                  const norm = {
+                    x: Math.min(marqueeRect.x, marqueeRect.x + marqueeRect.width),
+                    y: Math.min(marqueeRect.y, marqueeRect.y + marqueeRect.height),
+                    width: Math.abs(marqueeRect.width),
+                    height: Math.abs(marqueeRect.height),
+                  }
+                  if (norm.width < 2 || norm.height < 2) {
+                    setMarqueeRect(null)
+                    if (!marqueeAdditiveRef.current) clearSelection()
+                    return
+                  }
+                  const picked = world.objects.filter((item) => {
+                    const left = item.x - item.width / 2
+                    const right = item.x + item.width / 2
+                    const top = item.y - item.height / 2
+                    const bottom = item.y + item.height / 2
+                    return (
+                      left < norm.x + norm.width
+                      && right > norm.x
+                      && top < norm.y + norm.height
+                      && bottom > norm.y
+                    )
+                  }).map((item) => item.id)
+
+                  if (picked.length === 0) {
+                    if (!marqueeAdditiveRef.current) clearSelection()
+                  } else if (marqueeAdditiveRef.current) {
+                    setSelectedObjectIds((prev) => {
+                      const merged = [...new Set([...prev, ...picked])]
+                      setSelection({ kind: 'object', id: merged[merged.length - 1] })
+                      return merged
+                    })
+                  } else {
+                    setSelectedObjectIds(picked)
+                    setSelection({ kind: 'object', id: picked[picked.length - 1] })
+                  }
+                  setMarqueeRect(null)
                 }}
                 onMouseLeave={() => {
                   middlePanStartRef.current = null
                   setMiddlePanActive(false)
                   setHoverWorld(null)
+                  setMarqueeRect(null)
                 }}
                 onWheel={(event) => {
                   event.evt.preventDefault()
@@ -1647,6 +1943,19 @@ function App() {
                       </>
                     ) : null}
 
+                    {normalizedMarquee ? (
+                      <Rect
+                        x={normalizedMarquee.x}
+                        y={normalizedMarquee.y}
+                        width={normalizedMarquee.width}
+                        height={normalizedMarquee.height}
+                        fill="rgba(123, 97, 255, 0.15)"
+                        stroke="#8b7bff"
+                        dash={[6, 4]}
+                        listening={false}
+                      />
+                    ) : null}
+
                     {layerVisibility.objects ? drawOrderedObjects.filter((object) => object.visible).map((object) => (
                       <Group key={object.id}>
                         <Rect
@@ -1656,15 +1965,28 @@ function App() {
                           width={object.width}
                           height={object.height}
                           fill="rgba(255, 157, 58, 0.15)"
-                          stroke={selection.kind === 'object' && selection.id === object.id ? '#ffd250' : '#ff7a59'}
-                          strokeWidth={selection.kind === 'object' && selection.id === object.id ? 3 : 2}
+                          stroke={selectedObjectIds.includes(object.id) ? '#ffd250' : '#ff7a59'}
+                          strokeWidth={selectedObjectIds.includes(object.id) ? 3 : 2}
                           draggable={!(panMode || spaceHeld || middlePanActive || layerLock.objects)}
-                          onClick={() => setSelection({ kind: 'object', id: object.id })}
+                          onClick={(event) => selectObject(object.id, Boolean(event.evt.shiftKey))}
                           onDragEnd={(event) => {
-                            updateObject(object.id, {
-                              x: Number((event.target.x() + object.width / 2).toFixed(2)),
-                              y: Number((event.target.y() + object.height / 2).toFixed(2)),
-                            })
+                            const nextX = Number((event.target.x() + object.width / 2).toFixed(2))
+                            const nextY = Number((event.target.y() + object.height / 2).toFixed(2))
+                            const deltaX = nextX - object.x
+                            const deltaY = nextY - object.y
+                            if (selectedObjectIds.length > 1 && selectedObjectIds.includes(object.id)) {
+                              updateWorld({
+                                ...world,
+                                objects: world.objects.map((item) => {
+                                  if (!selectedObjectIds.includes(item.id)) return item
+                                  const nextPos = clampWorldPoint(item.x + deltaX, item.y + deltaY)
+                                  return { ...item, x: nextPos.x, y: nextPos.y }
+                                }),
+                                meta: { ...world.meta, updatedAt: new Date().toISOString() },
+                              })
+                            } else {
+                              updateObject(object.id, { x: nextX, y: nextY })
+                            }
                           }}
                           onTransformEnd={(event) => {
                             const node = event.target
@@ -1690,8 +2012,57 @@ function App() {
                             listening={false}
                           />
                         ) : null}
+                        {showDepthGuides && selectedObjectIds.includes(object.id) ? (
+                          <>
+                            <Rect
+                              x={object.x - object.width / 2}
+                              y={object.depth - 1}
+                              width={object.width}
+                              height={2}
+                              fill="rgba(255, 210, 80, 0.95)"
+                              listening={false}
+                            />
+                            <Text
+                              x={object.x - object.width / 2}
+                              y={object.depth - 15}
+                              text={`depth ${Math.round(object.depth)}`}
+                              fontSize={10}
+                              fill="#ffd250"
+                              listening={false}
+                            />
+                          </>
+                        ) : null}
                       </Group>
                     )) : null}
+
+                    {selectedObjectPrimaryCollider && selectedObjectPrimaryCollider.shape.type === 'rect' ? (
+                      <Rect
+                        x={selectedObjectPrimaryCollider.shape.rect.x}
+                        y={selectedObjectPrimaryCollider.shape.rect.y}
+                        width={selectedObjectPrimaryCollider.shape.rect.width}
+                        height={selectedObjectPrimaryCollider.shape.rect.height}
+                        fill="rgba(41, 232, 255, 0.14)"
+                        stroke="#8ff8ff"
+                        strokeWidth={3}
+                        dash={[4, 3]}
+                        listening={false}
+                      />
+                    ) : null}
+
+                    {selectedObjectLinkedTriggers.map((trigger) => trigger.shape.type === 'rect' ? (
+                      <Rect
+                        key={`linked-trigger-${trigger.id}`}
+                        x={trigger.shape.rect.x}
+                        y={trigger.shape.rect.y}
+                        width={trigger.shape.rect.width}
+                        height={trigger.shape.rect.height}
+                        fill="rgba(255, 70, 188, 0.14)"
+                        stroke="#ff74ce"
+                        strokeWidth={3}
+                        dash={[6, 4]}
+                        listening={false}
+                      />
+                    ) : null)}
 
                     {layerVisibility.colliders ? world.colliders.map((collider) => collider.shape.type === 'rect' ? (
                       <Rect
@@ -1705,7 +2076,7 @@ function App() {
                         stroke={selection.kind === 'collider' && selection.id === collider.id ? '#9af7ff' : '#3cc8ff'}
                         strokeWidth={selection.kind === 'collider' && selection.id === collider.id ? 3 : 2}
                         draggable={!(panMode || spaceHeld || middlePanActive || layerLock.colliders)}
-                        onClick={() => setSelection({ kind: 'collider', id: collider.id })}
+                        onClick={() => selectEntity({ kind: 'collider', id: collider.id })}
                         onDragEnd={(event) => {
                           updateColliderRect(collider.id, {
                             x: Number(event.target.x().toFixed(2)),
@@ -1741,7 +2112,7 @@ function App() {
                         stroke={selection.kind === 'trigger' && selection.id === trigger.id ? '#ff8bd8' : '#ff47b6'}
                         strokeWidth={selection.kind === 'trigger' && selection.id === trigger.id ? 3 : 2}
                         draggable={!(panMode || spaceHeld || middlePanActive || layerLock.triggers)}
-                        onClick={() => setSelection({ kind: 'trigger', id: trigger.id })}
+                        onClick={() => selectEntity({ kind: 'trigger', id: trigger.id })}
                         onDragEnd={(event) => {
                           updateTriggerRect(trigger.id, {
                             x: Number(event.target.x().toFixed(2)),
@@ -1774,7 +2145,7 @@ function App() {
                         stroke="#7d5c00"
                         strokeWidth={2}
                         draggable={!(panMode || spaceHeld || middlePanActive || layerLock.npcs)}
-                        onClick={() => setSelection({ kind: 'npc', id: npc.id })}
+                        onClick={() => selectEntity({ kind: 'npc', id: npc.id })}
                         onDragEnd={(event) => {
                           updateNpc(npc.id, {
                             x: Number(event.target.x().toFixed(2)),
@@ -1791,7 +2162,7 @@ function App() {
                       </>
                     ) : null}
                     <Text x={8} y={8} text="Orange=Object  Cyan=Collider  Pink=Trigger  Yellow=NPC" fontSize={12} fill="#fefefe" listening={false} />
-                    <Text x={8} y={22} text="Space/MiddleMouse+Drag = Pan, Wheel = Zoom, Arrows = Pan, F = Fit, Del = Delete, Cmd/Ctrl+D = Duplicate" fontSize={11} fill="#d1d5db" listening={false} />
+                    <Text x={8} y={22} text="Space/MiddleMouse+Drag = Pan, Wheel = Zoom, Arrows = Pan, Alt+Arrows = Nudge, Drag empty area = Marquee, Shift+Click = Multi-select" fontSize={11} fill="#d1d5db" listening={false} />
                   </Group>
                   {layerVisibility.minimap ? (
                     <>
@@ -1912,7 +2283,29 @@ function App() {
 
         <aside className="wb-sidebar right">
           <h3>Inspector</h3>
-          <p className="wb-legend"><strong>Shortcuts:</strong> Space+Drag oder MiddleMouse+Drag pan, Wheel zoom, Pfeile pan, F frame, Shift+F fit, Del delete, Cmd/Ctrl+D duplicate, Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z redo, 1-4 load bookmark, Shift+1-4 save bookmark.</p>
+          <p className="wb-legend"><strong>Shortcuts:</strong> Space+Drag oder MiddleMouse+Drag pan, Wheel zoom, Pfeile pan, Alt+Pfeile nudge selection, F frame, Shift+F fit, Cmd/Ctrl+A select all objects, Esc clear selection, Del delete, Cmd/Ctrl+D duplicate, Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z redo, 1-4 load bookmark, Shift+1-4 save bookmark.</p>
+          {selectedObjectIds.length > 1 ? (
+            <>
+              <h4>{selectedObjectIds.length} Objects selected</h4>
+              <div className="wb-inline-buttons">
+                <button onClick={() => alignSelectedObjects('left')}>Align Left</button>
+                <button onClick={() => alignSelectedObjects('centerX')}>Align Center X</button>
+                <button onClick={() => alignSelectedObjects('right')}>Align Right</button>
+              </div>
+              <div className="wb-inline-buttons">
+                <button onClick={() => alignSelectedObjects('top')}>Align Top</button>
+                <button onClick={() => alignSelectedObjects('centerY')}>Align Center Y</button>
+                <button onClick={() => alignSelectedObjects('bottom')}>Align Bottom</button>
+              </div>
+              <div className="wb-inline-buttons">
+                <button onClick={() => nudgeSelectedObjects(-1, 0)}>Nudge -X</button>
+                <button onClick={() => nudgeSelectedObjects(1, 0)}>Nudge +X</button>
+                <button onClick={() => nudgeSelectedObjects(0, -1)}>Nudge -Y</button>
+                <button onClick={() => nudgeSelectedObjects(0, 1)}>Nudge +Y</button>
+              </div>
+              <p className="wb-hint">Marquee: leerer Bereich ziehen. Shift+Click add/remove.</p>
+            </>
+          ) : null}
           {selectedObject ? (
             <>
               <h4>Object: {selectedObject.key}</h4>
@@ -1933,6 +2326,11 @@ function App() {
                 <button onClick={() => updateObject(selectedObject.id, { depth: Math.round(selectedObject.y) })}>Depth = Y</button>
                 <button onClick={() => nudgeObjectDepth(selectedObject.id, 1)}>+1</button>
                 <button onClick={() => nudgeObjectDepth(selectedObject.id, 10)}>+10</button>
+              </div>
+              <div className="wb-inline-buttons">
+                <button onClick={() => applyObjectLayerPreset(selectedObject.id, 'backdrop')}>Preset: Backdrop</button>
+                <button onClick={() => applyObjectLayerPreset(selectedObject.id, 'foot')}>Preset: Foot Layer</button>
+                <button onClick={() => applyObjectLayerPreset(selectedObject.id, 'roof')}>Preset: Roof / Behind</button>
               </div>
               <label htmlFor="obj-render-group">Render Group</label>
               <select
@@ -1971,7 +2369,16 @@ function App() {
                 <button onClick={() => autoColliderFromObject(selectedObject.id)}>Auto Collider from Object</button>
                 <button onClick={() => createDoorTriggerFromObject(selectedObject.id)}>Create Door Trigger</button>
               </div>
-              <p className="wb-hint">Walkability wird ueber Collider + Blocking gesteuert. Render-Layer steuert nur, was visuell oben liegt.</p>
+              <div className="wb-inline-buttons">
+                <button onClick={() => nudgeLinkedCollider(selectedObject.id, 'topDown')} disabled={!selectedObjectPrimaryCollider}>Hitbox Top +4 (nach unten)</button>
+                <button onClick={() => nudgeLinkedCollider(selectedObject.id, 'topUp')} disabled={!selectedObjectPrimaryCollider}>Hitbox Top -4 (nach oben)</button>
+              </div>
+              <div className="wb-inline-buttons">
+                <button onClick={() => nudgeLinkedCollider(selectedObject.id, 'narrow')} disabled={!selectedObjectPrimaryCollider}>Hitbox schmaler</button>
+                <button onClick={() => nudgeLinkedCollider(selectedObject.id, 'wider')} disabled={!selectedObjectPrimaryCollider}>Hitbox breiter</button>
+              </div>
+              <p className="wb-hint">Walkability wird ueber Collider + Blocking gesteuert. Depth-Linie zeigt, ab welcher Y-Hoehe der Player vor/hinter dem Objekt liegt.</p>
+              <p className="wb-hint">Linked Collider: {selectedObjectPrimaryCollider ? selectedObjectPrimaryCollider.id : 'none'} | Linked Triggers: {selectedObjectLinkedTriggers.length}</p>
             </>
           ) : null}
 
