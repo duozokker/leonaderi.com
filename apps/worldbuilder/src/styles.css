@@ -104,6 +104,13 @@ button:hover {
   gap: 0.25rem;
 }
 
+.wb-legend {
+  margin: 0 0 0.65rem;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
 .wb-list button {
   text-align: left;
 }
@@ -123,6 +130,23 @@ select {
   padding: 0.35rem;
 }
 
+label {
+  display: block;
+  margin: 0.45rem 0 0.2rem;
+  color: #cbd5e1;
+  font-size: 0.84rem;
+}
+
+.wb-inline-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.wb-inline-check input[type='checkbox'] {
+  margin: 0;
+}
+
 textarea {
   min-height: 100px;
 }
@@ -130,6 +154,20 @@ textarea {
 .wb-canvas {
   display: flex;
   flex-direction: column;
+  gap: 0.5rem;
+}
+
+.wb-canvas-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.wb-canvas-toolbar label {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
   gap: 0.5rem;
 }
 
@@ -162,6 +200,28 @@ textarea {
   flex: 1;
   min-height: 500px;
   font-family: 'IBM Plex Mono', monospace;
+}
+
+.wb-status {
+  border: 1px solid #334155;
+  padding: 0.5rem 0.7rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.wb-status.ok {
+  border-color: #065f46;
+  background: rgba(6, 95, 70, 0.35);
+}
+
+.wb-status.warn {
+  border-color: #92400e;
+  background: rgba(146, 64, 14, 0.35);
+}
+
+.wb-status.error {
+  border-color: #b91c1c;
+  background: rgba(153, 27, 27, 0.35);
 }
 
 .err {

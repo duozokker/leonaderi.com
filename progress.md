@@ -1,0 +1,41 @@
+Original prompt: verbessere den weiter! der ist immer noch buggy und viele sachen kann man nicht benutzen! mache das so lange bis man das wirklich gut nutzen kann und es keine fehler gibt! höre nicht auf und gehe jedes kleinste detail durch. stoppe nur wenn du wirklich nix mehr findest. bevor du dir denkst dass du stoppen willst geh nochmal durch, finde fehler oder sachen die UI/UX technisch noch nicht optimal sind und verbessere sie! mache das als loop dauerhaft für stunden bis das tool perfekt ist
+
+## Session Log
+- Initialized progress tracking for worldbuilder stability loop.
+- Next: run Playwright client against worldbuilder app, inspect screenshots/state/errors, and iterate fixes.
+
+## TODO
+- Reproduce current bugs with scripted interactions and capture baseline artifacts.
+- Fix highest-impact UX blockers in canvas selection/resize/pan and inspector sync.
+- Improve save/load reliability and user feedback for parse/validation errors.
+- Add guardrails for bad numeric input and invalid transforms.
+- Re-test with Playwright until no obvious regressions remain.
+- Baseline Playwright run completed; screenshots were black canvas-only captures and no render_game_to_text output exists yet.
+- Next fixes: add deterministic text-state hook, strengthen canvas rendering observability, and improve UI interactions.
+- Confirmed real worldbuilder instance at http://localhost:5188 (earlier runs hit wrong app port).
+- Starting UI bug pass: selection/inspector sync, canvas transforms, tabs, and import/save error handling.
+- Implemented stability pass in apps/worldbuilder:
+  - Added local draft/session autosave to localStorage and reset-local-draft control.
+  - Added robust JSON import/apply/save error handling with status toasts.
+  - Added duplicate/delete actions (buttons + keyboard shortcuts).
+  - Added canvas UX controls: snap grid, labels toggle, Space+drag pan, cursor-centered wheel zoom, reset view.
+  - Added trigger resize transform support and disabled entity drag while panning.
+  - Added inspector enhancements: trigger type/enabled/interaction ID + NPC interaction ID edits.
+  - Added render_game_to_text and advanceTime hooks for automated test loop.
+  - Added worldbuilder favicon to remove 404 console error.
+- Playwright loop rerun on worldbuilder URL (http://localhost:5188):
+  - screenshots generated in output/worldbuilder-loop/after-fixes
+  - state JSON generated (state-0..2)
+  - no errors-*.json emitted
+- Validation:
+  - npm run lint ✅
+  - npm run build -w @leonaderi/worldbuilder ✅
+  - npm run build (root) ✅
+
+## Remaining Ideas
+- Add marquee/multi-select and true drag-resize handles for side-specific constraints.
+- Add dedicated trigger-to-interaction editor table (create/select actions inline).
+- Add minimap + fit-to-selection for large maps.
+- Add undo/redo stack persisted in session.
+- Final verification pass done after setting strict worldbuilder dev port to 5188.
+- Playwright artifacts: output/worldbuilder-loop/final-pass (shots + state; no errors files).
