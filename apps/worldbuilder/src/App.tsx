@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type Konva from 'konva'
-import { Layer, Rect, Stage, Text, Transformer, Group, Circle } from 'react-konva'
+import { Layer, Rect, Stage, Text, Transformer, Group, Circle, Image as KonvaImage } from 'react-konva'
 import ReactFlow, {
   Background,
   Controls,
@@ -30,6 +30,7 @@ type Selection =
 
 type Tabs = 'canvas' | 'dialogue' | 'validation' | 'json'
 type StatusTone = 'ok' | 'warn' | 'error'
+type BackgroundMode = 'abstract' | 'rendered' | 'blend'
 
 type FileHandleLike = {
   createWritable?: () => Promise<{
@@ -266,6 +267,9 @@ function App() {
   const [frameCounter, setFrameCounter] = useState(0)
   const [history, setHistory] = useState<AuthoringWorldV1[]>([])
   const [future, setFuture] = useState<AuthoringWorldV1[]>([])
+  const [backgroundMode, setBackgroundMode] = useState<BackgroundMode>('abstract')
+  const [backgroundBlendOpacity, setBackgroundBlendOpacity] = useState(0.4)
+  const [renderedMapImage, setRenderedMapImage] = useState<HTMLImageElement | null>(null)
   const [layerVisibility, setLayerVisibility] = useState({
     objects: true,
     colliders: true,
@@ -280,6 +284,12 @@ function App() {
     npcs: false,
   })
 
+  useEffect(() => {
+    const img = new window.Image()
+    img.src = '/map-composite.png'
+    img.onload = () => setRenderedMapImage(img)
+  }, [])
+
   const selectedDialogue = useMemo(
     () => world.dialogues.find((item) => item.id === dialogueId) ?? world.dialogues[0] ?? null,
     [world.dialogues, dialogueId],
@@ -293,6 +303,7 @@ function App() {
   const selectedTrigger = selection.kind === 'trigger' ? world.triggers.find((item) => item.id === selection.id) ?? null : null
   const selectedNpc = selection.kind === 'npc' ? world.npcs.find((item) => item.id === selection.id) ?? null : null
   const selectedPoi = selection.kind === 'poi' ? world.poiIndex.find((item) => item.id === selection.id) ?? null : null
+  const selectedInteraction = selectedTrigger?.interactionId ? world.interactions.find((item) => item.id === selectedTrigger.interactionId) ?? null : null
 
   const selectedRef = useRef<Konva.Node | null>(null)
   const transformerRef = useRef<Konva.Transformer | null>(null)
@@ -452,6 +463,43 @@ function App() {
       poiIndex: world.poiIndex.map((item) => (item.id === id ? { ...item, ...patch } : item)),
       meta: { ...world.meta, updatedAt: new Date().toISOString() },
     })
+  }
+
+  const updateInteraction = (interactionId: string, updater: (current: AuthoringWorldV1['interactions'][number]) => AuthoringWorldV1['interactions'][number]) => {
+    updateWorld({
+      ...world,
+      interactions: world.interactions.map((item) => (item.id === interactionId ? updater(item) : item)),
+      meta: { ...world.meta, updatedAt: new Date().toISOString() },
+    })
+  }
+
+  const createInteractionForTrigger = (triggerId: string) => {
+    const trigger = world.triggers.find((item) => item.id === triggerId)
+    if (!trigger) return
+    const existing = trigger.interactionId ? world.interactions.find((item) => item.id === trigger.interactionId) : null
+    if (existing) return
+    const interactionId = `int-${Date.now()}`
+    updateWorld({
+      ...world,
+      triggers: world.triggers.map((item) => item.id === triggerId ? { ...item, interactionId } : item),
+      interactions: [
+        ...world.interactions,
+        {
+          id: interactionId,
+          triggerId,
+          actions: [
+            {
+              id: `action-${Date.now()}`,
+              label: 'Show Dialogue',
+              type: 'open_dialogue',
+              dialogueId: world.dialogues[0]?.id ?? '',
+            },
+          ],
+        },
+      ],
+      meta: { ...world.meta, updatedAt: new Date().toISOString() },
+    })
+    showStatus('ok', 'Interaction erstellt')
   }
 
   const parseAndLoadWorld = (source: string, context: string) => {
@@ -1054,6 +1102,8 @@ function App() {
       zoom,
       camera,
       panMode: panMode || spaceHeld || middlePanActive,
+      backgroundMode,
+      backgroundBlendOpacity,
       map: { width: mapWidth, height: mapHeight, tileSize: world.map.tileSize },
       counts: {
         objects: world.objects.length,
@@ -1077,7 +1127,7 @@ function App() {
       delete window.render_game_to_text
       delete window.advanceTime
     }
-  }, [tab, selection, zoom, camera, panMode, spaceHeld, middlePanActive, mapWidth, mapHeight, world.map.tileSize, world.objects.length, world.colliders.length, world.triggers.length, world.npcs.length, world.poiIndex.length, frameCounter, history.length, future.length, layerLock, layerVisibility, drawOrderedObjects])
+  }, [tab, selection, zoom, camera, panMode, spaceHeld, middlePanActive, backgroundMode, backgroundBlendOpacity, mapWidth, mapHeight, world.map.tileSize, world.objects.length, world.colliders.length, world.triggers.length, world.npcs.length, world.poiIndex.length, frameCounter, history.length, future.length, layerLock, layerVisibility, drawOrderedObjects])
 
   const minimapScale = Math.min(180 / mapWidth, 120 / mapHeight)
   const minimapWidth = mapWidth * minimapScale
@@ -1199,6 +1249,33 @@ function App() {
                   Reset View
                 </button>
                 <span className="wb-history-pill">History {history.length} / Redo {future.length}</span>
+                <label className="wb-inline-check" htmlFor="bg-mode-select">
+                  View
+                  <select
+                    id="bg-mode-select"
+                    className="wb-input"
+                    value={backgroundMode}
+                    onChange={(event) => setBackgroundMode(event.target.value as BackgroundMode)}
+                  >
+                    <option value="abstract">Abstract</option>
+                    <option value="rendered">Rendered</option>
+                    <option value="blend">Blend</option>
+                  </select>
+                </label>
+                {backgroundMode === 'blend' ? (
+                  <label className="wb-inline-check" htmlFor="blend-opacity-range">
+                    Blend
+                    <input
+                      id="blend-opacity-range"
+                      type="range"
+                      min="0.05"
+                      max="1"
+                      step="0.05"
+                      value={backgroundBlendOpacity}
+                      onChange={(event) => setBackgroundBlendOpacity(Number(event.target.value))}
+                    />
+                  </label>
+                ) : null}
               </div>
               <div className="wb-layer-toggles">
                 <label className="wb-inline-check">
@@ -1319,17 +1396,32 @@ function App() {
                       setCamera(clampCameraToBounds(event.target.x(), event.target.y(), zoom))
                     }}
                   >
-                    {world.map.terrainGrid.map((row, y) => row.map((terrain, x) => (
-                      <Rect
-                        key={`t-${x}-${y}`}
-                        x={x * world.map.tileSize}
-                        y={y * world.map.tileSize}
-                        width={world.map.tileSize}
-                        height={world.map.tileSize}
-                        fill={terrainColor(terrain)}
+                    {(backgroundMode === 'rendered' || backgroundMode === 'blend') && renderedMapImage ? (
+                      <KonvaImage
+                        image={renderedMapImage}
+                        x={0}
+                        y={0}
+                        width={mapWidth}
+                        height={mapHeight}
                         listening={false}
+                        opacity={backgroundMode === 'blend' ? 1 : 1}
                       />
-                    )))}
+                    ) : null}
+
+                    {(backgroundMode === 'abstract' || backgroundMode === 'blend')
+                      ? world.map.terrainGrid.map((row, y) => row.map((terrain, x) => (
+                        <Rect
+                          key={`t-${x}-${y}`}
+                          x={x * world.map.tileSize}
+                          y={y * world.map.tileSize}
+                          width={world.map.tileSize}
+                          height={world.map.tileSize}
+                          fill={terrainColor(terrain)}
+                          opacity={backgroundMode === 'blend' ? backgroundBlendOpacity : 1}
+                          listening={false}
+                        />
+                      )))
+                      : null}
 
                     {snapToGrid ? (
                       <>
@@ -1744,6 +1836,225 @@ function App() {
                   })
                 }}
               />
+              {!selectedInteraction ? (
+                <button onClick={() => createInteractionForTrigger(selectedTrigger.id)}>Create Interaction</button>
+              ) : (
+                <div className="wb-nested-card">
+                  <h5>Interaction: {selectedInteraction.id}</h5>
+                  {selectedInteraction.actions.map((action) => (
+                    <div key={action.id} className="wb-nested-card">
+                      <label htmlFor={`action-label-${action.id}`}>Action Label</label>
+                      <input
+                        id={`action-label-${action.id}`}
+                        className="wb-input"
+                        value={action.label}
+                        onChange={(event) => {
+                          updateInteraction(selectedInteraction.id, (interaction) => ({
+                            ...interaction,
+                            actions: interaction.actions.map((item) => item.id === action.id ? { ...item, label: event.target.value } : item),
+                          }))
+                        }}
+                      />
+                      <label htmlFor={`action-type-${action.id}`}>Type</label>
+                      <select
+                        id={`action-type-${action.id}`}
+                        className="wb-input"
+                        value={action.type}
+                        onChange={(event) => {
+                          const nextType = event.target.value as AuthoringWorldV1['interactions'][number]['actions'][number]['type']
+                          updateInteraction(selectedInteraction.id, (interaction) => ({
+                            ...interaction,
+                            actions: interaction.actions.map((item) => {
+                              if (item.id !== action.id) return item
+                              if (nextType === 'open_dialogue') {
+                                return { id: item.id, label: item.label, type: 'open_dialogue', dialogueId: world.dialogues[0]?.id ?? '' }
+                              }
+                              if (nextType === 'open_link_confirm') {
+                                return { id: item.id, label: item.label, type: 'open_link_confirm', href: 'https://example.com', confirmMessage: 'Diesen Link oeffnen?' }
+                              }
+                              if (nextType === 'set_flag') {
+                                return { id: item.id, label: item.label, type: 'set_flag', flag: 'flag_example', value: true }
+                              }
+                              if (nextType === 'teleport') {
+                                return { id: item.id, label: item.label, type: 'teleport', target: { x: 100, y: 100 } }
+                              }
+                              if (nextType === 'open_modal') {
+                                return { id: item.id, label: item.label, type: 'open_modal', modalKey: 'about' }
+                              }
+                              return { id: item.id, label: item.label, type: 'show_toast', message: 'Hello' }
+                            }),
+                          }))
+                        }}
+                      >
+                        <option value="open_dialogue">open_dialogue</option>
+                        <option value="open_link_confirm">open_link_confirm</option>
+                        <option value="show_toast">show_toast</option>
+                        <option value="set_flag">set_flag</option>
+                        <option value="teleport">teleport</option>
+                        <option value="open_modal">open_modal</option>
+                      </select>
+                      {action.type === 'open_dialogue' ? (
+                        <>
+                          <label htmlFor={`action-dialogue-${action.id}`}>Dialogue</label>
+                          <select
+                            id={`action-dialogue-${action.id}`}
+                            className="wb-input"
+                            value={action.dialogueId}
+                            onChange={(event) => {
+                              updateInteraction(selectedInteraction.id, (interaction) => ({
+                                ...interaction,
+                                actions: interaction.actions.map((item) => item.id === action.id && item.type === 'open_dialogue'
+                                  ? { ...item, dialogueId: event.target.value }
+                                  : item),
+                              }))
+                            }}
+                          >
+                            {world.dialogues.map((dialogue) => (
+                              <option key={dialogue.id} value={dialogue.id}>{dialogue.title}</option>
+                            ))}
+                          </select>
+                        </>
+                      ) : null}
+                      {action.type === 'open_link_confirm' ? (
+                        <>
+                          <label htmlFor={`action-href-${action.id}`}>Href</label>
+                          <input
+                            id={`action-href-${action.id}`}
+                            className="wb-input"
+                            value={action.href}
+                            onChange={(event) => {
+                              updateInteraction(selectedInteraction.id, (interaction) => ({
+                                ...interaction,
+                                actions: interaction.actions.map((item) => item.id === action.id && item.type === 'open_link_confirm'
+                                  ? { ...item, href: event.target.value }
+                                  : item),
+                              }))
+                            }}
+                          />
+                          <label htmlFor={`action-confirm-${action.id}`}>Confirm Text</label>
+                          <input
+                            id={`action-confirm-${action.id}`}
+                            className="wb-input"
+                            value={action.confirmMessage ?? ''}
+                            onChange={(event) => {
+                              updateInteraction(selectedInteraction.id, (interaction) => ({
+                                ...interaction,
+                                actions: interaction.actions.map((item) => item.id === action.id && item.type === 'open_link_confirm'
+                                  ? { ...item, confirmMessage: event.target.value }
+                                  : item),
+                              }))
+                            }}
+                          />
+                        </>
+                      ) : null}
+                      {action.type === 'show_toast' ? (
+                        <>
+                          <label htmlFor={`action-message-${action.id}`}>Message</label>
+                          <input
+                            id={`action-message-${action.id}`}
+                            className="wb-input"
+                            value={action.message}
+                            onChange={(event) => {
+                              updateInteraction(selectedInteraction.id, (interaction) => ({
+                                ...interaction,
+                                actions: interaction.actions.map((item) => item.id === action.id && item.type === 'show_toast'
+                                  ? { ...item, message: event.target.value }
+                                  : item),
+                              }))
+                            }}
+                          />
+                        </>
+                      ) : null}
+                      {action.type === 'set_flag' ? (
+                        <>
+                          <label htmlFor={`action-flag-${action.id}`}>Flag</label>
+                          <input
+                            id={`action-flag-${action.id}`}
+                            className="wb-input"
+                            value={action.flag}
+                            onChange={(event) => {
+                              updateInteraction(selectedInteraction.id, (interaction) => ({
+                                ...interaction,
+                                actions: interaction.actions.map((item) => item.id === action.id && item.type === 'set_flag'
+                                  ? { ...item, flag: event.target.value }
+                                  : item),
+                              }))
+                            }}
+                          />
+                        </>
+                      ) : null}
+                      {action.type === 'teleport' ? (
+                        <>
+                          <label htmlFor={`action-target-x-${action.id}`}>Target X</label>
+                          {numberInput(`action-target-x-${action.id}`, action.target.x, (next) => {
+                            updateInteraction(selectedInteraction.id, (interaction) => ({
+                              ...interaction,
+                              actions: interaction.actions.map((item) => item.id === action.id && item.type === 'teleport'
+                                ? { ...item, target: { ...item.target, x: next } }
+                                : item),
+                            }))
+                          })}
+                          <label htmlFor={`action-target-y-${action.id}`}>Target Y</label>
+                          {numberInput(`action-target-y-${action.id}`, action.target.y, (next) => {
+                            updateInteraction(selectedInteraction.id, (interaction) => ({
+                              ...interaction,
+                              actions: interaction.actions.map((item) => item.id === action.id && item.type === 'teleport'
+                                ? { ...item, target: { ...item.target, y: next } }
+                                : item),
+                            }))
+                          })}
+                        </>
+                      ) : null}
+                      {action.type === 'open_modal' ? (
+                        <>
+                          <label htmlFor={`action-modal-${action.id}`}>Modal Key</label>
+                          <input
+                            id={`action-modal-${action.id}`}
+                            className="wb-input"
+                            value={action.modalKey}
+                            onChange={(event) => {
+                              updateInteraction(selectedInteraction.id, (interaction) => ({
+                                ...interaction,
+                                actions: interaction.actions.map((item) => item.id === action.id && item.type === 'open_modal'
+                                  ? { ...item, modalKey: event.target.value }
+                                  : item),
+                              }))
+                            }}
+                          />
+                        </>
+                      ) : null}
+                      <button
+                        onClick={() => {
+                          updateInteraction(selectedInteraction.id, (interaction) => ({
+                            ...interaction,
+                            actions: interaction.actions.filter((item) => item.id !== action.id),
+                          }))
+                        }}
+                      >
+                        Remove Action
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => {
+                      updateInteraction(selectedInteraction.id, (interaction) => ({
+                        ...interaction,
+                        actions: [
+                          ...interaction.actions,
+                          {
+                            id: `action-${Date.now()}`,
+                            label: 'Show Dialogue',
+                            type: 'open_dialogue',
+                            dialogueId: world.dialogues[0]?.id ?? '',
+                          },
+                        ],
+                      }))
+                    }}
+                  >
+                    Add Action
+                  </button>
+                </div>
+              )}
               <label className="wb-inline-check" htmlFor="trigger-enabled">
                 <input
                   id="trigger-enabled"

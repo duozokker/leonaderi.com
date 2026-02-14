@@ -177,6 +177,15 @@ textarea {
   gap: 0.5rem;
 }
 
+.wb-canvas-toolbar .wb-input {
+  width: auto;
+  min-width: 120px;
+}
+
+.wb-canvas-toolbar input[type='range'] {
+  width: 130px;
+}
+
 .wb-history-pill {
   border: 1px solid #334155;
   border-radius: 999px;
