@@ -167,10 +167,10 @@ function App() {
     gameEventBus.emit('admin:patch-updated', { patch })
   }, [patch])
 
-  const closeEntryModal = (): void => {
+  const closeEntryModal = useCallback((): void => {
     setActiveEntry(null)
     setEntryNote(null)
-  }
+  }, [])
 
   const handleEntryAction = (entry: PoiEntry, action: PoiAction): void => {
     if (action.type === 'open_link' && action.href) {
@@ -186,11 +186,11 @@ function App() {
     setEntryNote(getActionModalMessage(entry, action))
   }
 
-  const closeConfirm = (): void => {
+  const closeConfirm = useCallback((): void => {
     setConfirmState(defaultConfirmState)
-  }
+  }, [])
 
-  const proceedConfirm = (): void => {
+  const proceedConfirm = useCallback((): void => {
     const href = confirmState.href
     if (href) {
       window.open(href, '_blank', 'noopener,noreferrer')
@@ -199,7 +199,33 @@ function App() {
     setConfirmState(defaultConfirmState)
     setActiveEntry(null)
     setEntryNote(null)
-  }
+  }, [confirmState.href])
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+
+      if (confirmState.open) {
+        event.preventDefault()
+        closeConfirm()
+        return
+      }
+
+      if (activeEntry) {
+        event.preventDefault()
+        closeEntryModal()
+        return
+      }
+
+      if (introOpen) {
+        event.preventDefault()
+        setIntroOpen(false)
+      }
+    }
+
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [activeEntry, closeConfirm, closeEntryModal, confirmState.open, introOpen])
 
   const uiText = patch.global.uiTextOverrides ?? {}
   const statusLabels = {

@@ -139,3 +139,31 @@ Original prompt: verbessere den weiter! der ist immer noch buggy und viele sache
   - npm run lint ✅
   - npm run build -w @leonaderi/worldbuilder ✅
   - Playwright run: output/worldbuilder-loop/loop-14 (no errors file generated).
+- Runtime stability pass:
+  - Overworld scene now unsubscribes all global event-bus handlers on scene shutdown/destroy to prevent duplicate handlers after restarts.
+  - Building name tags now follow object-local depth (`spriteDepth + 1`) instead of fixed top-most depth, reducing visual overlap artifacts.
+- Portfolio modal UX/accessibility pass:
+  - Entry and Confirm modals now expose `role=dialog` + `aria-modal`.
+  - Backdrop click closes modal.
+  - Keyboard focus now lands on modal action buttons when opened.
+  - Escape handling in app shell closes confirm -> entry -> intro in order.
+- Worldbuilder UX/control pass:
+  - Save/Open/Export flows converted to stable callbacks.
+  - New keyboard shortcuts: Cmd/Ctrl+S save, Cmd/Ctrl+O open, G cycles view mode.
+  - Legend and overlay hints updated to include new shortcuts.
+- Validation hardening:
+  - Extracted world validation into `apps/worldbuilder/src/lib/validation.ts` with broader checks:
+    - duplicates, bounds checks, missing object refs, missing trigger interaction links,
+      dialogue graph integrity + unreachable nodes.
+  - Added test coverage in `tests/worldbuilderValidation.test.ts`.
+- Playwright + manual verification:
+  - Worldbuilder Playwright: `output/worldbuilder-loop/loop-15`.
+  - Portfolio Playwright: `output/portfolio-loop/loop-1`, `output/portfolio-loop/loop-2-headed` (canvas capture issue remains black in this client).
+  - Manual browser verification screenshots:
+    - `output/portfolio-loop/manual-intro.png`
+    - `output/portfolio-loop/manual-world.png`
+    - `output/worldbuilder-loop/manual-loop-current.png`
+- Online references checked for editor/runtime decisions:
+  - Phaser depth sorting docs
+  - Tiled editor docs
+  - React Flow docs and map editor repos (RPG Paper Maker, Tiled)

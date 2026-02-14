@@ -1,5 +1,5 @@
 import type { PoiAction, PoiEntry } from '../../content/types'
-import type { CSSProperties } from 'react'
+import { useEffect, useRef, type CSSProperties } from 'react'
 
 interface EntryModalProps {
   entry: PoiEntry | null
@@ -11,6 +11,13 @@ interface EntryModalProps {
 }
 
 export function EntryModal({ entry, note, onClose, onAction, statusLabels, closeLabel }: EntryModalProps) {
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null)
+
+  useEffect(() => {
+    if (!entry) return
+    closeButtonRef.current?.focus()
+  }, [entry])
+
   if (!entry) {
     return null
   }
@@ -18,8 +25,10 @@ export function EntryModal({ entry, note, onClose, onAction, statusLabels, close
   const previewStyle = { '--accent': entry.accentColor } as CSSProperties
 
   return (
-    <div className="modal-backdrop">
-      <div className="modal-card entry-card">
+    <div className="modal-backdrop" onMouseDown={(event) => {
+      if (event.target === event.currentTarget) onClose()
+    }}>
+      <div className="modal-card entry-card" role="dialog" aria-modal="true" aria-label={entry.dialog.title}>
         <div className="entry-layout">
           <div className="entry-preview" style={previewStyle}>
             <div className="entry-preview-house" />
@@ -47,7 +56,7 @@ export function EntryModal({ entry, note, onClose, onAction, statusLabels, close
             </button>
           ))}
 
-          <button className="pixel-btn primary" onClick={onClose} type="button">
+          <button ref={closeButtonRef} className="pixel-btn primary" onClick={onClose} type="button">
             {closeLabel}
           </button>
         </div>
