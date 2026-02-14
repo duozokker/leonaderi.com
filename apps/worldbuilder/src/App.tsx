@@ -266,6 +266,19 @@ function App() {
   const [frameCounter, setFrameCounter] = useState(0)
   const [history, setHistory] = useState<AuthoringWorldV1[]>([])
   const [future, setFuture] = useState<AuthoringWorldV1[]>([])
+  const [layerVisibility, setLayerVisibility] = useState({
+    objects: true,
+    colliders: true,
+    triggers: true,
+    npcs: true,
+    minimap: true,
+  })
+  const [layerLock, setLayerLock] = useState({
+    objects: false,
+    colliders: false,
+    triggers: false,
+    npcs: false,
+  })
 
   const selectedDialogue = useMemo(
     () => world.dialogues.find((item) => item.id === dialogueId) ?? world.dialogues[0] ?? null,
@@ -857,6 +870,66 @@ function App() {
     ))
   }, [clampCameraToBounds, mapHeight, mapWidth])
 
+  const frameSelection = useCallback(() => {
+    const padding = 60
+    if (selectedObject) {
+      const targetZoom = clampZoom(Math.min(
+        (stageWidth - padding * 2) / selectedObject.width,
+        (stageHeight - padding * 2) / selectedObject.height,
+      ))
+      setZoom(targetZoom)
+      setCamera(clampCameraToBounds(
+        stageWidth / 2 - selectedObject.x * targetZoom,
+        stageHeight / 2 - selectedObject.y * targetZoom,
+        targetZoom,
+      ))
+      return
+    }
+    if (selectedCollider?.shape.type === 'rect') {
+      const rect = selectedCollider.shape.rect
+      const cx = rect.x + rect.width / 2
+      const cy = rect.y + rect.height / 2
+      const targetZoom = clampZoom(Math.min(
+        (stageWidth - padding * 2) / rect.width,
+        (stageHeight - padding * 2) / rect.height,
+      ))
+      setZoom(targetZoom)
+      setCamera(clampCameraToBounds(
+        stageWidth / 2 - cx * targetZoom,
+        stageHeight / 2 - cy * targetZoom,
+        targetZoom,
+      ))
+      return
+    }
+    if (selectedTrigger?.shape.type === 'rect') {
+      const rect = selectedTrigger.shape.rect
+      const cx = rect.x + rect.width / 2
+      const cy = rect.y + rect.height / 2
+      const targetZoom = clampZoom(Math.min(
+        (stageWidth - padding * 2) / rect.width,
+        (stageHeight - padding * 2) / rect.height,
+      ))
+      setZoom(targetZoom)
+      setCamera(clampCameraToBounds(
+        stageWidth / 2 - cx * targetZoom,
+        stageHeight / 2 - cy * targetZoom,
+        targetZoom,
+      ))
+      return
+    }
+    if (selectedNpc) {
+      const targetZoom = clampZoom(2.2)
+      setZoom(targetZoom)
+      setCamera(clampCameraToBounds(
+        stageWidth / 2 - selectedNpc.x * targetZoom,
+        stageHeight / 2 - selectedNpc.y * targetZoom,
+        targetZoom,
+      ))
+      return
+    }
+    fitMapView()
+  }, [clampCameraToBounds, fitMapView, selectedCollider, selectedNpc, selectedObject, selectedTrigger])
+
   const undo = useCallback(() => {
     setHistory((prev) => {
       if (prev.length === 0) return prev
@@ -927,7 +1000,11 @@ function App() {
       }
 
       if (!isTypingTarget && event.key.toLowerCase() === 'f') {
-        fitMapView()
+        if (event.shiftKey) {
+          fitMapView()
+        } else {
+          frameSelection()
+        }
         event.preventDefault()
       }
 
@@ -968,7 +1045,7 @@ function App() {
       window.removeEventListener('keydown', keydown)
       window.removeEventListener('keyup', keyup)
     }
-  }, [camera, clampCameraToBounds, fitMapView, redo, selection, undo, zoom])
+  }, [camera, clampCameraToBounds, fitMapView, frameSelection, redo, selection, undo, zoom])
 
   useEffect(() => {
     window.render_game_to_text = () => JSON.stringify({
@@ -986,6 +1063,7 @@ function App() {
         pois: world.poiIndex.length,
       },
       history: { undo: history.length, redo: future.length },
+      layers: { visibility: layerVisibility, lock: layerLock },
       topLayers: drawOrderedObjects.slice(-5).map((item) => ({ id: item.id, key: item.key, depth: item.depth })),
       frameCounter,
       coordinateSystem: 'origin: top-left, +x right, +y down',
@@ -999,7 +1077,7 @@ function App() {
       delete window.render_game_to_text
       delete window.advanceTime
     }
-  }, [tab, selection, zoom, camera, panMode, spaceHeld, middlePanActive, mapWidth, mapHeight, world.map.tileSize, world.objects.length, world.colliders.length, world.triggers.length, world.npcs.length, world.poiIndex.length, frameCounter, history.length, future.length, drawOrderedObjects])
+  }, [tab, selection, zoom, camera, panMode, spaceHeld, middlePanActive, mapWidth, mapHeight, world.map.tileSize, world.objects.length, world.colliders.length, world.triggers.length, world.npcs.length, world.poiIndex.length, frameCounter, history.length, future.length, layerLock, layerVisibility, drawOrderedObjects])
 
   const minimapScale = Math.min(180 / mapWidth, 120 / mapHeight)
   const minimapWidth = mapWidth * minimapScale
@@ -1109,6 +1187,7 @@ function App() {
                 <button onClick={() => setPanMode((prev) => !prev)}>
                   {panMode ? 'Pan: ON' : 'Pan: OFF'}
                 </button>
+                <button onClick={frameSelection}>Frame Selected</button>
                 <button onClick={fitMapView}>Fit Map</button>
                 <button
                   onClick={() => {
@@ -1120,6 +1199,46 @@ function App() {
                   Reset View
                 </button>
                 <span className="wb-history-pill">History {history.length} / Redo {future.length}</span>
+              </div>
+              <div className="wb-layer-toggles">
+                <label className="wb-inline-check">
+                  <input type="checkbox" checked={layerVisibility.objects} onChange={(event) => setLayerVisibility((prev) => ({ ...prev, objects: event.target.checked }))} />
+                  Objects
+                </label>
+                <label className="wb-inline-check">
+                  <input type="checkbox" checked={layerVisibility.colliders} onChange={(event) => setLayerVisibility((prev) => ({ ...prev, colliders: event.target.checked }))} />
+                  Colliders
+                </label>
+                <label className="wb-inline-check">
+                  <input type="checkbox" checked={layerVisibility.triggers} onChange={(event) => setLayerVisibility((prev) => ({ ...prev, triggers: event.target.checked }))} />
+                  Triggers
+                </label>
+                <label className="wb-inline-check">
+                  <input type="checkbox" checked={layerVisibility.npcs} onChange={(event) => setLayerVisibility((prev) => ({ ...prev, npcs: event.target.checked }))} />
+                  NPCs
+                </label>
+                <label className="wb-inline-check">
+                  <input type="checkbox" checked={layerVisibility.minimap} onChange={(event) => setLayerVisibility((prev) => ({ ...prev, minimap: event.target.checked }))} />
+                  Minimap
+                </label>
+              </div>
+              <div className="wb-layer-toggles">
+                <label className="wb-inline-check">
+                  <input type="checkbox" checked={layerLock.objects} onChange={(event) => setLayerLock((prev) => ({ ...prev, objects: event.target.checked }))} />
+                  Lock Objects
+                </label>
+                <label className="wb-inline-check">
+                  <input type="checkbox" checked={layerLock.colliders} onChange={(event) => setLayerLock((prev) => ({ ...prev, colliders: event.target.checked }))} />
+                  Lock Colliders
+                </label>
+                <label className="wb-inline-check">
+                  <input type="checkbox" checked={layerLock.triggers} onChange={(event) => setLayerLock((prev) => ({ ...prev, triggers: event.target.checked }))} />
+                  Lock Triggers
+                </label>
+                <label className="wb-inline-check">
+                  <input type="checkbox" checked={layerLock.npcs} onChange={(event) => setLayerLock((prev) => ({ ...prev, npcs: event.target.checked }))} />
+                  Lock NPCs
+                </label>
               </div>
 
               <Stage
@@ -1239,7 +1358,7 @@ function App() {
                       </>
                     ) : null}
 
-                    {drawOrderedObjects.filter((object) => object.visible).map((object) => (
+                    {layerVisibility.objects ? drawOrderedObjects.filter((object) => object.visible).map((object) => (
                       <Group key={object.id}>
                         <Rect
                           ref={selection.kind === 'object' && selection.id === object.id ? selectedRef : undefined}
@@ -1250,7 +1369,7 @@ function App() {
                           fill="rgba(255, 157, 58, 0.15)"
                           stroke={selection.kind === 'object' && selection.id === object.id ? '#ffd250' : '#ff7a59'}
                           strokeWidth={selection.kind === 'object' && selection.id === object.id ? 3 : 2}
-                          draggable={!(panMode || spaceHeld || middlePanActive)}
+                          draggable={!(panMode || spaceHeld || middlePanActive || layerLock.objects)}
                           onClick={() => setSelection({ kind: 'object', id: object.id })}
                           onDragEnd={(event) => {
                             updateObject(object.id, {
@@ -1283,9 +1402,9 @@ function App() {
                           />
                         ) : null}
                       </Group>
-                    ))}
+                    )) : null}
 
-                    {world.colliders.map((collider) => collider.shape.type === 'rect' ? (
+                    {layerVisibility.colliders ? world.colliders.map((collider) => collider.shape.type === 'rect' ? (
                       <Rect
                         key={collider.id}
                         ref={selection.kind === 'collider' && selection.id === collider.id ? selectedRef : undefined}
@@ -1296,7 +1415,7 @@ function App() {
                         fill="rgba(41, 232, 255, 0.1)"
                         stroke={selection.kind === 'collider' && selection.id === collider.id ? '#9af7ff' : '#3cc8ff'}
                         strokeWidth={selection.kind === 'collider' && selection.id === collider.id ? 3 : 2}
-                        draggable={!(panMode || spaceHeld || middlePanActive)}
+                        draggable={!(panMode || spaceHeld || middlePanActive || layerLock.colliders)}
                         onClick={() => setSelection({ kind: 'collider', id: collider.id })}
                         onDragEnd={(event) => {
                           updateColliderRect(collider.id, {
@@ -1318,9 +1437,9 @@ function App() {
                           })
                         }}
                       />
-                    ) : null)}
+                    ) : null) : null}
 
-                    {world.triggers.map((trigger) => trigger.shape.type === 'rect' ? (
+                    {layerVisibility.triggers ? world.triggers.map((trigger) => trigger.shape.type === 'rect' ? (
                       <Rect
                         key={trigger.id}
                         ref={selection.kind === 'trigger' && selection.id === trigger.id ? selectedRef : undefined}
@@ -1332,7 +1451,7 @@ function App() {
                         dash={[6, 4]}
                         stroke={selection.kind === 'trigger' && selection.id === trigger.id ? '#ff8bd8' : '#ff47b6'}
                         strokeWidth={selection.kind === 'trigger' && selection.id === trigger.id ? 3 : 2}
-                        draggable={!(panMode || spaceHeld || middlePanActive)}
+                        draggable={!(panMode || spaceHeld || middlePanActive || layerLock.triggers)}
                         onClick={() => setSelection({ kind: 'trigger', id: trigger.id })}
                         onDragEnd={(event) => {
                           updateTriggerRect(trigger.id, {
@@ -1354,9 +1473,9 @@ function App() {
                           })
                         }}
                       />
-                    ) : null)}
+                    ) : null) : null}
 
-                    {world.npcs.map((npc) => (
+                    {layerVisibility.npcs ? world.npcs.map((npc) => (
                       <Circle
                         key={npc.id}
                         x={npc.x}
@@ -1365,7 +1484,7 @@ function App() {
                         fill={selection.kind === 'npc' && selection.id === npc.id ? '#ffe88f' : '#f4d35e'}
                         stroke="#7d5c00"
                         strokeWidth={2}
-                        draggable={!(panMode || spaceHeld || middlePanActive)}
+                        draggable={!(panMode || spaceHeld || middlePanActive || layerLock.npcs)}
                         onClick={() => setSelection({ kind: 'npc', id: npc.id })}
                         onDragEnd={(event) => {
                           updateNpc(npc.id, {
@@ -1374,12 +1493,14 @@ function App() {
                           })
                         }}
                       />
-                    ))}
+                    )) : null}
 
                     <Text x={8} y={8} text="Orange=Object  Cyan=Collider  Pink=Trigger  Yellow=NPC" fontSize={12} fill="#fefefe" listening={false} />
                     <Text x={8} y={22} text="Space/MiddleMouse+Drag = Pan, Wheel = Zoom, Arrows = Pan, F = Fit, Del = Delete, Cmd/Ctrl+D = Duplicate" fontSize={11} fill="#d1d5db" listening={false} />
                   </Group>
-                  <Rect x={minimapX - 2} y={minimapY - 2} width={minimapWidth + 4} height={minimapHeight + 4} fill="rgba(15, 23, 42, 0.9)" stroke="#5b708f" strokeWidth={1} listening={false} />
+                  {layerVisibility.minimap ? (
+                    <>
+                      <Rect x={minimapX - 2} y={minimapY - 2} width={minimapWidth + 4} height={minimapHeight + 4} fill="rgba(15, 23, 42, 0.9)" stroke="#5b708f" strokeWidth={1} listening={false} />
                   <Rect x={minimapX} y={minimapY} width={minimapWidth} height={minimapHeight} fill="rgba(35, 119, 219, 0.7)" listening={false} />
                   {drawOrderedObjects.filter((object) => object.visible).map((object) => (
                     <Rect
@@ -1402,6 +1523,8 @@ function App() {
                     listening={false}
                   />
                   <Text x={minimapX + 4} y={minimapY + 4} text="Minimap" fontSize={10} fill="#e5e7eb" listening={false} />
+                    </>
+                  ) : null}
                   <Transformer ref={transformerRef} rotateEnabled={false} enabledAnchors={['top-left', 'top-center', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right']} />
                 </Layer>
               </Stage>
