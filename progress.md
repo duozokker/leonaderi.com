@@ -132,3 +132,10 @@ Original prompt: verbessere den weiter! der ist immer noch buggy und viele sache
   - Re-ran lint/build and Playwright (`output/worldbuilder-loop/loop-13`).
 - Note:
   - Scripted click-selection via the current generic Playwright action client is still not reflected in `render_game_to_text` state snapshots, while pan/zoom assertions continue to work.
+- Loop 12 completed:
+  - Added a dedicated command legend panel in inspector with grouped controls (camera/tools/edit/history/selection/depth).
+  - Keeps full command reference always visible while editing.
+- Validation:
+  - npm run lint ✅
+  - npm run build -w @leonaderi/worldbuilder ✅
+  - Playwright run: output/worldbuilder-loop/loop-14 (no errors file generated).

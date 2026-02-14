@@ -2418,6 +2418,15 @@ function App() {
         <aside className="wb-sidebar right">
           <h3>Inspector</h3>
           <p className="wb-legend"><strong>Shortcuts:</strong> V/M/R Tool wechseln, Space+Drag oder MiddleMouse+Drag pan, Wheel zoom, Pfeile pan, Alt+Pfeile nudge selection, F frame, Shift+F fit, Cmd/Ctrl+A select all objects, Esc clear selection, Del delete, Cmd/Ctrl+D duplicate, Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z redo, 1-4 load bookmark, Shift+1-4 save bookmark, Minimap klicken/ziehen = jump camera.</p>
+          <div className="wb-command-legend">
+            <h4>Command Legend</h4>
+            <p><strong>Camera:</strong> Space/MiddleMouse + Drag pan, Wheel zoom, Pfeile pan, F frame selection, Shift+F fit map, Minimap click/drag jump.</p>
+            <p><strong>Tools:</strong> V select, M move, R resize, Drag empty area marquee, Shift+Click additive selection.</p>
+            <p><strong>Edit:</strong> Del/Backspace delete, Cmd/Ctrl+D duplicate, Alt+Pfeile nudge selected objects (Shift = coarse).</p>
+            <p><strong>History:</strong> Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z oder Cmd/Ctrl+Y redo.</p>
+            <p><strong>Selection:</strong> Cmd/Ctrl+A select all objects, Esc clear selection.</p>
+            <p><strong>Depth:</strong> Depth Guides + Player Depth Preview zeigen Front/Back-Layering gegen Player-Y.</p>
+          </div>
           {selectedObjectIds.length > 1 ? (
             <>
               <h4>{selectedObjectIds.length} Objects selected</h4>
