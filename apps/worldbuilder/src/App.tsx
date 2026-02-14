@@ -393,6 +393,14 @@ function App() {
     statusTimerRef.current = window.setTimeout(() => setStatus(null), 2800)
   }, [])
 
+  const cycleBackgroundMode = useCallback(() => {
+    setBackgroundMode((prev) => {
+      if (prev === 'abstract') return 'rendered'
+      if (prev === 'rendered') return 'blend'
+      return 'abstract'
+    })
+  }, [])
+
   const refreshJsonBuffer = useCallback((nextWorld: AuthoringWorldV1) => {
     setJsonBuffer(JSON.stringify(nextWorld, null, 2))
   }, [])
@@ -786,7 +794,7 @@ function App() {
     showStatus('ok', 'Preset gesetzt: Roof/Occluder (Player laeuft dahinter)')
   }
 
-  const parseAndLoadWorld = (source: string, context: string) => {
+  const parseAndLoadWorld = useCallback((source: string, context: string) => {
     const parsed = AuthoringWorldSchema.parse(JSON.parse(source))
     updateWorld(parsed)
     clearSelection()
@@ -794,9 +802,9 @@ function App() {
       setDialogueId(parsed.dialogues[0]?.id ?? '')
     }
     showStatus('ok', `${context}: OK`)
-  }
+  }, [clearSelection, dialogueId, showStatus, updateWorld])
 
-  const exportJson = () => {
+  const exportJson = useCallback(() => {
     const content = `${JSON.stringify(world, null, 2)}\n`
     const blob = new Blob([content], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
@@ -806,9 +814,9 @@ function App() {
     a.click()
     URL.revokeObjectURL(url)
     showStatus('ok', 'JSON exportiert')
-  }
+  }, [showStatus, world])
 
-  const importFromFile = async () => {
+  const importFromFile = useCallback(async () => {
     try {
       if (window.showOpenFilePicker) {
         const [handle] = await window.showOpenFilePicker({
@@ -842,9 +850,9 @@ function App() {
     } catch (error) {
       showStatus('error', error instanceof Error ? error.message : 'Import fehlgeschlagen')
     }
-  }
+  }, [parseAndLoadWorld, showStatus])
 
-  const saveToFile = async () => {
+  const saveToFile = useCallback(async () => {
     const payload = `${JSON.stringify(world, null, 2)}\n`
     try {
       if (fileHandle?.createWritable) {
@@ -878,7 +886,7 @@ function App() {
     } catch (error) {
       showStatus('error', error instanceof Error ? error.message : 'Speichern fehlgeschlagen')
     }
-  }
+  }, [exportJson, fileHandle, showStatus, world])
 
   const addObject = () => {
     const id = `obj-${Date.now()}`
@@ -1391,6 +1399,10 @@ function App() {
         }
         event.preventDefault()
       }
+      if (!isTypingTarget && event.key.toLowerCase() === 'g') {
+        cycleBackgroundMode()
+        event.preventDefault()
+      }
 
       if (!isTypingTarget && event.key.toLowerCase() === 'v') {
         setCanvasTool('select')
@@ -1439,6 +1451,14 @@ function App() {
         duplicateSelectionRef.current()
         event.preventDefault()
       }
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
+        void saveToFile()
+        event.preventDefault()
+      }
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'o') {
+        void importFromFile()
+        event.preventDefault()
+      }
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') {
         if (event.shiftKey) {
           redo()
@@ -1461,7 +1481,7 @@ function App() {
       window.removeEventListener('keydown', keydown)
       window.removeEventListener('keyup', keyup)
     }
-  }, [camera, clearSelection, clampCameraToBounds, fitMapView, frameSelection, loadCameraBookmark, nudgeSelectedObjects, redo, saveCameraBookmark, selectAllObjects, selection, selectedObjectIds.length, undo, zoom])
+  }, [camera, clearSelection, clampCameraToBounds, cycleBackgroundMode, fitMapView, frameSelection, importFromFile, loadCameraBookmark, nudgeSelectedObjects, redo, saveCameraBookmark, saveToFile, selectAllObjects, selection, selectedObjectIds.length, undo, zoom])
 
   useEffect(() => {
     window.render_game_to_text = () => JSON.stringify({
@@ -2227,7 +2247,7 @@ function App() {
                       </>
                     ) : null}
                     <Text x={8} y={8} text="Orange=Object  Cyan=Collider  Pink=Trigger  Yellow=NPC" fontSize={12} fill="#fefefe" listening={false} />
-                    <Text x={8} y={22} text="V/M/R = Select/Move/Resize, Space/MiddleMouse+Drag = Pan, Wheel = Zoom, Alt+Arrows = Nudge, Drag empty area = Marquee" fontSize={11} fill="#d1d5db" listening={false} />
+                    <Text x={8} y={22} text="V/M/R = Select/Move/Resize, G = View mode, Cmd/Ctrl+S/O = Save/Open, Space/MiddleMouse+Drag = Pan, Alt+Arrows = Nudge" fontSize={11} fill="#d1d5db" listening={false} />
                   </Group>
                   {layerVisibility.minimap ? (
                     <>
@@ -2381,14 +2401,14 @@ function App() {
 
         <aside className="wb-sidebar right">
           <h3>Inspector</h3>
-          <p className="wb-legend"><strong>Shortcuts:</strong> V/M/R Tool wechseln, Space+Drag oder MiddleMouse+Drag pan, Wheel zoom, Pfeile pan, Alt+Pfeile nudge selection, F frame, Shift+F fit, Cmd/Ctrl+A select all objects, Esc clear selection, Del delete, Cmd/Ctrl+D duplicate, Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z redo, 1-4 load bookmark, Shift+1-4 save bookmark, Minimap klicken/ziehen = jump camera.</p>
+          <p className="wb-legend"><strong>Shortcuts:</strong> V/M/R Tool wechseln, G View wechseln, Space+Drag oder MiddleMouse+Drag pan, Wheel zoom, Pfeile pan, Alt+Pfeile nudge selection, F frame, Shift+F fit, Cmd/Ctrl+A select all objects, Cmd/Ctrl+O open, Cmd/Ctrl+S save, Esc clear selection, Del delete, Cmd/Ctrl+D duplicate, Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z redo, 1-4 load bookmark, Shift+1-4 save bookmark, Minimap klicken/ziehen = jump camera.</p>
           <div className="wb-command-legend">
             <h4>Command Legend</h4>
             <p><strong>Camera:</strong> Space/MiddleMouse + Drag pan, Wheel zoom, Pfeile pan, F frame selection, Shift+F fit map, Minimap click/drag jump.</p>
-            <p><strong>Tools:</strong> V select, M move, R resize, Drag empty area marquee, Shift+Click additive selection.</p>
+            <p><strong>Tools:</strong> V select, M move, R resize, G cycles Abstract/Rendered/Blend, Drag empty area marquee, Shift+Click additive selection.</p>
             <p><strong>Edit:</strong> Del/Backspace delete, Cmd/Ctrl+D duplicate, Alt+Pfeile nudge selected objects (Shift = coarse).</p>
             <p><strong>History:</strong> Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z oder Cmd/Ctrl+Y redo.</p>
-            <p><strong>Selection:</strong> Cmd/Ctrl+A select all objects, Esc clear selection.</p>
+            <p><strong>Selection:</strong> Cmd/Ctrl+A select all objects, Esc clear selection, Cmd/Ctrl+O open JSON, Cmd/Ctrl+S save JSON.</p>
             <p><strong>Depth:</strong> Depth Guides + Player Depth Preview zeigen Front/Back-Layering gegen Player-Y.</p>
           </div>
           {selectedObjectIds.length > 1 ? (
