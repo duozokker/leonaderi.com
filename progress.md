@@ -100,3 +100,18 @@ Original prompt: verbessere den weiter! der ist immer noch buggy und viele sache
 - Notes:
   - Playwright action client currently captures pan/zoom reliably, but click-selection assertions remain flaky with coordinate-only bursts.
   - Browser live snapshot confirms new toolbar controls and inspector shortcuts are present.
+- Loop 9 completed:
+  - Added explicit canvas tool system:
+    - Select (V)
+    - Move (M)
+    - Resize (R)
+  - Drag behavior now follows tool mode (move-only dragging; resize-only transformer handles).
+  - Added minimap navigation: click or drag directly inside minimap to reposition camera.
+  - Improved cursor modes to reflect active tool/pan state.
+  - Added session persistence for canvas tool in localStorage.
+  - Extended debug state payload with `canvasTool`.
+- Validation:
+  - npm run lint ✅
+  - npm run build -w @leonaderi/worldbuilder ✅
+  - Playwright run: output/worldbuilder-loop/loop-11 (no errors file).
+  - Browser a11y snapshot confirms new controls and shortcuts text.

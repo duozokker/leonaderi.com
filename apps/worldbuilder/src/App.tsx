@@ -31,6 +31,7 @@ type Selection =
 type Tabs = 'canvas' | 'dialogue' | 'validation' | 'json'
 type StatusTone = 'ok' | 'warn' | 'error'
 type BackgroundMode = 'abstract' | 'rendered' | 'blend'
+type CanvasTool = 'select' | 'move' | 'resize'
 
 type FileHandleLike = {
   createWritable?: () => Promise<{
@@ -209,6 +210,7 @@ type SavedSessionV1 = {
   zoom: number
   camera: { x: number; y: number }
   panMode: boolean
+  canvasTool: CanvasTool
 }
 
 function loadDraftWorld(): AuthoringWorldV1 {
@@ -229,6 +231,7 @@ function loadSessionDefaults(): SavedSessionV1 {
     zoom: 1,
     camera: { x: 20, y: 20 },
     panMode: false,
+    canvasTool: 'select',
   }
   if (typeof window === 'undefined') return fallback
   try {
@@ -243,6 +246,7 @@ function loadSessionDefaults(): SavedSessionV1 {
         y: typeof parsed.camera?.y === 'number' ? parsed.camera.y : fallback.camera.y,
       },
       panMode: Boolean(parsed.panMode),
+      canvasTool: parsed.canvasTool === 'move' || parsed.canvasTool === 'resize' ? parsed.canvasTool : 'select',
     }
   } catch {
     return fallback
@@ -260,6 +264,7 @@ function App() {
   const [zoom, setZoom] = useState(sessionDefaults.zoom)
   const [camera, setCamera] = useState(sessionDefaults.camera)
   const [panMode, setPanMode] = useState(sessionDefaults.panMode)
+  const [canvasTool, setCanvasTool] = useState<CanvasTool>(sessionDefaults.canvasTool)
   const [spaceHeld, setSpaceHeld] = useState(false)
   const [middlePanActive, setMiddlePanActive] = useState(false)
   const [snapToGrid, setSnapToGrid] = useState(false)
@@ -1343,6 +1348,11 @@ function App() {
   useEffect(() => {
     const transformer = transformerRef.current
     if (!transformer) return
+    if (canvasTool !== 'resize') {
+      transformer.nodes([])
+      transformer.getLayer()?.batchDraw()
+      return
+    }
     if (selection.kind === 'object' && selectedObjectIds.length !== 1) {
       transformer.nodes([])
       transformer.getLayer()?.batchDraw()
@@ -1356,20 +1366,20 @@ function App() {
     }
     transformer.nodes([node])
     transformer.getLayer()?.batchDraw()
-  }, [selection, selectedObjectIds.length, world.objects, world.colliders, world.triggers])
+  }, [canvasTool, selection, selectedObjectIds.length, world.objects, world.colliders, world.triggers])
 
   useEffect(() => {
     if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current)
     autosaveTimerRef.current = window.setTimeout(() => {
       window.localStorage.setItem(WORLD_LOCAL_STORAGE_KEY, JSON.stringify(world))
-      const session: SavedSessionV1 = { tab, zoom, camera, panMode }
+      const session: SavedSessionV1 = { tab, zoom, camera, panMode, canvasTool }
       window.localStorage.setItem(SESSION_LOCAL_STORAGE_KEY, JSON.stringify(session))
       window.localStorage.setItem(BOOKMARKS_STORAGE_KEY, JSON.stringify(cameraBookmarks))
     }, 200)
     return () => {
       if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current)
     }
-  }, [world, tab, zoom, camera, panMode, cameraBookmarks])
+  }, [world, tab, zoom, camera, panMode, canvasTool, cameraBookmarks])
 
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
@@ -1405,6 +1415,19 @@ function App() {
         } else {
           frameSelection()
         }
+        event.preventDefault()
+      }
+
+      if (!isTypingTarget && event.key.toLowerCase() === 'v') {
+        setCanvasTool('select')
+        event.preventDefault()
+      }
+      if (!isTypingTarget && event.key.toLowerCase() === 'm') {
+        setCanvasTool('move')
+        event.preventDefault()
+      }
+      if (!isTypingTarget && event.key.toLowerCase() === 'r') {
+        setCanvasTool('resize')
         event.preventDefault()
       }
 
@@ -1473,6 +1496,7 @@ function App() {
       selectedObjectIds,
       zoom,
       camera,
+      canvasTool,
       panMode: panMode || spaceHeld || middlePanActive,
       backgroundMode,
       backgroundBlendOpacity,
@@ -1504,7 +1528,7 @@ function App() {
       delete window.render_game_to_text
       delete window.advanceTime
     }
-  }, [tab, selection, selectedObjectIds, zoom, camera, panMode, spaceHeld, middlePanActive, backgroundMode, backgroundBlendOpacity, hoverWorld, showCrosshair, showDepthGuides, normalizedMarquee, mapWidth, mapHeight, world.map.tileSize, world.objects.length, world.colliders.length, world.triggers.length, world.npcs.length, world.poiIndex.length, frameCounter, history.length, future.length, layerLock, layerVisibility, cameraBookmarks, drawOrderedObjects])
+  }, [tab, selection, selectedObjectIds, zoom, camera, canvasTool, panMode, spaceHeld, middlePanActive, backgroundMode, backgroundBlendOpacity, hoverWorld, showCrosshair, showDepthGuides, normalizedMarquee, mapWidth, mapHeight, world.map.tileSize, world.objects.length, world.colliders.length, world.triggers.length, world.npcs.length, world.poiIndex.length, frameCounter, history.length, future.length, layerLock, layerVisibility, cameraBookmarks, drawOrderedObjects])
 
   const minimapScale = Math.min(180 / mapWidth, 120 / mapHeight)
   const minimapWidth = mapWidth * minimapScale
@@ -1627,6 +1651,11 @@ function App() {
                 <button onClick={() => setPanMode((prev) => !prev)}>
                   {panMode ? 'Pan: ON' : 'Pan: OFF'}
                 </button>
+                <div className="wb-tool-group" role="group" aria-label="canvas-tools">
+                  <button className={canvasTool === 'select' ? 'active' : ''} onClick={() => setCanvasTool('select')}>Select (V)</button>
+                  <button className={canvasTool === 'move' ? 'active' : ''} onClick={() => setCanvasTool('move')}>Move (M)</button>
+                  <button className={canvasTool === 'resize' ? 'active' : ''} onClick={() => setCanvasTool('resize')}>Resize (R)</button>
+                </div>
                 <button onClick={frameSelection}>Frame Selected</button>
                 <button onClick={fitMapView}>Fit Map</button>
                 <button onClick={selectAllObjects}>Select All Objects</button>
@@ -1737,7 +1766,17 @@ function App() {
                 width={stageWidth}
                 height={stageHeight}
                 className="wb-stage"
-                style={{ cursor: middlePanActive ? 'grabbing' : (panMode || spaceHeld ? 'grab' : (marqueeRect ? 'crosshair' : 'default')) }}
+                style={{
+                  cursor: middlePanActive
+                    ? 'grabbing'
+                    : (panMode || spaceHeld
+                      ? 'grab'
+                      : (marqueeRect
+                        ? 'crosshair'
+                        : (canvasTool === 'move'
+                          ? 'move'
+                          : (canvasTool === 'resize' ? 'nwse-resize' : 'default')))),
+                }}
                 onContextMenu={(event) => {
                   event.evt.preventDefault()
                 }}
@@ -1760,6 +1799,10 @@ function App() {
                   if (target === event.target.getStage()) {
                     if (event.evt.button !== 0) return
                     if (panMode || spaceHeld || middlePanActive) return
+                    if (canvasTool !== 'select') {
+                      clearSelection()
+                      return
+                    }
                     const stage = event.target.getStage()
                     const pointer = stage?.getPointerPosition()
                     if (pointer) {
@@ -1967,7 +2010,7 @@ function App() {
                           fill="rgba(255, 157, 58, 0.15)"
                           stroke={selectedObjectIds.includes(object.id) ? '#ffd250' : '#ff7a59'}
                           strokeWidth={selectedObjectIds.includes(object.id) ? 3 : 2}
-                          draggable={!(panMode || spaceHeld || middlePanActive || layerLock.objects)}
+                          draggable={canvasTool === 'move' && !(panMode || spaceHeld || middlePanActive || layerLock.objects)}
                           onClick={(event) => selectObject(object.id, Boolean(event.evt.shiftKey))}
                           onDragEnd={(event) => {
                             const nextX = Number((event.target.x() + object.width / 2).toFixed(2))
@@ -2075,7 +2118,7 @@ function App() {
                         fill="rgba(41, 232, 255, 0.1)"
                         stroke={selection.kind === 'collider' && selection.id === collider.id ? '#9af7ff' : '#3cc8ff'}
                         strokeWidth={selection.kind === 'collider' && selection.id === collider.id ? 3 : 2}
-                        draggable={!(panMode || spaceHeld || middlePanActive || layerLock.colliders)}
+                        draggable={canvasTool === 'move' && !(panMode || spaceHeld || middlePanActive || layerLock.colliders)}
                         onClick={() => selectEntity({ kind: 'collider', id: collider.id })}
                         onDragEnd={(event) => {
                           updateColliderRect(collider.id, {
@@ -2111,7 +2154,7 @@ function App() {
                         dash={[6, 4]}
                         stroke={selection.kind === 'trigger' && selection.id === trigger.id ? '#ff8bd8' : '#ff47b6'}
                         strokeWidth={selection.kind === 'trigger' && selection.id === trigger.id ? 3 : 2}
-                        draggable={!(panMode || spaceHeld || middlePanActive || layerLock.triggers)}
+                        draggable={canvasTool === 'move' && !(panMode || spaceHeld || middlePanActive || layerLock.triggers)}
                         onClick={() => selectEntity({ kind: 'trigger', id: trigger.id })}
                         onDragEnd={(event) => {
                           updateTriggerRect(trigger.id, {
@@ -2144,7 +2187,7 @@ function App() {
                         fill={selection.kind === 'npc' && selection.id === npc.id ? '#ffe88f' : '#f4d35e'}
                         stroke="#7d5c00"
                         strokeWidth={2}
-                        draggable={!(panMode || spaceHeld || middlePanActive || layerLock.npcs)}
+                        draggable={canvasTool === 'move' && !(panMode || spaceHeld || middlePanActive || layerLock.npcs)}
                         onClick={() => selectEntity({ kind: 'npc', id: npc.id })}
                         onDragEnd={(event) => {
                           updateNpc(npc.id, {
@@ -2162,12 +2205,45 @@ function App() {
                       </>
                     ) : null}
                     <Text x={8} y={8} text="Orange=Object  Cyan=Collider  Pink=Trigger  Yellow=NPC" fontSize={12} fill="#fefefe" listening={false} />
-                    <Text x={8} y={22} text="Space/MiddleMouse+Drag = Pan, Wheel = Zoom, Arrows = Pan, Alt+Arrows = Nudge, Drag empty area = Marquee, Shift+Click = Multi-select" fontSize={11} fill="#d1d5db" listening={false} />
+                    <Text x={8} y={22} text="V/M/R = Select/Move/Resize, Space/MiddleMouse+Drag = Pan, Wheel = Zoom, Alt+Arrows = Nudge, Drag empty area = Marquee" fontSize={11} fill="#d1d5db" listening={false} />
                   </Group>
                   {layerVisibility.minimap ? (
                     <>
                       <Rect x={minimapX - 2} y={minimapY - 2} width={minimapWidth + 4} height={minimapHeight + 4} fill="rgba(15, 23, 42, 0.9)" stroke="#5b708f" strokeWidth={1} listening={false} />
-                  <Rect x={minimapX} y={minimapY} width={minimapWidth} height={minimapHeight} fill="rgba(35, 119, 219, 0.7)" listening={false} />
+                      <Rect
+                        x={minimapX}
+                        y={minimapY}
+                        width={minimapWidth}
+                        height={minimapHeight}
+                        fill="rgba(35, 119, 219, 0.7)"
+                        onMouseDown={(event) => {
+                          const stage = event.target.getStage()
+                          const pointer = stage?.getPointerPosition()
+                          if (!pointer) return
+                          const worldX = clamp((pointer.x - minimapX) / minimapScale, 0, mapWidth)
+                          const worldY = clamp((pointer.y - minimapY) / minimapScale, 0, mapHeight)
+                          setCamera(clampCameraToBounds(
+                            stageWidth / 2 - worldX * zoom,
+                            stageHeight / 2 - worldY * zoom,
+                            zoom,
+                          ))
+                          event.cancelBubble = true
+                        }}
+                        onMouseMove={(event) => {
+                          if ((event.evt.buttons & 1) !== 1) return
+                          const stage = event.target.getStage()
+                          const pointer = stage?.getPointerPosition()
+                          if (!pointer) return
+                          const worldX = clamp((pointer.x - minimapX) / minimapScale, 0, mapWidth)
+                          const worldY = clamp((pointer.y - minimapY) / minimapScale, 0, mapHeight)
+                          setCamera(clampCameraToBounds(
+                            stageWidth / 2 - worldX * zoom,
+                            stageHeight / 2 - worldY * zoom,
+                            zoom,
+                          ))
+                          event.cancelBubble = true
+                        }}
+                      />
                   {drawOrderedObjects.filter((object) => object.visible).map((object) => (
                     <Rect
                       key={`mini-${object.id}`}
@@ -2283,7 +2359,7 @@ function App() {
 
         <aside className="wb-sidebar right">
           <h3>Inspector</h3>
-          <p className="wb-legend"><strong>Shortcuts:</strong> Space+Drag oder MiddleMouse+Drag pan, Wheel zoom, Pfeile pan, Alt+Pfeile nudge selection, F frame, Shift+F fit, Cmd/Ctrl+A select all objects, Esc clear selection, Del delete, Cmd/Ctrl+D duplicate, Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z redo, 1-4 load bookmark, Shift+1-4 save bookmark.</p>
+          <p className="wb-legend"><strong>Shortcuts:</strong> V/M/R Tool wechseln, Space+Drag oder MiddleMouse+Drag pan, Wheel zoom, Pfeile pan, Alt+Pfeile nudge selection, F frame, Shift+F fit, Cmd/Ctrl+A select all objects, Esc clear selection, Del delete, Cmd/Ctrl+D duplicate, Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z redo, 1-4 load bookmark, Shift+1-4 save bookmark, Minimap klicken/ziehen = jump camera.</p>
           {selectedObjectIds.length > 1 ? (
             <>
               <h4>{selectedObjectIds.length} Objects selected</h4>
