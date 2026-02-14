@@ -259,10 +259,13 @@ function App() {
   const [camera, setCamera] = useState(sessionDefaults.camera)
   const [panMode, setPanMode] = useState(sessionDefaults.panMode)
   const [spaceHeld, setSpaceHeld] = useState(false)
+  const [middlePanActive, setMiddlePanActive] = useState(false)
   const [snapToGrid, setSnapToGrid] = useState(false)
   const [showLabels, setShowLabels] = useState(true)
   const [status, setStatus] = useState<{ tone: StatusTone; text: string } | null>(null)
   const [frameCounter, setFrameCounter] = useState(0)
+  const [history, setHistory] = useState<AuthoringWorldV1[]>([])
+  const [future, setFuture] = useState<AuthoringWorldV1[]>([])
 
   const selectedDialogue = useMemo(
     () => world.dialogues.find((item) => item.id === dialogueId) ?? world.dialogues[0] ?? null,
@@ -285,11 +288,24 @@ function App() {
   const statusTimerRef = useRef<number | null>(null)
   const deleteSelectionRef = useRef<() => void>(() => undefined)
   const duplicateSelectionRef = useRef<() => void>(() => undefined)
+  const middlePanStartRef = useRef<{ pointerX: number; pointerY: number; cameraX: number; cameraY: number } | null>(null)
 
   const mapWidth = world.map.columns * world.map.tileSize
   const mapHeight = world.map.rows * world.map.tileSize
   const stageWidth = 1000
   const stageHeight = 640
+  const drawOrderedObjects = useMemo(
+    () => [...world.objects].sort((a, b) => {
+      const groupRank = (group: string) => {
+        if (group === 'ground') return 0
+        if (group === 'default') return 1
+        if (group === 'foreground') return 2
+        return 1
+      }
+      return groupRank(a.renderGroup) - groupRank(b.renderGroup) || a.depth - b.depth || a.y - b.y
+    }),
+    [world.objects],
+  )
 
   const validationIssues = useMemo(() => validateWorld(world), [world])
 
@@ -313,10 +329,14 @@ function App() {
     setJsonBuffer(JSON.stringify(nextWorld, null, 2))
   }, [])
 
-  const updateWorld = useCallback((nextWorld: AuthoringWorldV1) => {
+  const updateWorld = useCallback((nextWorld: AuthoringWorldV1, options?: { trackHistory?: boolean }) => {
+    if (options?.trackHistory !== false) {
+      setHistory((prev) => [...prev.slice(-79), world])
+      setFuture([])
+    }
     setWorld(nextWorld)
     refreshJsonBuffer(nextWorld)
-  }, [refreshJsonBuffer])
+  }, [refreshJsonBuffer, world])
 
   const updateObject = (id: string, patch: Partial<AuthoringWorldV1['objects'][number]>) => {
     updateWorld({
@@ -339,6 +359,12 @@ function App() {
       }),
       meta: { ...world.meta, updatedAt: new Date().toISOString() },
     })
+  }
+
+  const nudgeObjectDepth = (id: string, delta: number) => {
+    const object = world.objects.find((item) => item.id === id)
+    if (!object) return
+    updateObject(id, { depth: object.depth + delta })
   }
 
   const updateColliderRect = (id: string, patch: Partial<{ x: number; y: number; width: number; height: number }>) => {
@@ -807,6 +833,53 @@ function App() {
   }
 
   const clampZoom = (value: number) => Math.max(0.35, Math.min(2.5, value))
+  const clampCameraToBounds = useCallback((nextX: number, nextY: number, zoomValue: number) => {
+    const minX = stageWidth - mapWidth * zoomValue - CAMERA_MIN_PADDING
+    const minY = stageHeight - mapHeight * zoomValue - CAMERA_MIN_PADDING
+    const maxX = CAMERA_MIN_PADDING
+    const maxY = CAMERA_MIN_PADDING
+    return {
+      x: Number(clamp(nextX, minX, maxX).toFixed(2)),
+      y: Number(clamp(nextY, minY, maxY).toFixed(2)),
+    }
+  }, [mapHeight, mapWidth])
+
+  const fitMapView = useCallback(() => {
+    const fitZoom = clampZoom(Math.min(
+      (stageWidth - CAMERA_MIN_PADDING * 2) / mapWidth,
+      (stageHeight - CAMERA_MIN_PADDING * 2) / mapHeight,
+    ))
+    setZoom(fitZoom)
+    setCamera(clampCameraToBounds(
+      (stageWidth - mapWidth * fitZoom) / 2,
+      (stageHeight - mapHeight * fitZoom) / 2,
+      fitZoom,
+    ))
+  }, [clampCameraToBounds, mapHeight, mapWidth])
+
+  const undo = useCallback(() => {
+    setHistory((prev) => {
+      if (prev.length === 0) return prev
+      const previous = prev[prev.length - 1]
+      setFuture((nextFuture) => [world, ...nextFuture].slice(0, 80))
+      setWorld(previous)
+      refreshJsonBuffer(previous)
+      showStatus('ok', 'Undo')
+      return prev.slice(0, -1)
+    })
+  }, [refreshJsonBuffer, showStatus, world])
+
+  const redo = useCallback(() => {
+    setFuture((prev) => {
+      if (prev.length === 0) return prev
+      const next = prev[0]
+      setHistory((past) => [...past.slice(-79), world])
+      setWorld(next)
+      refreshJsonBuffer(next)
+      showStatus('ok', 'Redo')
+      return prev.slice(1)
+    })
+  }, [refreshJsonBuffer, showStatus, world])
 
   useEffect(() => {
     const transformer = transformerRef.current
@@ -835,10 +908,34 @@ function App() {
 
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null
+      const isTypingTarget = Boolean(
+        target && (
+          target.tagName === 'INPUT'
+          || target.tagName === 'TEXTAREA'
+          || target.tagName === 'SELECT'
+          || target.isContentEditable
+        ),
+      )
+
+      if (!isTypingTarget && (event.key === 'ArrowLeft' || event.key === 'ArrowRight' || event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
+        const amount = event.shiftKey ? 64 : 24
+        const nextX = event.key === 'ArrowLeft' ? camera.x + amount : event.key === 'ArrowRight' ? camera.x - amount : camera.x
+        const nextY = event.key === 'ArrowUp' ? camera.y + amount : event.key === 'ArrowDown' ? camera.y - amount : camera.y
+        setCamera(clampCameraToBounds(nextX, nextY, zoom))
+        event.preventDefault()
+      }
+
+      if (!isTypingTarget && event.key.toLowerCase() === 'f') {
+        fitMapView()
+        event.preventDefault()
+      }
+
       if (event.key === ' ') {
         setSpaceHeld(true)
         event.preventDefault()
       }
+      if (isTypingTarget) return
       if (event.key === 'Delete' || event.key === 'Backspace') {
         if (selection.kind !== 'none' && selection.kind !== 'poi') {
           deleteSelectionRef.current()
@@ -847,6 +944,18 @@ function App() {
       }
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'd') {
         duplicateSelectionRef.current()
+        event.preventDefault()
+      }
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') {
+        if (event.shiftKey) {
+          redo()
+        } else {
+          undo()
+        }
+        event.preventDefault()
+      }
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'y') {
+        redo()
         event.preventDefault()
       }
     }
@@ -859,7 +968,7 @@ function App() {
       window.removeEventListener('keydown', keydown)
       window.removeEventListener('keyup', keyup)
     }
-  }, [selection])
+  }, [camera, clampCameraToBounds, fitMapView, redo, selection, undo, zoom])
 
   useEffect(() => {
     window.render_game_to_text = () => JSON.stringify({
@@ -867,7 +976,7 @@ function App() {
       selection,
       zoom,
       camera,
-      panMode: panMode || spaceHeld,
+      panMode: panMode || spaceHeld || middlePanActive,
       map: { width: mapWidth, height: mapHeight, tileSize: world.map.tileSize },
       counts: {
         objects: world.objects.length,
@@ -876,6 +985,8 @@ function App() {
         npcs: world.npcs.length,
         pois: world.poiIndex.length,
       },
+      history: { undo: history.length, redo: future.length },
+      topLayers: drawOrderedObjects.slice(-5).map((item) => ({ id: item.id, key: item.key, depth: item.depth })),
       frameCounter,
       coordinateSystem: 'origin: top-left, +x right, +y down',
     })
@@ -888,7 +999,19 @@ function App() {
       delete window.render_game_to_text
       delete window.advanceTime
     }
-  }, [tab, selection, zoom, camera, panMode, spaceHeld, mapWidth, mapHeight, world.map.tileSize, world.objects.length, world.colliders.length, world.triggers.length, world.npcs.length, world.poiIndex.length, frameCounter])
+  }, [tab, selection, zoom, camera, panMode, spaceHeld, middlePanActive, mapWidth, mapHeight, world.map.tileSize, world.objects.length, world.colliders.length, world.triggers.length, world.npcs.length, world.poiIndex.length, frameCounter, history.length, future.length, drawOrderedObjects])
+
+  const minimapScale = Math.min(180 / mapWidth, 120 / mapHeight)
+  const minimapWidth = mapWidth * minimapScale
+  const minimapHeight = mapHeight * minimapScale
+  const minimapX = stageWidth - minimapWidth - 14
+  const minimapY = stageHeight - minimapHeight - 14
+  const viewportWorld = {
+    x: clamp(-camera.x / zoom, 0, mapWidth),
+    y: clamp(-camera.y / zoom, 0, mapHeight),
+    width: clamp(stageWidth / zoom, 1, mapWidth),
+    height: clamp(stageHeight / zoom, 1, mapHeight),
+  }
 
   return (
     <div className="wb-root">
@@ -905,8 +1028,10 @@ function App() {
           <button data-testid="add-collider-btn" onClick={addCollider}>+ Collider</button>
           <button data-testid="add-trigger-btn" onClick={addTrigger}>+ Trigger</button>
           <button data-testid="add-npc-btn" onClick={addNpc}>+ NPC</button>
-          <button onClick={duplicateSelection} disabled={selection.kind === 'none' || selection.kind === 'poi'}>Duplicate</button>
-          <button onClick={deleteSelection} disabled={selection.kind === 'none' || selection.kind === 'poi'}>Delete</button>
+          <button onClick={undo} disabled={history.length === 0}>Undo</button>
+          <button onClick={redo} disabled={future.length === 0}>Redo</button>
+          <button onClick={duplicateSelection} disabled={!selectedObject && !selectedCollider && !selectedTrigger && !selectedNpc}>Duplicate</button>
+          <button onClick={deleteSelection} disabled={!selectedObject && !selectedCollider && !selectedTrigger && !selectedNpc}>Delete</button>
           <button onClick={resetSeed}>Reset Seed</button>
           <button onClick={clearLocalDraft}>Reset Local Draft</button>
         </div>
@@ -935,8 +1060,10 @@ function App() {
           <h3>Entities</h3>
           <div className="wb-list">
             <h4>Objects</h4>
-            {world.objects.map((item) => (
-              <button key={item.id} className={selection.kind === 'object' && selection.id === item.id ? 'sel' : ''} onClick={() => setSelection({ kind: 'object', id: item.id })}>{item.key}</button>
+            {drawOrderedObjects.map((item) => (
+              <button key={item.id} className={selection.kind === 'object' && selection.id === item.id ? 'sel' : ''} onClick={() => setSelection({ kind: 'object', id: item.id })}>
+                {item.key} <span className="wb-inline-meta">d:{item.depth} {item.visible ? '' : '(hidden)'}</span>
+              </button>
             ))}
             <h4>Colliders</h4>
             {world.colliders.map((item) => (
@@ -982,6 +1109,7 @@ function App() {
                 <button onClick={() => setPanMode((prev) => !prev)}>
                   {panMode ? 'Pan: ON' : 'Pan: OFF'}
                 </button>
+                <button onClick={fitMapView}>Fit Map</button>
                 <button
                   onClick={() => {
                     setZoom(1)
@@ -991,6 +1119,7 @@ function App() {
                 >
                   Reset View
                 </button>
+                <span className="wb-history-pill">History {history.length} / Redo {future.length}</span>
               </div>
 
               <Stage
@@ -998,11 +1127,48 @@ function App() {
                 width={stageWidth}
                 height={stageHeight}
                 className="wb-stage"
+                style={{ cursor: middlePanActive || panMode || spaceHeld ? 'grabbing' : 'default' }}
                 onMouseDown={(event) => {
+                  if (event.evt.button === 1) {
+                    event.evt.preventDefault()
+                    const stage = event.target.getStage()
+                    const pointer = stage?.getPointerPosition()
+                    if (!pointer) return
+                    middlePanStartRef.current = {
+                      pointerX: pointer.x,
+                      pointerY: pointer.y,
+                      cameraX: camera.x,
+                      cameraY: camera.y,
+                    }
+                    setMiddlePanActive(true)
+                    return
+                  }
                   const target = event.target
                   if (target === event.target.getStage()) {
                     setSelection({ kind: 'none', id: '' })
                   }
+                }}
+                onMouseMove={(event) => {
+                  if (!middlePanStartRef.current) return
+                  const stage = event.target.getStage()
+                  const pointer = stage?.getPointerPosition()
+                  if (!pointer) return
+                  const deltaX = pointer.x - middlePanStartRef.current.pointerX
+                  const deltaY = pointer.y - middlePanStartRef.current.pointerY
+                  const next = clampCameraToBounds(
+                    middlePanStartRef.current.cameraX + deltaX,
+                    middlePanStartRef.current.cameraY + deltaY,
+                    zoom,
+                  )
+                  setCamera(next)
+                }}
+                onMouseUp={() => {
+                  middlePanStartRef.current = null
+                  setMiddlePanActive(false)
+                }}
+                onMouseLeave={() => {
+                  middlePanStartRef.current = null
+                  setMiddlePanActive(false)
                 }}
                 onWheel={(event) => {
                   event.evt.preventDefault()
@@ -1020,15 +1186,8 @@ function App() {
                     x: pointer.x - mousePointTo.x * nextZoom,
                     y: pointer.y - mousePointTo.y * nextZoom,
                   }
-                  const minX = stageWidth - mapWidth * nextZoom - CAMERA_MIN_PADDING
-                  const minY = stageHeight - mapHeight * nextZoom - CAMERA_MIN_PADDING
-                  const maxX = CAMERA_MIN_PADDING
-                  const maxY = CAMERA_MIN_PADDING
                   setZoom(nextZoom)
-                  setCamera({
-                    x: clamp(unclampedCamera.x, minX, maxX),
-                    y: clamp(unclampedCamera.y, minY, maxY),
-                  })
+                  setCamera(clampCameraToBounds(unclampedCamera.x, unclampedCamera.y, nextZoom))
                 }}
               >
                 <Layer>
@@ -1036,16 +1195,9 @@ function App() {
                     x={camera.x}
                     y={camera.y}
                     scale={{ x: zoom, y: zoom }}
-                    draggable={panMode || spaceHeld}
+                    draggable={panMode || spaceHeld || middlePanActive}
                     onDragEnd={(event) => {
-                      const minX = stageWidth - mapWidth * zoom - CAMERA_MIN_PADDING
-                      const minY = stageHeight - mapHeight * zoom - CAMERA_MIN_PADDING
-                      const maxX = CAMERA_MIN_PADDING
-                      const maxY = CAMERA_MIN_PADDING
-                      setCamera({
-                        x: Number(clamp(event.target.x(), minX, maxX).toFixed(2)),
-                        y: Number(clamp(event.target.y(), minY, maxY).toFixed(2)),
-                      })
+                      setCamera(clampCameraToBounds(event.target.x(), event.target.y(), zoom))
                     }}
                   >
                     {world.map.terrainGrid.map((row, y) => row.map((terrain, x) => (
@@ -1087,7 +1239,7 @@ function App() {
                       </>
                     ) : null}
 
-                    {world.objects.map((object) => (
+                    {drawOrderedObjects.filter((object) => object.visible).map((object) => (
                       <Group key={object.id}>
                         <Rect
                           ref={selection.kind === 'object' && selection.id === object.id ? selectedRef : undefined}
@@ -1098,7 +1250,7 @@ function App() {
                           fill="rgba(255, 157, 58, 0.15)"
                           stroke={selection.kind === 'object' && selection.id === object.id ? '#ffd250' : '#ff7a59'}
                           strokeWidth={selection.kind === 'object' && selection.id === object.id ? 3 : 2}
-                          draggable={!(panMode || spaceHeld)}
+                          draggable={!(panMode || spaceHeld || middlePanActive)}
                           onClick={() => setSelection({ kind: 'object', id: object.id })}
                           onDragEnd={(event) => {
                             updateObject(object.id, {
@@ -1144,7 +1296,7 @@ function App() {
                         fill="rgba(41, 232, 255, 0.1)"
                         stroke={selection.kind === 'collider' && selection.id === collider.id ? '#9af7ff' : '#3cc8ff'}
                         strokeWidth={selection.kind === 'collider' && selection.id === collider.id ? 3 : 2}
-                        draggable={!(panMode || spaceHeld)}
+                        draggable={!(panMode || spaceHeld || middlePanActive)}
                         onClick={() => setSelection({ kind: 'collider', id: collider.id })}
                         onDragEnd={(event) => {
                           updateColliderRect(collider.id, {
@@ -1180,7 +1332,7 @@ function App() {
                         dash={[6, 4]}
                         stroke={selection.kind === 'trigger' && selection.id === trigger.id ? '#ff8bd8' : '#ff47b6'}
                         strokeWidth={selection.kind === 'trigger' && selection.id === trigger.id ? 3 : 2}
-                        draggable={!(panMode || spaceHeld)}
+                        draggable={!(panMode || spaceHeld || middlePanActive)}
                         onClick={() => setSelection({ kind: 'trigger', id: trigger.id })}
                         onDragEnd={(event) => {
                           updateTriggerRect(trigger.id, {
@@ -1213,7 +1365,7 @@ function App() {
                         fill={selection.kind === 'npc' && selection.id === npc.id ? '#ffe88f' : '#f4d35e'}
                         stroke="#7d5c00"
                         strokeWidth={2}
-                        draggable={!(panMode || spaceHeld)}
+                        draggable={!(panMode || spaceHeld || middlePanActive)}
                         onClick={() => setSelection({ kind: 'npc', id: npc.id })}
                         onDragEnd={(event) => {
                           updateNpc(npc.id, {
@@ -1225,8 +1377,31 @@ function App() {
                     ))}
 
                     <Text x={8} y={8} text="Orange=Object  Cyan=Collider  Pink=Trigger  Yellow=NPC" fontSize={12} fill="#fefefe" listening={false} />
-                    <Text x={8} y={22} text="Space+Drag = Pan, Wheel = Zoom, Del = Delete, Cmd/Ctrl+D = Duplicate" fontSize={11} fill="#d1d5db" listening={false} />
+                    <Text x={8} y={22} text="Space/MiddleMouse+Drag = Pan, Wheel = Zoom, Arrows = Pan, F = Fit, Del = Delete, Cmd/Ctrl+D = Duplicate" fontSize={11} fill="#d1d5db" listening={false} />
                   </Group>
+                  <Rect x={minimapX - 2} y={minimapY - 2} width={minimapWidth + 4} height={minimapHeight + 4} fill="rgba(15, 23, 42, 0.9)" stroke="#5b708f" strokeWidth={1} listening={false} />
+                  <Rect x={minimapX} y={minimapY} width={minimapWidth} height={minimapHeight} fill="rgba(35, 119, 219, 0.7)" listening={false} />
+                  {drawOrderedObjects.filter((object) => object.visible).map((object) => (
+                    <Rect
+                      key={`mini-${object.id}`}
+                      x={minimapX + (object.x - object.width / 2) * minimapScale}
+                      y={minimapY + (object.y - object.height / 2) * minimapScale}
+                      width={Math.max(1, object.width * minimapScale)}
+                      height={Math.max(1, object.height * minimapScale)}
+                      fill="rgba(255, 187, 69, 0.55)"
+                      listening={false}
+                    />
+                  ))}
+                  <Rect
+                    x={minimapX + viewportWorld.x * minimapScale}
+                    y={minimapY + viewportWorld.y * minimapScale}
+                    width={Math.max(2, viewportWorld.width * minimapScale)}
+                    height={Math.max(2, viewportWorld.height * minimapScale)}
+                    stroke="#f8fafc"
+                    strokeWidth={1}
+                    listening={false}
+                  />
+                  <Text x={minimapX + 4} y={minimapY + 4} text="Minimap" fontSize={10} fill="#e5e7eb" listening={false} />
                   <Transformer ref={transformerRef} rotateEnabled={false} enabledAnchors={['top-left', 'top-center', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right']} />
                 </Layer>
               </Stage>
@@ -1319,10 +1494,11 @@ function App() {
 
         <aside className="wb-sidebar right">
           <h3>Inspector</h3>
-          <p className="wb-legend"><strong>Shortcuts:</strong> Space+Drag pan, Wheel zoom, Del delete, Cmd/Ctrl+D duplicate.</p>
+          <p className="wb-legend"><strong>Shortcuts:</strong> Space+Drag oder MiddleMouse+Drag pan, Wheel zoom, Pfeile pan, F fit, Del delete, Cmd/Ctrl+D duplicate, Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z redo.</p>
           {selectedObject ? (
             <>
               <h4>Object: {selectedObject.key}</h4>
+              <p className="wb-hint">Render Order: Hoehere `depth` Werte werden ueber niedrigeren gerendert.</p>
               <label htmlFor="obj-x">X</label>
               {numberInput('obj-x', selectedObject.x, (next) => updateObject(selectedObject.id, { x: next }))}
               <label htmlFor="obj-y">Y</label>
@@ -1333,6 +1509,47 @@ function App() {
               {numberInput('obj-height', selectedObject.height, (next) => updateObject(selectedObject.id, { height: Math.max(8, next) }), { min: 8 })}
               <label htmlFor="obj-depth">Depth</label>
               {numberInput('obj-depth', selectedObject.depth, (next) => updateObject(selectedObject.id, { depth: next }))}
+              <div className="wb-inline-buttons">
+                <button onClick={() => nudgeObjectDepth(selectedObject.id, -10)}>-10</button>
+                <button onClick={() => nudgeObjectDepth(selectedObject.id, -1)}>-1</button>
+                <button onClick={() => updateObject(selectedObject.id, { depth: Math.round(selectedObject.y) })}>Depth = Y</button>
+                <button onClick={() => nudgeObjectDepth(selectedObject.id, 1)}>+1</button>
+                <button onClick={() => nudgeObjectDepth(selectedObject.id, 10)}>+10</button>
+              </div>
+              <label htmlFor="obj-render-group">Render Group</label>
+              <select
+                id="obj-render-group"
+                name="obj-render-group"
+                aria-label="obj-render-group"
+                className="wb-input"
+                value={selectedObject.renderGroup}
+                onChange={(event) => updateObject(selectedObject.id, { renderGroup: event.target.value })}
+              >
+                <option value="ground">ground</option>
+                <option value="default">default</option>
+                <option value="foreground">foreground</option>
+              </select>
+              <label className="wb-inline-check" htmlFor="obj-collision">
+                <input
+                  id="obj-collision"
+                  name="obj-collision"
+                  type="checkbox"
+                  checked={Boolean(selectedObject.collision)}
+                  onChange={(event) => updateObject(selectedObject.id, { collision: event.target.checked })}
+                />
+                Blocking (player cannot walk through this object)
+              </label>
+              <label className="wb-inline-check" htmlFor="obj-visible">
+                <input
+                  id="obj-visible"
+                  name="obj-visible"
+                  type="checkbox"
+                  checked={selectedObject.visible}
+                  onChange={(event) => updateObject(selectedObject.id, { visible: event.target.checked })}
+                />
+                Visible
+              </label>
+              <p className="wb-hint">Walkability wird ueber Collider + Blocking gesteuert. Render-Layer steuert nur, was visuell oben liegt.</p>
             </>
           ) : null}
 
