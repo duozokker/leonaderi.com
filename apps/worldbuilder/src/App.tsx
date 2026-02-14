@@ -279,6 +279,7 @@ function App() {
   const [hoverWorld, setHoverWorld] = useState<{ x: number; y: number } | null>(null)
   const [showCrosshair, setShowCrosshair] = useState(true)
   const [showDepthGuides, setShowDepthGuides] = useState(true)
+  const [depthPreviewY, setDepthPreviewY] = useState<number | null>(null)
   const [cameraBookmarks, setCameraBookmarks] = useState<Record<number, { x: number; y: number; zoom: number } | null>>(() => {
     if (typeof window === 'undefined') return { 1: null, 2: null, 3: null, 4: null }
     try {
@@ -511,6 +512,15 @@ function App() {
     const object = world.objects.find((item) => item.id === id)
     if (!object) return
     updateObject(id, { depth: object.depth + delta })
+  }
+
+  const normalizeAllDepthByY = () => {
+    updateWorld({
+      ...world,
+      objects: world.objects.map((item) => ({ ...item, depth: Math.round(item.y) })),
+      meta: { ...world.meta, updatedAt: new Date().toISOString() },
+    })
+    showStatus('ok', 'Alle Objekt-Depths auf Y gesetzt')
   }
 
   const nudgeSelectedObjects = useCallback((dx: number, dy: number) => {
@@ -1503,6 +1513,7 @@ function App() {
       hoverWorld,
       showCrosshair,
       showDepthGuides,
+      depthPreviewY,
       marqueeRect: normalizedMarquee,
       map: { width: mapWidth, height: mapHeight, tileSize: world.map.tileSize },
       counts: {
@@ -1528,7 +1539,7 @@ function App() {
       delete window.render_game_to_text
       delete window.advanceTime
     }
-  }, [tab, selection, selectedObjectIds, zoom, camera, canvasTool, panMode, spaceHeld, middlePanActive, backgroundMode, backgroundBlendOpacity, hoverWorld, showCrosshair, showDepthGuides, normalizedMarquee, mapWidth, mapHeight, world.map.tileSize, world.objects.length, world.colliders.length, world.triggers.length, world.npcs.length, world.poiIndex.length, frameCounter, history.length, future.length, layerLock, layerVisibility, cameraBookmarks, drawOrderedObjects])
+  }, [tab, selection, selectedObjectIds, zoom, camera, canvasTool, panMode, spaceHeld, middlePanActive, backgroundMode, backgroundBlendOpacity, hoverWorld, showCrosshair, showDepthGuides, depthPreviewY, normalizedMarquee, mapWidth, mapHeight, world.map.tileSize, world.objects.length, world.colliders.length, world.triggers.length, world.npcs.length, world.poiIndex.length, frameCounter, history.length, future.length, layerLock, layerVisibility, cameraBookmarks, drawOrderedObjects])
 
   const minimapScale = Math.min(180 / mapWidth, 120 / mapHeight)
   const minimapWidth = mapWidth * minimapScale
@@ -1716,6 +1727,30 @@ function App() {
                   <input type="checkbox" checked={showDepthGuides} onChange={(event) => setShowDepthGuides(event.target.checked)} />
                   Depth Guides
                 </label>
+                <label className="wb-inline-check">
+                  <input
+                    type="checkbox"
+                    checked={depthPreviewY !== null}
+                    onChange={(event) => setDepthPreviewY(event.target.checked ? Math.round(mapHeight / 2) : null)}
+                  />
+                  Player Depth Preview
+                </label>
+                {depthPreviewY !== null ? (
+                  <label className="wb-inline-check" htmlFor="depth-preview-range">
+                    Y
+                    <input
+                      id="depth-preview-range"
+                      type="range"
+                      min="0"
+                      max={mapHeight}
+                      step="1"
+                      value={depthPreviewY}
+                      onChange={(event) => setDepthPreviewY(Number(event.target.value))}
+                    />
+                    <span>{depthPreviewY}</span>
+                  </label>
+                ) : null}
+                <button onClick={normalizeAllDepthByY}>Normalize Depth by Y</button>
                 <span className="wb-history-pill">
                   Cursor {hoverWorld ? `${Math.round(hoverWorld.x)},${Math.round(hoverWorld.y)} (tile ${Math.floor(hoverWorld.x / world.map.tileSize)},${Math.floor(hoverWorld.y / world.map.tileSize)})` : '--'}
                 </span>
@@ -2007,7 +2042,9 @@ function App() {
                           y={object.y - object.height / 2}
                           width={object.width}
                           height={object.height}
-                          fill="rgba(255, 157, 58, 0.15)"
+                          fill={depthPreviewY === null
+                            ? 'rgba(255, 157, 58, 0.15)'
+                            : (object.depth > depthPreviewY ? 'rgba(255, 122, 89, 0.24)' : 'rgba(124, 255, 168, 0.2)')}
                           stroke={selectedObjectIds.includes(object.id) ? '#ffd250' : '#ff7a59'}
                           strokeWidth={selectedObjectIds.includes(object.id) ? 3 : 2}
                           draggable={canvasTool === 'move' && !(panMode || spaceHeld || middlePanActive || layerLock.objects)}
@@ -2106,6 +2143,27 @@ function App() {
                         listening={false}
                       />
                     ) : null)}
+
+                    {depthPreviewY !== null ? (
+                      <>
+                        <Rect
+                          x={0}
+                          y={depthPreviewY}
+                          width={mapWidth}
+                          height={1}
+                          fill="rgba(255, 248, 102, 0.95)"
+                          listening={false}
+                        />
+                        <Text
+                          x={8}
+                          y={Math.max(28, depthPreviewY - 14)}
+                          text={`Player depth preview Y=${depthPreviewY} (green=object behind player, red=object in front)`}
+                          fontSize={11}
+                          fill="#fff8a8"
+                          listening={false}
+                        />
+                      </>
+                    ) : null}
 
                     {layerVisibility.colliders ? world.colliders.map((collider) => collider.shape.type === 'rect' ? (
                       <Rect
@@ -2453,6 +2511,11 @@ function App() {
                 <button onClick={() => nudgeLinkedCollider(selectedObject.id, 'narrow')} disabled={!selectedObjectPrimaryCollider}>Hitbox schmaler</button>
                 <button onClick={() => nudgeLinkedCollider(selectedObject.id, 'wider')} disabled={!selectedObjectPrimaryCollider}>Hitbox breiter</button>
               </div>
+              {depthPreviewY !== null ? (
+                <p className="wb-hint">
+                  Preview @ Y={depthPreviewY}: {selectedObject.depth > depthPreviewY ? 'Objekt liegt vor dem Player (verdeckt ihn).' : 'Objekt liegt hinter dem Player.'}
+                </p>
+              ) : null}
               <p className="wb-hint">Walkability wird ueber Collider + Blocking gesteuert. Depth-Linie zeigt, ab welcher Y-Hoehe der Player vor/hinter dem Objekt liegt.</p>
               <p className="wb-hint">Linked Collider: {selectedObjectPrimaryCollider ? selectedObjectPrimaryCollider.id : 'none'} | Linked Triggers: {selectedObjectLinkedTriggers.length}</p>
             </>
