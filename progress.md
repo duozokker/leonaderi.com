@@ -115,3 +115,15 @@ Original prompt: verbessere den weiter! der ist immer noch buggy und viele sache
   - npm run build -w @leonaderi/worldbuilder ✅
   - Playwright run: output/worldbuilder-loop/loop-11 (no errors file).
   - Browser a11y snapshot confirms new controls and shortcuts text.
+- Loop 10 completed:
+  - Added player depth preview system for layering decisions:
+    - toggle + Y slider in canvas toolbar
+    - world-wide preview line
+    - object tinting in preview mode (green behind player / red in front of player)
+  - Added global action `Normalize Depth by Y` for fast depth cleanup.
+  - Added selected-object preview hint in inspector describing current front/behind state.
+  - Extended telemetry state with `depthPreviewY`.
+- Validation:
+  - npm run lint ✅
+  - npm run build -w @leonaderi/worldbuilder ✅
+  - Playwright run: output/worldbuilder-loop/loop-12 (no errors file).
