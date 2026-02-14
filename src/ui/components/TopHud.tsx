@@ -1,17 +1,20 @@
 interface TopHudProps {
   hoverLabel: string | null
   onOpenIntro: () => void
+  title: string
+  defaultSubtitle: string
+  helpLabel: string
 }
 
-export function TopHud({ hoverLabel, onOpenIntro }: TopHudProps) {
+export function TopHud({ hoverLabel, onOpenIntro, title, defaultSubtitle, helpLabel }: TopHudProps) {
   return (
     <div className="hud-shell">
       <div>
-        <strong>Leonaderi Pixel World</strong>
-        <p>{hoverLabel ?? 'Bewege dich mit WASD/Pfeiltasten und erkunde die Stadt.'}</p>
+        <strong>{title}</strong>
+        <p>{hoverLabel ?? defaultSubtitle}</p>
       </div>
       <button className="pixel-btn" type="button" onClick={onOpenIntro}>
-        Hilfe
+        {helpLabel}
       </button>
     </div>
   )

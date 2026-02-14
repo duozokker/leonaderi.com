@@ -31,6 +31,12 @@ export interface WorldPlacement {
   y: number
   width: number
   height: number
+  hitbox?: {
+    x: number
+    y: number
+    width: number
+    height: number
+  }
   interactRadius: number
   visual: EntryVisualType
   solid: boolean

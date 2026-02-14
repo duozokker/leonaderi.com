@@ -1,0 +1,174 @@
+{
+  "version": "1.0.0",
+  "name": "Untitled Map",
+  "exportDate": "2026-02-14T14:13:16.044827Z",
+  "engine": "pixellab-map-editor",
+  "mapConfig": {
+    "tileSize": 16,
+    "dimensions": {
+      "width": 66,
+      "height": 42,
+      "pixelWidth": 1056,
+      "pixelHeight": 672
+    },
+    "boundingBox": {
+      "maxX": 65,
+      "maxY": 37,
+      "minX": 0,
+      "minY": -4
+    }
+  },
+  "terrains": [
+    {
+      "id": 2,
+      "name": "lush short green grass",
+      "color": "#22c55e",
+      "baseTileId": "d7a99568-522e-4dab-9ef1-fb5e303bf153"
+    },
+    {
+      "id": 7,
+      "name": "tulip flowers",
+      "color": "#9ca3af",
+      "baseTileId": "a913d3ca-0dad-455b-a246-7010aa56a150"
+    },
+    {
+      "id": 3,
+      "name": "packed dirt path",
+      "color": "#92400e",
+      "baseTileId": "31dbebc2-ea76-4fc3-9b52-054d2ce586a4"
+    },
+    {
+      "id": 1,
+      "name": "calm blue lake water",
+      "color": "#2563eb",
+      "baseTileId": "0f32a082-bb1c-4648-b346-d504cbb0e544"
+    },
+    {
+      "id": 6,
+      "name": "packed dirt path \u2194 calm blue lake water",
+      "color": "#4e466a",
+      "baseTileId": "transition-a58a11ee-f4a1-4bd3-88ae-bcac1d59b59e"
+    },
+    {
+      "id": 5,
+      "name": "brick packed path ",
+      "color": "#a16207",
+      "baseTileId": "5f90009e-a8e3-4f11-8ec5-53ffaa56c14b"
+    },
+    {
+      "id": 4,
+      "name": "cobblestone path",
+      "color": "#a16207",
+      "baseTileId": "227f1fc3-533d-4c9f-a64a-d4dcaae394f3"
+    }
+  ],
+  "tilesets": [
+    {
+      "id": "68d3f509-6aa5-429a-803c-d9b8fae04bd3",
+      "filename": "lush short green grass-tulip flowers.png",
+      "lowerTerrain": "lush short green grass",
+      "upperTerrain": "tulip flowers",
+      "lowerTerrainId": 2,
+      "upperTerrainId": 7,
+      "transitionSize": 0,
+      "transitionDescription": "",
+      "tileSize": 16,
+      "gridLayout": "4x4",
+      "wangIndexMapping": "standard"
+    },
+    {
+      "id": "cb6e5fa7-43dd-420f-9b7d-c5fe175dbb37",
+      "filename": "calm blue lake water-lush short green grass.png",
+      "lowerTerrain": "calm blue lake water",
+      "upperTerrain": "lush short green grass",
+      "lowerTerrainId": 1,
+      "upperTerrainId": 2,
+      "transitionSize": 0.5,
+      "transitionDescription": "wet grassy shoreline with tiny pebbles",
+      "tileSize": 16,
+      "gridLayout": "4x4",
+      "wangIndexMapping": "standard"
+    },
+    {
+      "id": "afbfb5a1-2cf7-4d4f-9d55-48acc12dffe9",
+      "filename": "packed dirt path-brick packed path .png",
+      "lowerTerrain": "packed dirt path",
+      "upperTerrain": "brick packed path ",
+      "lowerTerrainId": 3,
+      "upperTerrainId": 5,
+      "transitionSize": 0,
+      "transitionDescription": "",
+      "tileSize": 16,
+      "gridLayout": "4x4",
+      "wangIndexMapping": "standard"
+    },
+    {
+      "id": "c5285694-6851-47d3-a893-a05280d3be28",
+      "filename": "lush short green grass-packed dirt path.png",
+      "lowerTerrain": "lush short green grass",
+      "upperTerrain": "packed dirt path",
+      "lowerTerrainId": 2,
+      "upperTerrainId": 3,
+      "transitionSize": 0.25,
+      "transitionDescription": "trampled grass edges with tiny stones",
+      "tileSize": 16,
+      "gridLayout": "4x4",
+      "wangIndexMapping": "standard"
+    },
+    {
+      "id": "074a716c-bd27-4709-9f35-2552178581c0",
+      "filename": "lush short green grass-cobblestone path.png",
+      "lowerTerrain": "lush short green grass",
+      "upperTerrain": "cobblestone path",
+      "lowerTerrainId": 2,
+      "upperTerrainId": 4,
+      "transitionSize": 0,
+      "transitionDescription": "",
+      "tileSize": 16,
+      "gridLayout": "4x4",
+      "wangIndexMapping": "standard"
+    },
+    {
+      "id": "a58a11ee-f4a1-4bd3-88ae-bcac1d59b59e",
+      "filename": "packed dirt path-calm blue lake water.png",
+      "lowerTerrain": "packed dirt path",
+      "upperTerrain": "calm blue lake water",
+      "lowerTerrainId": 3,
+      "upperTerrainId": 1,
+      "transitionSize": 1,
+      "transitionDescription": "rough stones",
+      "tileSize": 16,
+      "gridLayout": "4x4",
+      "wangIndexMapping": "standard"
+    },
+    {
+      "id": "930e7bf0-e3fd-419e-b7c2-8483463bea37",
+      "filename": "packed dirt path-tulip flowers.png",
+      "lowerTerrain": "packed dirt path",
+      "upperTerrain": "tulip flowers",
+      "lowerTerrainId": 3,
+      "upperTerrainId": 7,
+      "transitionSize": 0,
+      "transitionDescription": "",
+      "tileSize": 16,
+      "gridLayout": "4x4",
+      "wangIndexMapping": "standard"
+    }
+  ],
+  "overlays": [
+    {
+      "id": 0,
+      "filename": "overlay-0.png",
+      "type": "inpainting",
+      "dimensions": {
+        "width": 560,
+        "height": 368
+      },
+      "worldCoordinates": {
+        "x": 320,
+        "y": 80
+      },
+      "layer": "custom"
+    }
+  ]
+}

@@ -1,0 +1,336 @@
+{
+  "version": "1.0.0",
+  "totalObjects": 17,
+  "objects": [
+    {
+      "id": "f863c84b-b7e5-4a45-92e6-a2272c83ab03",
+      "name": "Object 0",
+      "filename": "f863c84b-b7e5-4a45-92e6-a2272c83ab03.png",
+      "boundingBox": {
+        "x": 363,
+        "y": 243,
+        "width": 73,
+        "height": 56
+      },
+      "layer": 1,
+      "visible": true,
+      "locked": false,
+      "description": "cute cozy top down bridge",
+      "metadata": {
+        "generatedAt": "2026-02-13T12:50:59.353Z"
+      },
+      "isProgress": false
+    },
+    {
+      "id": "6d861941-49d5-4b95-93a2-529d641438f4",
+      "name": "Guide NPC",
+      "filename": "6d861941-49d5-4b95-93a2-529d641438f4.png",
+      "boundingBox": {
+        "x": 481.5,
+        "y": 216.5,
+        "width": 32,
+        "height": 32
+      },
+      "layer": 2,
+      "visible": true,
+      "locked": false,
+      "description": "Character: Guide NPC (south)",
+      "metadata": {
+        "generatedAt": "2026-02-13T12:51:34.363Z"
+      },
+      "isProgress": false
+    },
+    {
+      "id": "ca4358bf-2a3b-4a15-8a62-879e92630a35",
+      "name": "Recruiter NPC",
+      "filename": "ca4358bf-2a3b-4a15-8a62-879e92630a35.png",
+      "boundingBox": {
+        "x": 331.5,
+        "y": 228,
+        "width": 32,
+        "height": 32
+      },
+      "layer": 3,
+      "visible": true,
+      "locked": false,
+      "description": "Character: Recruiter NPC (south)",
+      "metadata": {
+        "generatedAt": "2026-02-13T12:51:52.859Z"
+      },
+      "isProgress": false
+    },
+    {
+      "id": "10ed1493-11a4-4654-9dcd-1893d23bacdc",
+      "name": "Object 0",
+      "filename": "10ed1493-11a4-4654-9dcd-1893d23bacdc.png",
+      "boundingBox": {
+        "x": 680.4000624219968,
+        "y": 62.40006242199685,
+        "width": 72,
+        "height": 88
+      },
+      "layer": 4,
+      "visible": true,
+      "locked": false,
+      "description": "Strict 2D top-down cozy farming-village pixel art. Single detached building sprite only. Transparent background only. No isometric view, no oblique perspective, no 3D depth, no floating platform, no square frame, no border tile, no pedestal, no base plate. LinkedIn social house: cozy blue-roof village house, clear south-facing entrance, tiny hanging LinkedIn sign near the door, warm windows, subtle flower pots, readable silhouette at small scale",
+      "metadata": {
+        "generatedAt": "2026-02-13T13:03:31.087Z"
+      },
+      "isProgress": false
+    },
+    {
+      "id": "20289e0a-2792-4c71-aebd-0a92f0aea715",
+      "name": "Guide NPC",
+      "filename": "20289e0a-2792-4c71-aebd-0a92f0aea715.png",
+      "boundingBox": {
+        "x": 716,
+        "y": 416,
+        "width": 32,
+        "height": 32
+      },
+      "layer": 5,
+      "visible": true,
+      "locked": false,
+      "description": "Character: Guide NPC (south)",
+      "metadata": {
+        "generatedAt": "2026-02-13T12:52:09.612Z"
+      },
+      "isProgress": false
+    },
+    {
+      "id": "26510811-a140-48ae-819a-967565899a6f",
+      "name": "Object 0",
+      "filename": "26510811-a140-48ae-819a-967565899a6f.png",
+      "boundingBox": {
+        "x": 512,
+        "y": 226.5,
+        "width": 44,
+        "height": 44
+      },
+      "layer": 6,
+      "visible": true,
+      "locked": false,
+      "description": "cute cozy city center stone fountain that emits water \n",
+      "metadata": {
+        "generatedAt": "2026-02-13T13:12:24.145Z"
+      },
+      "isProgress": false
+    },
+    {
+      "id": "e28517cb-7b07-41f3-b23b-ac77ab827544",
+      "name": "Object 0",
+      "filename": "e28517cb-7b07-41f3-b23b-ac77ab827544.png",
+      "boundingBox": {
+        "x": 487,
+        "y": 129,
+        "width": 95,
+        "height": 79
+      },
+      "layer": 8,
+      "visible": true,
+      "locked": false,
+      "description": "Imported: company_hall.png",
+      "metadata": {
+        "version": "2026-02-13T13:18:03.973961",
+        "lastEdited": "2026-02-13T13:18:03.973961",
+        "generatedAt": "2026-02-13T13:14:27.488Z"
+      },
+      "isProgress": false
+    },
+    {
+      "id": "f52d2bc0-6622-4693-9eff-52bedf53f8d0",
+      "name": "Object 0",
+      "filename": "f52d2bc0-6622-4693-9eff-52bedf53f8d0.png",
+      "boundingBox": {
+        "x": 736.5,
+        "y": 173.5,
+        "width": 96,
+        "height": 97
+      },
+      "layer": 9,
+      "visible": true,
+      "locked": false,
+      "description": "Imported: cv_archive.png",
+      "metadata": {
+        "generatedAt": "2026-02-13T13:14:55.053Z"
+      },
+      "isProgress": false
+    },
+    {
+      "id": "7c878aff-3f76-4dc3-8f6f-f14c3fb2f734",
+      "name": "Object 0",
+      "filename": "7c878aff-3f76-4dc3-8f6f-f14c3fb2f734.png",
+      "boundingBox": {
+        "x": 564,
+        "y": 321,
+        "width": 104,
+        "height": 97
+      },
+      "layer": 10,
+      "visible": true,
+      "locked": false,
+      "description": "Imported: twitter_ruin.png",
+      "metadata": {
+        "generatedAt": "2026-02-13T13:15:22.501Z"
+      },
+      "isProgress": false
+    },
+    {
+      "id": "5ff7d2d4-eadb-4cde-a5af-8ee10048aa26",
+      "name": "Object 0",
+      "filename": "5ff7d2d4-eadb-4cde-a5af-8ee10048aa26.png",
+      "boundingBox": {
+        "x": 649.5,
+        "y": 200,
+        "width": 60,
+        "height": 59
+      },
+      "layer": 11,
+      "visible": true,
+      "locked": false,
+      "description": "Imported: flower_patch.png",
+      "metadata": {
+        "generatedAt": "2026-02-13T13:16:03.053Z"
+      },
+      "isProgress": false
+    },
+    {
+      "id": "e8cddaf2-1258-45db-8a0f-5044ee0bbee0",
+      "name": "Object 0",
+      "filename": "e8cddaf2-1258-45db-8a0f-5044ee0bbee0.png",
+      "boundingBox": {
+        "x": 226,
+        "y": 154.5,
+        "width": 99,
+        "height": 93
+      },
+      "layer": 12,
+      "visible": true,
+      "locked": false,
+      "description": "Imported: youtube_ruin.png",
+      "metadata": {
+        "generatedAt": "2026-02-13T13:16:22.701Z"
+      },
+      "isProgress": false
+    },
+    {
+      "id": "5cc478fa-80e2-436a-b216-92429f9453e2",
+      "name": "Object 0",
+      "filename": "5cc478fa-80e2-436a-b216-92429f9453e2.png",
+      "boundingBox": {
+        "x": 328.5,
+        "y": 340.5,
+        "width": 100,
+        "height": 98
+      },
+      "layer": 13,
+      "visible": true,
+      "locked": false,
+      "description": "Imported: github_house.png",
+      "metadata": {
+        "version": "2026-02-13T13:21:14.760178",
+        "lastEdited": "2026-02-13T13:21:14.760178",
+        "generatedAt": "2026-02-13T13:19:20.870Z"
+      },
+      "isProgress": false
+    },
+    {
+      "id": "153711ad-e578-4651-a62a-b9af47f68cd0",
+      "name": "Player Hero",
+      "filename": "153711ad-e578-4651-a62a-b9af47f68cd0.png",
+      "boundingBox": {
+        "x": 597,
+        "y": 149,
+        "width": 32,
+        "height": 32
+      },
+      "layer": 14,
+      "visible": true,
+      "locked": false,
+      "description": "Character: Player Hero (south)",
+      "metadata": {
+        "generatedAt": "2026-02-13T13:25:25.024Z"
+      },
+      "isProgress": false
+    },
+    {
+      "id": "23fb6ebd-dad8-4387-a4ae-5e7f4aa8f66e",
+      "name": "Village NPC",
+      "filename": "23fb6ebd-dad8-4387-a4ae-5e7f4aa8f66e.png",
+      "boundingBox": {
+        "x": 208,
+        "y": 295,
+        "width": 32,
+        "height": 32
+      },
+      "layer": 15,
+      "visible": true,
+      "locked": false,
+      "description": "Character: Village NPC (south)",
+      "metadata": {
+        "generatedAt": "2026-02-13T13:37:11.712Z"
+      },
+      "isProgress": false
+    },
+    {
+      "id": "71e22de1-6f3e-40bc-9718-51ace39bba66",
+      "name": "Object 0",
+      "filename": "71e22de1-6f3e-40bc-9718-51ace39bba66.png",
+      "boundingBox": {
+        "x": 193,
+        "y": 350,
+        "width": 80,
+        "height": 112
+      },
+      "layer": 16,
+      "visible": true,
+      "locked": false,
+      "description": "tree",
+      "metadata": {
+        "lastEdited": "2026-02-13T13:41:05.948359",
+        "generatedAt": "2026-02-13T13:39:08.251Z"
+      },
+      "isProgress": false
+    },
+    {
+      "id": "f1f6a544-46eb-4a63-a618-63b394e627d5",
+      "name": "Object 0 (Copy)",
+      "filename": "f1f6a544-46eb-4a63-a618-63b394e627d5.png",
+      "boundingBox": {
+        "x": 488,
+        "y": 38,
+        "width": 80,
+        "height": 112
+      },
+      "layer": 19,
+      "visible": true,
+      "locked": false,
+      "description": "tree",
+      "metadata": {
+        "lastEdited": "2026-02-13T13:41:05.948359",
+        "generatedAt": "2026-02-13T13:41:27.377Z"
+      },
+      "isProgress": false
+    },
+    {
+      "id": "81f6ef51-f413-4a51-97be-c3ea18c87886",
+      "name": "Object 0 (Copy)",
+      "filename": "81f6ef51-f413-4a51-97be-c3ea18c87886.png",
+      "boundingBox": {
+        "x": 383,
+        "y": 68,
+        "width": 80,
+        "height": 112
+      },
+      "layer": 16,
+      "visible": true,
+      "locked": false,
+      "description": "tree",
+      "metadata": {
+        "lastEdited": "2026-02-13T13:41:05.948359",
+        "generatedAt": "2026-02-13T13:42:41.198Z"
+      },
+      "isProgress": false
+    }
+  ]
+}
