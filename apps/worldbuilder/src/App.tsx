@@ -2048,7 +2048,7 @@ function App() {
                           stroke={selectedObjectIds.includes(object.id) ? '#ffd250' : '#ff7a59'}
                           strokeWidth={selectedObjectIds.includes(object.id) ? 3 : 2}
                           draggable={canvasTool === 'move' && !(panMode || spaceHeld || middlePanActive || layerLock.objects)}
-                          onClick={(event) => selectObject(object.id, Boolean(event.evt.shiftKey))}
+                          onMouseDown={(event) => selectObject(object.id, Boolean(event.evt.shiftKey))}
                           onDragEnd={(event) => {
                             const nextX = Number((event.target.x() + object.width / 2).toFixed(2))
                             const nextY = Number((event.target.y() + object.height / 2).toFixed(2))
@@ -2177,7 +2177,7 @@ function App() {
                         stroke={selection.kind === 'collider' && selection.id === collider.id ? '#9af7ff' : '#3cc8ff'}
                         strokeWidth={selection.kind === 'collider' && selection.id === collider.id ? 3 : 2}
                         draggable={canvasTool === 'move' && !(panMode || spaceHeld || middlePanActive || layerLock.colliders)}
-                        onClick={() => selectEntity({ kind: 'collider', id: collider.id })}
+                        onMouseDown={() => selectEntity({ kind: 'collider', id: collider.id })}
                         onDragEnd={(event) => {
                           updateColliderRect(collider.id, {
                             x: Number(event.target.x().toFixed(2)),
@@ -2213,7 +2213,7 @@ function App() {
                         stroke={selection.kind === 'trigger' && selection.id === trigger.id ? '#ff8bd8' : '#ff47b6'}
                         strokeWidth={selection.kind === 'trigger' && selection.id === trigger.id ? 3 : 2}
                         draggable={canvasTool === 'move' && !(panMode || spaceHeld || middlePanActive || layerLock.triggers)}
-                        onClick={() => selectEntity({ kind: 'trigger', id: trigger.id })}
+                        onMouseDown={() => selectEntity({ kind: 'trigger', id: trigger.id })}
                         onDragEnd={(event) => {
                           updateTriggerRect(trigger.id, {
                             x: Number(event.target.x().toFixed(2)),
@@ -2246,7 +2246,7 @@ function App() {
                         stroke="#7d5c00"
                         strokeWidth={2}
                         draggable={canvasTool === 'move' && !(panMode || spaceHeld || middlePanActive || layerLock.npcs)}
-                        onClick={() => selectEntity({ kind: 'npc', id: npc.id })}
+                        onMouseDown={() => selectEntity({ kind: 'npc', id: npc.id })}
                         onDragEnd={(event) => {
                           updateNpc(npc.id, {
                             x: Number(event.target.x().toFixed(2)),

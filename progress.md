@@ -127,3 +127,8 @@ Original prompt: verbessere den weiter! der ist immer noch buggy und viele sache
   - npm run lint ✅
   - npm run build -w @leonaderi/worldbuilder ✅
   - Playwright run: output/worldbuilder-loop/loop-12 (no errors file).
+- Loop 11 completed:
+  - Switched canvas entity selection handlers from `onClick` to `onMouseDown` for snappier and more reliable direct selection.
+  - Re-ran lint/build and Playwright (`output/worldbuilder-loop/loop-13`).
+- Note:
+  - Scripted click-selection via the current generic Playwright action client is still not reflected in `render_game_to_text` state snapshots, while pan/zoom assertions continue to work.
