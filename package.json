@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "test": "vitest run",
+    "preview": "vite preview",
+    "map:migrate": "node scripts/map/migrate-map.mjs",
+    "admin:apply": "node scripts/admin/apply-admin-patch.mjs",
+    "admin:apply:dry": "node scripts/admin/apply-admin-patch.mjs --dry-run"
   },
   "dependencies": {
     "phaser": "^3.90.0",
@@ -26,6 +30,7 @@
     "globals": "^16.5.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.48.0",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "vitest": "^3.2.4"
   }
 }

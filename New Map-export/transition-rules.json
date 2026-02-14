@@ -1,0 +1,52 @@
+{
+  "transitions": [
+    {
+      "from": "lush short green grass",
+      "to": "tulip flowers",
+      "fromId": 2,
+      "toId": 7,
+      "tilesetId": "68d3f509-6aa5-429a-803c-d9b8fae04bd3",
+      "transitionSize": 0
+    },
+    {
+      "from": "calm blue lake water",
+      "to": "lush short green grass",
+      "fromId": 1,
+      "toId": 2,
+      "tilesetId": "cb6e5fa7-43dd-420f-9b7d-c5fe175dbb37",
+      "transitionSize": 0.5
+    },
+    {
+      "from": "lush short green grass",
+      "to": "packed dirt path",
+      "fromId": 2,
+      "toId": 3,
+      "tilesetId": "c5285694-6851-47d3-a893-a05280d3be28",
+      "transitionSize": 0.25
+    },
+    {
+      "from": "packed dirt path",
+      "to": "brick packed path ",
+      "fromId": 3,
+      "toId": 5,
+      "tilesetId": "afbfb5a1-2cf7-4d4f-9d55-48acc12dffe9",
+      "transitionSize": 0
+    },
+    {
+      "from": "lush short green grass",
+      "to": "cobblestone path",
+      "fromId": 2,
+      "toId": 4,
+      "tilesetId": "074a716c-bd27-4709-9f35-2552178581c0",
+      "transitionSize": 0
+    },
+    {
+      "from": "packed dirt path",
+      "to": "calm blue lake water",
+      "fromId": 3,
+      "toId": 1,
+      "tilesetId": "a58a11ee-f4a1-4bd3-88ae-bcac1d59b59e",
+      "transitionSize": 1
+    }
+  ]
+}

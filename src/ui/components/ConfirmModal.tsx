@@ -4,6 +4,8 @@ interface ConfirmModalProps {
   message: string
   onCancel: () => void
   onConfirm: () => void
+  cancelLabel: string
+  confirmLabel: string
 }
 
 export function ConfirmModal({
@@ -12,6 +14,8 @@ export function ConfirmModal({
   message,
   onCancel,
   onConfirm,
+  cancelLabel,
+  confirmLabel,
 }: ConfirmModalProps) {
   if (!open) {
     return null
@@ -24,10 +28,10 @@ export function ConfirmModal({
         <p>{message}</p>
         <div className="modal-actions">
           <button className="pixel-btn" type="button" onClick={onCancel}>
-            Zurueck
+            {cancelLabel}
           </button>
           <button className="pixel-btn primary" type="button" onClick={onConfirm}>
-            OK, weiter
+            {confirmLabel}
           </button>
         </div>
       </div>

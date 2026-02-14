@@ -6,24 +6,11 @@ interface EntryModalProps {
   note: string | null
   onClose: () => void
   onAction: (entry: PoiEntry, action: PoiAction) => void
+  statusLabels: Record<PoiEntry['status'], string>
+  closeLabel: string
 }
 
-function statusLabel(status: PoiEntry['status']): string {
-  switch (status) {
-    case 'live':
-      return 'Live'
-    case 'wip':
-      return 'In Produktion'
-    case 'coming_soon':
-      return 'Coming Soon'
-    case 'ruins':
-      return 'Ruine'
-    default:
-      return status
-  }
-}
-
-export function EntryModal({ entry, note, onClose, onAction }: EntryModalProps) {
+export function EntryModal({ entry, note, onClose, onAction, statusLabels, closeLabel }: EntryModalProps) {
   if (!entry) {
     return null
   }
@@ -40,7 +27,7 @@ export function EntryModal({ entry, note, onClose, onAction }: EntryModalProps) 
           </div>
           <div>
             <h2>{entry.dialog.title}</h2>
-            <p className="status-chip status-chip-inline">{statusLabel(entry.status)}</p>
+            <p className="status-chip status-chip-inline">{statusLabels[entry.status]}</p>
             <p>{entry.dialog.body}</p>
             <p className="entry-description">{entry.description}</p>
             <p className="entry-tags">{entry.tags.map((tag) => `#${tag}`).join(' ')}</p>
@@ -61,7 +48,7 @@ export function EntryModal({ entry, note, onClose, onAction }: EntryModalProps) 
           ))}
 
           <button className="pixel-btn primary" onClick={onClose} type="button">
-            Schliessen
+            {closeLabel}
           </button>
         </div>
       </div>

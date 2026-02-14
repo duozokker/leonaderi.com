@@ -235,6 +235,117 @@
   max-width: 620px;
 }
 
+.admin-fab {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 180;
+}
+
+.admin-shell {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  width: min(420px, 42vw);
+  z-index: 320;
+  background: rgba(246, 240, 222, 0.96);
+  border: 3px solid #2f2d27;
+  box-shadow: 8px 8px 0 #2f2d27;
+  padding: 0.6rem;
+  overflow: auto;
+}
+
+.admin-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.admin-tabs,
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.admin-status {
+  margin-top: 0.45rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.4rem;
+  font-size: 0.5rem;
+}
+
+.admin-status .dirty {
+  color: #9f2312;
+}
+
+.admin-status .clean {
+  color: #196234;
+}
+
+.admin-legend,
+.admin-map-tools,
+.admin-section {
+  margin-top: 0.55rem;
+  border: 2px solid #2f2d27;
+  background: #fff;
+  padding: 0.5rem;
+}
+
+.admin-legend p,
+.admin-map-tools p {
+  margin: 0.2rem 0;
+  font-size: 0.5rem;
+  line-height: 1.6;
+}
+
+.admin-inspector h3 {
+  margin: 0.6rem 0 0.2rem;
+  font-size: 0.62rem;
+}
+
+.admin-field-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.admin-inspector label {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.48rem;
+}
+
+.admin-input {
+  width: 100%;
+  border: 2px solid #2f2d27;
+  background: #fefefe;
+  color: #141414;
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  font-size: 0.5rem;
+  padding: 0.3rem;
+}
+
+.admin-grid-two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+}
+
+.admin-footer {
+  margin-top: 0.6rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.admin-error {
+  color: #9f2312;
+  font-size: 0.5rem;
+}
+
 @media (max-width: 980px) {
   .entry-layout {
     grid-template-columns: 1fr;
@@ -278,5 +389,21 @@
 
   .intro-grid {
     grid-template-columns: 1fr;
+  }
+
+  .admin-shell {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: none;
+    border-left: 0;
+    border-right: 0;
+    box-shadow: none;
+  }
+
+  .admin-fab {
+    right: 0.4rem;
+    bottom: 4.8rem;
   }
 }

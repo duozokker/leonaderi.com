@@ -1,33 +1,41 @@
 interface IntroModalProps {
   onClose: () => void
+  texts: {
+    title: string
+    body: string
+    desktopTitle: string
+    desktopMove: string
+    desktopInteract: string
+    mobileTitle: string
+    mobileMove: string
+    mobileInteract: string
+    startButton: string
+  }
 }
 
-export function IntroModal({ onClose }: IntroModalProps) {
+export function IntroModal({ onClose, texts }: IntroModalProps) {
   return (
     <div className="modal-backdrop">
       <div className="modal-card intro-card">
-        <h2>Willkommen in deiner Pixel Portfolio World</h2>
-        <p>
-          Du spawnst als Charakter in einer Pokemon-like Stadt. Erkunde Haeuser, NPCs, Schilder
-          und entdecke Links zu LinkedIn, GitHub, Firma und Projekten.
-        </p>
+        <h2>{texts.title}</h2>
+        <p>{texts.body}</p>
 
         <div className="intro-grid">
           <div>
-            <h3>Desktop</h3>
-            <p>Bewegung: WASD oder Pfeiltasten</p>
-            <p>Interaktion: E, Enter, Space oder Mausklick</p>
+            <h3>{texts.desktopTitle}</h3>
+            <p>{texts.desktopMove}</p>
+            <p>{texts.desktopInteract}</p>
           </div>
           <div>
-            <h3>Mobile</h3>
-            <p>Nutze das D-Pad unten links</p>
-            <p>Mit Interact unten rechts sprichst du mit NPCs und betrittst Haeuser</p>
+            <h3>{texts.mobileTitle}</h3>
+            <p>{texts.mobileMove}</p>
+            <p>{texts.mobileInteract}</p>
           </div>
         </div>
 
         <div className="modal-actions">
           <button className="pixel-btn primary" onClick={onClose} type="button">
-            Spiel starten
+            {texts.startButton}
           </button>
         </div>
       </div>
