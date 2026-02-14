@@ -17,6 +17,7 @@
     "admin:apply": "node scripts/admin/apply-admin-patch.mjs",
     "admin:apply:dry": "node scripts/admin/apply-admin-patch.mjs --dry-run",
     "worldbuilder:dev": "npm run dev -w @leonaderi/worldbuilder",
+    "world:bootstrap": "tsx scripts/world/bootstrap-from-runtime.ts",
     "world:validate": "tsx packages/world-compiler/src/cli.ts validate world-data/project.world.v1.json",
     "world:compile": "tsx packages/world-compiler/src/cli.ts compile world-data/project.world.v1.json",
     "world:compile:check": "tsx packages/world-compiler/src/cli.ts compile world-data/project.world.v1.json --check"
