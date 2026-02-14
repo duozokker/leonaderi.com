@@ -190,6 +190,28 @@ textarea {
   width: 130px;
 }
 
+.wb-tool-group {
+  display: inline-flex;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.wb-tool-group button {
+  border: 0;
+  border-right: 1px solid #334155;
+  border-radius: 0;
+}
+
+.wb-tool-group button:last-child {
+  border-right: 0;
+}
+
+.wb-tool-group button.active {
+  background: #164e63;
+  color: #d9f9ff;
+}
+
 .wb-history-pill {
   border: 1px solid #334155;
   border-radius: 999px;
