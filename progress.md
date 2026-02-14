@@ -79,3 +79,24 @@ Original prompt: verbessere den weiter! der ist immer noch buggy und viele sache
   - Added bookmark persistence via localStorage.
   - Added toolbar bookmark indicators (B1..B4 with marker when set).
 - Playwright run: output/worldbuilder-loop/loop-7 (shots + state, no errors file).
+- Loop 8 completed:
+  - Added multi-selection quality-of-life controls: Select All Objects, Clear Selection, Esc clear, Cmd/Ctrl+A select all.
+  - Added marquee/pan conflict fix: no accidental marquee while pan mode/space pan is active.
+  - Added depth workflow improvements:
+    - Depth Guides toggle + per-selected-object depth line in canvas.
+    - Object layer presets: Backdrop, Foot Layer, Roof/Behind (Pokemon-style behind-house behavior).
+  - Added linked object helpers:
+    - Linked collider + trigger overlays for selected object.
+    - Quick collider tuning buttons (top down/up, narrower/wider).
+  - Added nudge shortcut for selected objects via Alt+Arrow (Shift for larger nudge).
+  - Added canvas context-menu suppression for cleaner middle/drag workflows.
+- Validation:
+  - npm run lint ✅
+  - npm run build -w @leonaderi/worldbuilder ✅
+  - Playwright runs:
+    - output/worldbuilder-loop/loop-8 (sanity run)
+    - output/worldbuilder-loop/loop-9 (post-change pan/zoom run)
+    - output/worldbuilder-loop/loop-10 (selection click targeting check)
+- Notes:
+  - Playwright action client currently captures pan/zoom reliably, but click-selection assertions remain flaky with coordinate-only bursts.
+  - Browser live snapshot confirms new toolbar controls and inspector shortcuts are present.
