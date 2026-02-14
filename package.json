@@ -3,15 +3,23 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "npm run world:compile:check && tsc -b && vite build",
     "lint": "eslint .",
     "test": "vitest run",
     "preview": "vite preview",
     "map:migrate": "node scripts/map/migrate-map.mjs",
     "admin:apply": "node scripts/admin/apply-admin-patch.mjs",
-    "admin:apply:dry": "node scripts/admin/apply-admin-patch.mjs --dry-run"
+    "admin:apply:dry": "node scripts/admin/apply-admin-patch.mjs --dry-run",
+    "worldbuilder:dev": "npm run dev -w @leonaderi/worldbuilder",
+    "world:validate": "tsx packages/world-compiler/src/cli.ts validate world-data/project.world.v1.json",
+    "world:compile": "tsx packages/world-compiler/src/cli.ts compile world-data/project.world.v1.json",
+    "world:compile:check": "tsx packages/world-compiler/src/cli.ts compile world-data/project.world.v1.json --check"
   },
   "dependencies": {
     "phaser": "^3.90.0",
@@ -31,6 +39,7 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.48.0",
     "vite": "^7.3.1",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "tsx": "^4.20.6"
   }
 }

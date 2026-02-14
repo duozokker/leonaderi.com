@@ -1,0 +1,175 @@
+:root {
+  color-scheme: light;
+  --bg: #0f172a;
+  --panel: #111827;
+  --panel-alt: #1f2937;
+  --text: #e5e7eb;
+  --muted: #9ca3af;
+  --accent: #22d3ee;
+  --warn: #fb7185;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+  background: linear-gradient(130deg, #0b1022, #18243d);
+  color: var(--text);
+}
+
+.wb-root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+}
+
+.wb-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  background: rgba(17, 24, 39, 0.95);
+  border: 1px solid #334155;
+  padding: 0.75rem;
+}
+
+.wb-topbar h1 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.wb-topbar p {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.wb-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+button {
+  border: 1px solid #334155;
+  background: #111827;
+  color: var(--text);
+  padding: 0.4rem 0.6rem;
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: var(--accent);
+}
+
+.wb-tabs {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.wb-tabs button.active {
+  border-color: var(--accent);
+  background: #164e63;
+}
+
+.wb-layout {
+  display: grid;
+  grid-template-columns: 270px minmax(700px, 1fr) 340px;
+  gap: 0.75rem;
+  min-height: 72vh;
+}
+
+.wb-sidebar,
+.wb-main {
+  border: 1px solid #334155;
+  background: rgba(15, 23, 42, 0.9);
+  padding: 0.75rem;
+  overflow: auto;
+}
+
+.wb-sidebar h3,
+.wb-main h3,
+.wb-sidebar h4 {
+  margin: 0 0 0.5rem;
+}
+
+.wb-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.wb-list button {
+  text-align: left;
+}
+
+.wb-list button.sel {
+  border-color: var(--accent);
+  background: #164e63;
+}
+
+.wb-input,
+textarea,
+select {
+  width: 100%;
+  border: 1px solid #334155;
+  background: #0b1220;
+  color: var(--text);
+  padding: 0.35rem;
+}
+
+textarea {
+  min-height: 100px;
+}
+
+.wb-canvas {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.wb-stage {
+  border: 1px solid #334155;
+  background: #0b1220;
+}
+
+.wb-dialogue-tab,
+.wb-json-tab,
+.wb-validation {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  height: 100%;
+}
+
+.wb-dialogue-head {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.wb-flow-wrap {
+  min-height: 460px;
+  border: 1px solid #334155;
+  background: #0b1220;
+}
+
+.wb-json-tab textarea {
+  flex: 1;
+  min-height: 500px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.err {
+  color: var(--warn);
+}
+
+@media (max-width: 1300px) {
+  .wb-layout {
+    grid-template-columns: 1fr;
+  }
+}
