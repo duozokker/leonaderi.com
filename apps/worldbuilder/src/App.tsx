@@ -173,6 +173,8 @@ function App() {
   const [fileHandle, setFileHandle] = useState<FileHandleLike | null>(null)
   const [jsonBuffer, setJsonBuffer] = useState(() => JSON.stringify(seedWorld, null, 2))
   const [zoom, setZoom] = useState(1)
+  const [camera, setCamera] = useState({ x: 20, y: 20 })
+  const [panMode, setPanMode] = useState(false)
 
   const selectedDialogue = useMemo(
     () => world.dialogues.find((item) => item.id === dialogueId) ?? world.dialogues[0] ?? null,
@@ -474,6 +476,8 @@ function App() {
     setFlowEdges(flow.edges)
   }
 
+  const clampZoom = (value: number) => Math.max(0.35, Math.min(2.5, value))
+
   useEffect(() => {
     const transformer = transformerRef.current
     if (!transformer) return
@@ -557,14 +561,46 @@ function App() {
                     max="2.5"
                     step="0.05"
                     value={zoom}
-                    onChange={(event) => setZoom(Number(event.target.value))}
+                    onChange={(event) => setZoom(clampZoom(Number(event.target.value)))}
                   />
                 </label>
+                <button onClick={() => setPanMode((prev) => !prev)}>
+                  {panMode ? 'Pan: ON' : 'Pan: OFF'}
+                </button>
+                <button
+                  onClick={() => {
+                    setZoom(1)
+                    setCamera({ x: 20, y: 20 })
+                  }}
+                >
+                  Reset View
+                </button>
               </div>
 
-              <Stage width={1000} height={640} className="wb-stage">
+              <Stage
+                width={1000}
+                height={640}
+                className="wb-stage"
+                onWheel={(event) => {
+                  event.evt.preventDefault()
+                  const direction = event.evt.deltaY > 0 ? -1 : 1
+                  const nextZoom = clampZoom(zoom + direction * 0.05)
+                  setZoom(nextZoom)
+                }}
+              >
                 <Layer>
-                  <Group x={20} y={20} scale={{ x: zoom, y: zoom }}>
+                  <Group
+                    x={camera.x}
+                    y={camera.y}
+                    scale={{ x: zoom, y: zoom }}
+                    draggable={panMode}
+                    onDragEnd={(event) => {
+                      setCamera({
+                        x: Number(event.target.x().toFixed(2)),
+                        y: Number(event.target.y().toFixed(2)),
+                      })
+                    }}
+                  >
                     {world.map.terrainGrid.map((row, y) => row.map((terrain, x) => (
                       <Rect
                         key={`t-${x}-${y}`}

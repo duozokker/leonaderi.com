@@ -9,12 +9,12 @@ export const portfolioGlossary: PoiEntry[] = [
     "name": "Company HQ",
     "kind": "company",
     "status": "live",
-    "description": "Das Hauptgebaeude deiner Firma.",
+    "description": "Das Hauptgebaeude deiner Firma: Leistungen, Cases, Kontakt und wie man mit dir arbeitet.",
     "accentColor": "#e59d39",
     "spriteHint": "hq_gold",
     "dialog": {
       "title": "Company HQ",
-      "body": "Hier sieht man dein Business-Profil."
+      "body": "Hier sieht man dein Business-Profil, Leistungen und wie man ein Projekt mit dir startet."
     },
     "tags": [
       "company",
@@ -23,37 +23,61 @@ export const portfolioGlossary: PoiEntry[] = [
     ],
     "district": "Company Quarter",
     "world": {
-      "x": 123,
-      "y": 96,
+      "x": 503,
+      "y": 208,
       "width": 95,
       "height": 79,
-      "hitbox": {
-        "x": 20,
-        "y": 32,
-        "width": 55,
-        "height": 40
-      },
       "interactRadius": 72,
       "visual": "house",
       "solid": true
     },
     "actions": [
       {
-        "id": "company-services",
-        "label": "Leistungen anzeigen",
-        "type": "open_modal"
-      },
-      {
-        "id": "open-company-dialog",
-        "label": "Company Dialog",
-        "type": "open_modal"
-      },
-      {
-        "id": "open-company-site",
-        "label": "Firmenwebsite",
+        "id": "company-website",
+        "label": "Firmenwebsite oeffnen",
         "type": "open_link",
         "href": "https://example.com",
         "confirmMessage": "Zur Firmenwebsite wechseln?"
+      },
+      {
+        "id": "company-services",
+        "label": "Leistungen anzeigen",
+        "type": "open_modal"
+      }
+    ]
+  },
+  {
+    "id": "construction-ruins",
+    "name": "Ruinen",
+    "kind": "coming_soon",
+    "status": "ruins",
+    "description": "Verstaubtes Haus als Platzhalter fuer zukuenftige Releases.",
+    "accentColor": "#7b7b7b",
+    "spriteHint": "house_ruins",
+    "dialog": {
+      "title": "Production Zone",
+      "body": "Dieses Haus wird spaeter mit neuem Content repariert und freigeschaltet."
+    },
+    "tags": [
+      "ruins",
+      "coming-soon",
+      "future"
+    ],
+    "district": "South",
+    "world": {
+      "x": 250,
+      "y": 464,
+      "width": 64,
+      "height": 64,
+      "interactRadius": 68,
+      "visual": "house",
+      "solid": true
+    },
+    "actions": [
+      {
+        "id": "ruins-soon",
+        "label": "Noch geschlossen",
+        "type": "coming_soon"
       }
     ]
   },
@@ -62,12 +86,12 @@ export const portfolioGlossary: PoiEntry[] = [
     "name": "GitHub Werkstatt",
     "kind": "external_link",
     "status": "live",
-    "description": "Code, Repositories und Open-Source-Projekte.",
+    "description": "Code, Repositories und Open-Source-Projekte als technischer Nachweis.",
     "accentColor": "#24292f",
     "spriteHint": "house_github",
     "dialog": {
       "title": "GitHub Werkstatt",
-      "body": "Hier sehen Besucher deinen Code."
+      "body": "Hier sehen Besucher deinen Code, Commit-Historie und aktive Projekte."
     },
     "tags": [
       "github",
@@ -76,8 +100,8 @@ export const portfolioGlossary: PoiEntry[] = [
     ],
     "district": "South District",
     "world": {
-      "x": 91,
-      "y": 176,
+      "x": 345,
+      "y": 417.5,
       "width": 74,
       "height": 71,
       "interactRadius": 72,
@@ -99,12 +123,12 @@ export const portfolioGlossary: PoiEntry[] = [
     "name": "LinkedIn Haus",
     "kind": "external_link",
     "status": "live",
-    "description": "Lebenslauf und professionelle Timeline.",
+    "description": "Lebenslauf und professionelle Timeline sind ueber LinkedIn erreichbar.",
     "accentColor": "#0a66c2",
     "spriteHint": "house_linkedin",
     "dialog": {
       "title": "LinkedIn",
-      "body": "Hier geht es direkt zu deinem Lebenslauf."
+      "body": "Hier geht es direkt zu deinem Lebenslauf und professionellen Profil."
     },
     "tags": [
       "linkedin",
@@ -113,16 +137,10 @@ export const portfolioGlossary: PoiEntry[] = [
     ],
     "district": "Career Lane",
     "world": {
-      "x": 222,
-      "y": 88,
+      "x": 696.4,
+      "y": 142.4,
       "width": 72,
       "height": 88,
-      "hitbox": {
-        "x": 16,
-        "y": 34,
-        "width": 44,
-        "height": 48
-      },
       "interactRadius": 68,
       "visual": "house",
       "solid": true
@@ -142,12 +160,12 @@ export const portfolioGlossary: PoiEntry[] = [
     "name": "Guide NPC",
     "kind": "npc",
     "status": "live",
-    "description": "Der Start-NPC erklaert die Welt.",
+    "description": "Der Start-NPC erklaert die Welt, Steuerung und Ziele.",
     "accentColor": "#69b578",
     "spriteHint": "npc_guide",
     "dialog": {
-      "title": "Welcome",
-      "body": "Erkunde die Stadt und entdecke Inhalte."
+      "title": "Welcome Trainer",
+      "body": "Erkunde die Stadt, rede mit NPCs und entdecke Links zu Profil, Projekten und deiner Firma."
     },
     "tags": [
       "npc",
@@ -155,8 +173,8 @@ export const portfolioGlossary: PoiEntry[] = [
     ],
     "district": "Town Plaza",
     "world": {
-      "x": 182,
-      "y": 146,
+      "x": 497.5,
+      "y": 296.5,
       "width": 32,
       "height": 32,
       "interactRadius": 56,
@@ -172,6 +190,110 @@ export const portfolioGlossary: PoiEntry[] = [
     ]
   },
   {
+    "id": "npc-recruiter-secret",
+    "name": "Recruiter NPC",
+    "kind": "npc",
+    "status": "live",
+    "description": "Geheimer NPC mit Mini-Quest fuer neugierige Besucher.",
+    "accentColor": "#c3b85f",
+    "spriteHint": "npc_recruiter",
+    "dialog": {
+      "title": "Secret Quest",
+      "body": "Finde die drei spannendsten Orte in der Stadt. Dann bist du offiziell Explorer."
+    },
+    "tags": [
+      "npc",
+      "easter-egg",
+      "quest"
+    ],
+    "district": "Hidden Corner",
+    "world": {
+      "x": 347.5,
+      "y": 308,
+      "width": 32,
+      "height": 32,
+      "interactRadius": 56,
+      "visual": "npc",
+      "solid": true
+    },
+    "actions": [
+      {
+        "id": "quest-modal",
+        "label": "Quest lesen",
+        "type": "open_modal"
+      }
+    ]
+  },
+  {
+    "id": "projects-lab",
+    "name": "Fun Projects Lab",
+    "kind": "project_showcase",
+    "status": "live",
+    "description": "Spielerische und kreative Projekte mit kurzen Erklaerungen und Links.",
+    "accentColor": "#2ca58d",
+    "spriteHint": "house_projects",
+    "dialog": {
+      "title": "Fun Projects Lab",
+      "body": "Hier liegen deine coolen Experimente, Side Projects und Demos."
+    },
+    "tags": [
+      "projects",
+      "creative",
+      "experiments"
+    ],
+    "district": "East Quarter",
+    "world": {
+      "x": 752.5,
+      "y": 253.5,
+      "width": 96,
+      "height": 97,
+      "interactRadius": 72,
+      "visual": "house",
+      "solid": true
+    },
+    "actions": [
+      {
+        "id": "projects-list",
+        "label": "Projektliste anzeigen",
+        "type": "open_modal"
+      }
+    ]
+  },
+  {
+    "id": "sign-about",
+    "name": "About-Schild",
+    "kind": "sign",
+    "status": "live",
+    "description": "Ein kurzer Pitch ueber dich und die Idee der Seite.",
+    "accentColor": "#8d7d58",
+    "spriteHint": "sign_about",
+    "dialog": {
+      "title": "About This World",
+      "body": "Diese Website ist deine Portfolio-Welt. Jede Location repraesentiert einen Teil deiner Arbeit."
+    },
+    "tags": [
+      "sign",
+      "about"
+    ],
+    "district": "Town Plaza",
+    "world": {
+      "x": 430,
+      "y": 304,
+      "width": 24,
+      "height": 26,
+      "interactRadius": 48,
+      "visual": "sign",
+      "solid": false
+    },
+    "actions": [
+      {
+        "id": "action-sign-about-coming-soon",
+        "label": "Coming soon",
+        "type": "coming_soon"
+      }
+    ]
+  },
+  {
     "id": "sign-controls",
     "name": "Steuerungs-Schild",
     "kind": "sign",
@@ -181,7 +303,7 @@ export const portfolioGlossary: PoiEntry[] = [
     "spriteHint": "sign_controls",
     "dialog": {
       "title": "Controls",
-      "body": "Desktop: WASD/Pfeile, Interaktion mit E/Enter/Space."
+      "body": "Desktop: WASD oder Pfeiltasten. Interaktion: E, Enter, Space oder Klick. Mobile: D-Pad + Interact."
     },
     "tags": [
       "sign",
@@ -189,24 +311,91 @@ export const portfolioGlossary: PoiEntry[] = [
     ],
     "district": "Town Plaza",
     "world": {
-      "x": 214,
-      "y": 176,
+      "x": 540,
+      "y": 264,
       "width": 24,
-      "height": 24,
+      "height": 26,
       "interactRadius": 48,
       "visual": "sign",
       "solid": false
     },
     "actions": [
       {
-        "id": "controls-read",
-        "label": "Schild lesen",
-        "type": "open_modal"
-      },
+        "id": "action-sign-controls-coming-soon",
+        "label": "Coming soon",
+        "type": "coming_soon"
+      }
+    ]
+  },
+  {
+    "id": "twitter-house",
+    "name": "Twitter Kiosk",
+    "kind": "social",
+    "status": "wip",
+    "description": "Kurze Updates, Build-in-public und spontane Gedanken.",
+    "accentColor": "#1d9bf0",
+    "spriteHint": "house_twitter",
+    "dialog": {
+      "title": "Twitter Kiosk",
+      "body": "Der Kanal wird vorbereitet. Du kannst ihn spaeter einfach per Glossar aktivieren."
+    },
+    "tags": [
+      "twitter",
+      "social",
+      "wip"
+    ],
+    "district": "South East",
+    "world": {
+      "x": 580,
+      "y": 401,
+      "width": 104,
+      "height": 97,
+      "interactRadius": 72,
+      "visual": "house",
+      "solid": true
+    },
+    "actions": [
       {
-        "id": "open-controls-dialog",
-        "label": "Controls lesen",
-        "type": "open_modal"
+        "id": "twitter-open",
+        "label": "Twitter oeffnen",
+        "type": "open_link",
+        "href": "https://x.com/your-handle",
+        "confirmMessage": "Twitter in neuem Tab oeffnen?"
+      }
+    ]
+  },
+  {
+    "id": "youtube-house",
+    "name": "YouTube Studio",
+    "kind": "social",
+    "status": "coming_soon",
+    "description": "Geplantes Studio fuer Videos, Devlogs und Tutorials.",
+    "accentColor": "#c4302b",
+    "spriteHint": "house_youtube",
+    "dialog": {
+      "title": "YouTube Studio",
+      "body": "Diese Location ist noch im Bau. Bald erscheinen hier Video-Formate."
+    },
+    "tags": [
+      "youtube",
+      "content",
+      "coming-soon"
+    ],
+    "district": "West Island",
+    "world": {
+      "x": 242,
+      "y": 234.5,
+      "width": 99,
+      "height": 93,
+      "interactRadius": 72,
+      "visual": "house",
+      "solid": true
+    },
+    "actions": [
+      {
+        "id": "youtube-soon",
+        "label": "Coming Soon",
+        "type": "coming_soon"
       }
     ]
   }
