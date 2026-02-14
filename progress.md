@@ -66,3 +66,11 @@ Original prompt: verbessere den weiter! der ist immer noch buggy und viele sache
 - Tiled editor emphasizes layer visibility/lock and map-level editing workflows.
 - Unity scene workflow emphasizes framing selection and camera navigation speed.
 - Godot 2D editor emphasizes intuitive viewport pan/zoom and tool-mode shortcuts.
+- Loop 5 completed:
+  - Added entity search filter for Objects/Colliders/Triggers/NPCs/POIs list.
+  - Added object helper actions: "Auto Collider from Object" and "Create Door Trigger".
+  - Added trigger->interaction action editor to configure dialogue/link/toast/flag/teleport/modal flows directly.
+- Loop 6 completed:
+  - Added live cursor world/tile coordinates in toolbar.
+  - Added optional crosshair lines on canvas for precise alignment.
+- Playwright runs: output/worldbuilder-loop/loop-5 and loop-6 (shots + state, no errors files).

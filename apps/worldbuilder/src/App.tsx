@@ -270,6 +270,8 @@ function App() {
   const [backgroundMode, setBackgroundMode] = useState<BackgroundMode>('abstract')
   const [backgroundBlendOpacity, setBackgroundBlendOpacity] = useState(0.4)
   const [renderedMapImage, setRenderedMapImage] = useState<HTMLImageElement | null>(null)
+  const [hoverWorld, setHoverWorld] = useState<{ x: number; y: number } | null>(null)
+  const [showCrosshair, setShowCrosshair] = useState(true)
   const [layerVisibility, setLayerVisibility] = useState({
     objects: true,
     colliders: true,
@@ -283,6 +285,7 @@ function App() {
     triggers: false,
     npcs: false,
   })
+  const [entityFilter, setEntityFilter] = useState('')
 
   useEffect(() => {
     const img = new window.Image()
@@ -329,6 +332,27 @@ function App() {
       return groupRank(a.renderGroup) - groupRank(b.renderGroup) || a.depth - b.depth || a.y - b.y
     }),
     [world.objects],
+  )
+  const filterNeedle = entityFilter.trim().toLowerCase()
+  const filteredObjects = useMemo(
+    () => drawOrderedObjects.filter((item) => `${item.key} ${item.id}`.toLowerCase().includes(filterNeedle)),
+    [drawOrderedObjects, filterNeedle],
+  )
+  const filteredColliders = useMemo(
+    () => world.colliders.filter((item) => item.id.toLowerCase().includes(filterNeedle)),
+    [world.colliders, filterNeedle],
+  )
+  const filteredTriggers = useMemo(
+    () => world.triggers.filter((item) => `${item.id} ${item.label}`.toLowerCase().includes(filterNeedle)),
+    [world.triggers, filterNeedle],
+  )
+  const filteredNpcs = useMemo(
+    () => world.npcs.filter((item) => `${item.id} ${item.spriteKey}`.toLowerCase().includes(filterNeedle)),
+    [world.npcs, filterNeedle],
+  )
+  const filteredPois = useMemo(
+    () => world.poiIndex.filter((item) => `${item.id} ${item.name}`.toLowerCase().includes(filterNeedle)),
+    [world.poiIndex, filterNeedle],
   )
 
   const validationIssues = useMemo(() => validateWorld(world), [world])
@@ -500,6 +524,93 @@ function App() {
       meta: { ...world.meta, updatedAt: new Date().toISOString() },
     })
     showStatus('ok', 'Interaction erstellt')
+  }
+
+  const createDoorTriggerFromObject = (objectId: string) => {
+    const object = world.objects.find((item) => item.id === objectId)
+    if (!object) return
+    const triggerId = `trigger-door-${Date.now()}`
+    const interactionId = `int-door-${Date.now()}`
+    const doorWidth = Math.max(16, Math.min(36, Math.round(object.width * 0.36)))
+    const doorHeight = 16
+    const poi = object.poiId ? world.poiIndex.find((item) => item.id === object.poiId) : null
+    const targetDialogue = world.dialogues.find((dialogue) => dialogue.id === `dlg-${object.poiId}`) ?? world.dialogues[0]
+    updateWorld({
+      ...world,
+      triggers: [
+        ...world.triggers,
+        {
+          id: triggerId,
+          type: 'door',
+          label: `${object.key} Door`,
+          objectId: object.id,
+          interactionId,
+          enabled: true,
+          shape: {
+            type: 'rect',
+            rect: clampRectToMap({
+              x: object.x - doorWidth / 2,
+              y: object.y + object.height / 2 - doorHeight - 2,
+              width: doorWidth,
+              height: doorHeight,
+            }, mapWidth, mapHeight),
+          },
+        },
+      ],
+      interactions: [
+        ...world.interactions,
+        {
+          id: interactionId,
+          triggerId,
+          actions: targetDialogue
+            ? [{ id: `action-${Date.now()}`, label: `${poi?.name ?? object.key} Dialog`, type: 'open_dialogue', dialogueId: targetDialogue.id }]
+            : [{ id: `action-${Date.now()}`, label: 'Interact', type: 'show_toast', message: `Interaktion mit ${poi?.name ?? object.key}` }],
+        },
+      ],
+      meta: { ...world.meta, updatedAt: new Date().toISOString() },
+    })
+    setSelection({ kind: 'trigger', id: triggerId })
+    showStatus('ok', 'Door Trigger erzeugt')
+  }
+
+  const autoColliderFromObject = (objectId: string) => {
+    const object = world.objects.find((item) => item.id === objectId)
+    if (!object) return
+    const existing = world.colliders.find((item) => item.objectId === objectId && item.shape.type === 'rect')
+    const rect = clampRectToMap({
+      x: object.x - object.width / 2 + 4,
+      y: object.y - object.height / 2 + object.height * 0.42,
+      width: Math.max(8, object.width - 8),
+      height: Math.max(8, object.height * 0.5),
+    }, mapWidth, mapHeight)
+
+    if (existing && existing.shape.type === 'rect') {
+      updateWorld({
+        ...world,
+        colliders: world.colliders.map((item) => item.id === existing.id ? { ...item, shape: { type: 'rect', rect } } : item),
+        meta: { ...world.meta, updatedAt: new Date().toISOString() },
+      })
+      setSelection({ kind: 'collider', id: existing.id })
+      showStatus('ok', 'Collider aktualisiert')
+      return
+    }
+
+    const id = `col-auto-${Date.now()}`
+    updateWorld({
+      ...world,
+      colliders: [
+        ...world.colliders,
+        {
+          id,
+          objectId,
+          shape: { type: 'rect', rect },
+          solid: true,
+        },
+      ],
+      meta: { ...world.meta, updatedAt: new Date().toISOString() },
+    })
+    setSelection({ kind: 'collider', id })
+    showStatus('ok', 'Collider erzeugt')
   }
 
   const parseAndLoadWorld = (source: string, context: string) => {
@@ -1104,6 +1215,8 @@ function App() {
       panMode: panMode || spaceHeld || middlePanActive,
       backgroundMode,
       backgroundBlendOpacity,
+      hoverWorld,
+      showCrosshair,
       map: { width: mapWidth, height: mapHeight, tileSize: world.map.tileSize },
       counts: {
         objects: world.objects.length,
@@ -1127,7 +1240,7 @@ function App() {
       delete window.render_game_to_text
       delete window.advanceTime
     }
-  }, [tab, selection, zoom, camera, panMode, spaceHeld, middlePanActive, backgroundMode, backgroundBlendOpacity, mapWidth, mapHeight, world.map.tileSize, world.objects.length, world.colliders.length, world.triggers.length, world.npcs.length, world.poiIndex.length, frameCounter, history.length, future.length, layerLock, layerVisibility, drawOrderedObjects])
+  }, [tab, selection, zoom, camera, panMode, spaceHeld, middlePanActive, backgroundMode, backgroundBlendOpacity, hoverWorld, showCrosshair, mapWidth, mapHeight, world.map.tileSize, world.objects.length, world.colliders.length, world.triggers.length, world.npcs.length, world.poiIndex.length, frameCounter, history.length, future.length, layerLock, layerVisibility, drawOrderedObjects])
 
   const minimapScale = Math.min(180 / mapWidth, 120 / mapHeight)
   const minimapWidth = mapWidth * minimapScale
@@ -1186,27 +1299,36 @@ function App() {
       <section className="wb-layout">
         <aside className="wb-sidebar left">
           <h3>Entities</h3>
+          <input
+            id="entity-filter"
+            name="entity-filter"
+            aria-label="entity-filter"
+            className="wb-input"
+            placeholder="Filter (id/name/key)..."
+            value={entityFilter}
+            onChange={(event) => setEntityFilter(event.target.value)}
+          />
           <div className="wb-list">
             <h4>Objects</h4>
-            {drawOrderedObjects.map((item) => (
+            {filteredObjects.map((item) => (
               <button key={item.id} className={selection.kind === 'object' && selection.id === item.id ? 'sel' : ''} onClick={() => setSelection({ kind: 'object', id: item.id })}>
                 {item.key} <span className="wb-inline-meta">d:{item.depth} {item.visible ? '' : '(hidden)'}</span>
               </button>
             ))}
             <h4>Colliders</h4>
-            {world.colliders.map((item) => (
+            {filteredColliders.map((item) => (
               <button key={item.id} className={selection.kind === 'collider' && selection.id === item.id ? 'sel' : ''} onClick={() => setSelection({ kind: 'collider', id: item.id })}>{item.id}</button>
             ))}
             <h4>Triggers</h4>
-            {world.triggers.map((item) => (
+            {filteredTriggers.map((item) => (
               <button key={item.id} className={selection.kind === 'trigger' && selection.id === item.id ? 'sel' : ''} onClick={() => setSelection({ kind: 'trigger', id: item.id })}>{item.label}</button>
             ))}
             <h4>NPCs</h4>
-            {world.npcs.map((item) => (
+            {filteredNpcs.map((item) => (
               <button key={item.id} className={selection.kind === 'npc' && selection.id === item.id ? 'sel' : ''} onClick={() => setSelection({ kind: 'npc', id: item.id })}>{item.id}</button>
             ))}
             <h4>POIs</h4>
-            {world.poiIndex.map((item) => (
+            {filteredPois.map((item) => (
               <button key={item.id} className={selection.kind === 'poi' && selection.id === item.id ? 'sel' : ''} onClick={() => setSelection({ kind: 'poi', id: item.id })}>{item.name}</button>
             ))}
           </div>
@@ -1276,6 +1398,13 @@ function App() {
                     />
                   </label>
                 ) : null}
+                <label className="wb-inline-check">
+                  <input type="checkbox" checked={showCrosshair} onChange={(event) => setShowCrosshair(event.target.checked)} />
+                  Crosshair
+                </label>
+                <span className="wb-history-pill">
+                  Cursor {hoverWorld ? `${Math.round(hoverWorld.x)},${Math.round(hoverWorld.y)} (tile ${Math.floor(hoverWorld.x / world.map.tileSize)},${Math.floor(hoverWorld.y / world.map.tileSize)})` : '--'}
+                </span>
               </div>
               <div className="wb-layer-toggles">
                 <label className="wb-inline-check">
@@ -1345,12 +1474,19 @@ function App() {
                   }
                 }}
                 onMouseMove={(event) => {
-                  if (!middlePanStartRef.current) return
                   const stage = event.target.getStage()
                   const pointer = stage?.getPointerPosition()
-                  if (!pointer) return
-                  const deltaX = pointer.x - middlePanStartRef.current.pointerX
-                  const deltaY = pointer.y - middlePanStartRef.current.pointerY
+                  if (pointer) {
+                    setHoverWorld({
+                      x: Number(((pointer.x - camera.x) / zoom).toFixed(2)),
+                      y: Number(((pointer.y - camera.y) / zoom).toFixed(2)),
+                    })
+                  }
+                  if (!middlePanStartRef.current) return
+                  const dragPointer = stage?.getPointerPosition()
+                  if (!dragPointer) return
+                  const deltaX = dragPointer.x - middlePanStartRef.current.pointerX
+                  const deltaY = dragPointer.y - middlePanStartRef.current.pointerY
                   const next = clampCameraToBounds(
                     middlePanStartRef.current.cameraX + deltaX,
                     middlePanStartRef.current.cameraY + deltaY,
@@ -1365,6 +1501,7 @@ function App() {
                 onMouseLeave={() => {
                   middlePanStartRef.current = null
                   setMiddlePanActive(false)
+                  setHoverWorld(null)
                 }}
                 onWheel={(event) => {
                   event.evt.preventDefault()
@@ -1587,6 +1724,12 @@ function App() {
                       />
                     )) : null}
 
+                    {showCrosshair && hoverWorld ? (
+                      <>
+                        <Rect x={hoverWorld.x} y={0} width={1} height={mapHeight} fill="rgba(255,255,255,0.25)" listening={false} />
+                        <Rect x={0} y={hoverWorld.y} width={mapWidth} height={1} fill="rgba(255,255,255,0.25)" listening={false} />
+                      </>
+                    ) : null}
                     <Text x={8} y={8} text="Orange=Object  Cyan=Collider  Pink=Trigger  Yellow=NPC" fontSize={12} fill="#fefefe" listening={false} />
                     <Text x={8} y={22} text="Space/MiddleMouse+Drag = Pan, Wheel = Zoom, Arrows = Pan, F = Fit, Del = Delete, Cmd/Ctrl+D = Duplicate" fontSize={11} fill="#d1d5db" listening={false} />
                   </Group>
@@ -1764,6 +1907,10 @@ function App() {
                 />
                 Visible
               </label>
+              <div className="wb-inline-buttons">
+                <button onClick={() => autoColliderFromObject(selectedObject.id)}>Auto Collider from Object</button>
+                <button onClick={() => createDoorTriggerFromObject(selectedObject.id)}>Create Door Trigger</button>
+              </div>
               <p className="wb-hint">Walkability wird ueber Collider + Blocking gesteuert. Render-Layer steuert nur, was visuell oben liegt.</p>
             </>
           ) : null}
