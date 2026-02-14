@@ -110,6 +110,7 @@ export class OverworldScene extends Phaser.Scene {
     R: Phaser.Input.Keyboard.Key
     P: Phaser.Input.Keyboard.Key
   }
+  private eventBusDisposers: Array<() => void> = []
 
   constructor() {
     super('OverworldScene')
@@ -189,6 +190,8 @@ export class OverworldScene extends Phaser.Scene {
     this.setupOffsetDebugUi()
     this.setupUiText()
     this.setupEventBridge()
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.teardownScene, this)
+    this.events.once(Phaser.Scenes.Events.DESTROY, this.teardownScene, this)
     this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _go: unknown, _dx: number, dy: number) => {
       this.adminWheelDeltaY = dy
     })
@@ -366,13 +369,14 @@ export class OverworldScene extends Phaser.Scene {
       if (obj.poiId) {
         const entry = this.mergedPois.find((e) => e.id === obj.poiId)
         if (entry) {
+          const nameTagDepth = Math.max(210, spriteDepth + 1)
           this.add.text(sx, sy - obj.height / 2 + 2, entry.name, {
             fontFamily: 'Press Start 2P, Courier New, monospace',
             fontSize: '5px',
             color: '#4a4438',
             backgroundColor: '#f8f2e4',
             padding: { x: 4, y: 2 },
-          }).setOrigin(0.5, 1).setDepth(340).setAlpha(0.9)
+          }).setOrigin(0.5, 1).setDepth(nameTagDepth).setAlpha(0.9)
         }
       }
 
@@ -677,14 +681,14 @@ export class OverworldScene extends Phaser.Scene {
   // ─── EVENT BRIDGE ──────────────────────────────────────────────
 
   private setupEventBridge(): void {
-    gameEventBus.on('ui:block', ({ blocked }) => {
+    this.eventBusDisposers.push(gameEventBus.on('ui:block', ({ blocked }) => {
       this.uiBlocked = blocked
       if (blocked) {
         this.playerBody.setVelocity(0, 0)
       }
-    })
+    }))
 
-    gameEventBus.on('admin:state-changed', (payload) => {
+    this.eventBusDisposers.push(gameEventBus.on('admin:state-changed', (payload) => {
       this.adminRuntime = {
         ...this.adminRuntime,
         ...payload,
@@ -709,18 +713,18 @@ export class OverworldScene extends Phaser.Scene {
         this.cameras.main.startFollow(this.player, true, 0.14, 0.14)
         this.cameras.main.setZoom(1.8)
       }
-    })
+    }))
 
-    gameEventBus.on('admin:selection:changed', ({ selection }) => {
+    this.eventBusDisposers.push(gameEventBus.on('admin:selection:changed', ({ selection }) => {
       this.adminRuntime = {
         ...this.adminRuntime,
         selection,
       }
       this.refreshOffsetDebugLabel()
       this.drawDebugHitboxes()
-    })
+    }))
 
-    gameEventBus.on('admin:patch-updated', ({ patch }) => {
+    this.eventBusDisposers.push(gameEventBus.on('admin:patch-updated', ({ patch }) => {
       const nextMerged = buildMergedAdminData(portfolioGlossary, patch)
       const requiresRebuild = this.requiresSceneRebuild(nextMerged)
 
@@ -737,11 +741,18 @@ export class OverworldScene extends Phaser.Scene {
       this.syncInteractablesFromMergedPois()
       this.refreshOffsetDebugLabel()
       this.drawDebugHitboxes()
-    })
+    }))
 
-    gameEventBus.on('admin:camera:fit-map', () => {
+    this.eventBusDisposers.push(gameEventBus.on('admin:camera:fit-map', () => {
       this.fitCameraToMap()
-    })
+    }))
+  }
+
+  private teardownScene(): void {
+    for (const dispose of this.eventBusDisposers) {
+      dispose()
+    }
+    this.eventBusDisposers = []
   }
 
   // ─── INTERACTABLES ─────────────────────────────────────────────
