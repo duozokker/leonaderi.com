@@ -1,0 +1,558 @@
+{
+  "meta": {
+    "projectId": "leonaderi-world",
+    "version": 1,
+    "createdAt": "2026-02-14T00:00:00.000Z",
+    "updatedAt": "2026-02-14T00:00:00.000Z",
+    "appVersion": "0.1.0"
+  },
+  "map": {
+    "tileSize": 16,
+    "columns": 24,
+    "rows": 16,
+    "yOffset": 0,
+    "objectOffset": {
+      "x": 0,
+      "y": 0
+    },
+    "terrainGrid": [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1],
+      [1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1],
+      [1,2,2,2,2,2,2,2,2,2,3,3,3,2,2,2,2,2,2,2,2,2,1,1],
+      [1,2,2,2,2,2,2,2,2,3,3,3,3,3,2,2,2,2,2,2,2,2,1,1],
+      [1,2,2,2,2,2,2,2,2,3,3,5,5,3,2,2,2,2,2,2,2,2,1,1],
+      [1,2,2,2,2,2,2,2,2,3,3,5,5,3,2,2,2,2,2,2,2,2,1,1],
+      [1,2,2,2,2,2,2,2,2,2,3,3,3,2,2,2,2,2,2,2,2,2,1,1],
+      [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1],
+      [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1],
+      [1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1],
+      [1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+    ],
+    "tilesets": [
+      {
+        "key": "tsWaterGrass",
+        "filename": "water_grass.png",
+        "upperRule": "not_water",
+        "depth": 5
+      },
+      {
+        "key": "tsGrassDirt",
+        "filename": "grass_dirt.png",
+        "upperRule": "dirt_or_brick",
+        "depth": 6
+      },
+      {
+        "key": "tsDirtBrick",
+        "filename": "dirt_brick.png",
+        "upperRule": "brick",
+        "depth": 8
+      }
+    ],
+    "overlay": {
+      "filename": "overlay_0.png",
+      "x": 192,
+      "y": 128,
+      "width": 384,
+      "height": 256,
+      "depth": 9
+    }
+  },
+  "assets": {
+    "objectTextures": [
+      "company_hall.png",
+      "linkedin_house.png",
+      "github_house.png",
+      "bridge.png",
+      "tree.png",
+      "sign_board.png"
+    ],
+    "npcSprites": [
+      "guide",
+      "recruiter",
+      "villager"
+    ],
+    "logos": [
+      "linkedin",
+      "github"
+    ]
+  },
+  "objects": [
+    {
+      "id": "obj-company-hall",
+      "key": "objCompanyHall",
+      "filename": "company_hall.png",
+      "x": 170,
+      "y": 136,
+      "width": 95,
+      "height": 79,
+      "depth": 127,
+      "poiId": "company-hq",
+      "collision": true,
+      "renderGroup": "buildings",
+      "visible": true
+    },
+    {
+      "id": "obj-linkedin",
+      "key": "objLinkedin",
+      "filename": "linkedin_house.png",
+      "x": 258,
+      "y": 132,
+      "width": 72,
+      "height": 88,
+      "depth": 127,
+      "poiId": "linkedin-house",
+      "collision": true,
+      "renderGroup": "buildings",
+      "visible": true
+    },
+    {
+      "id": "obj-github",
+      "key": "objGithub",
+      "filename": "github_house.png",
+      "x": 128,
+      "y": 212,
+      "width": 74,
+      "height": 71,
+      "depth": 127,
+      "poiId": "github-house",
+      "collision": true,
+      "renderGroup": "buildings",
+      "visible": true
+    },
+    {
+      "id": "obj-bridge",
+      "key": "objBridge",
+      "filename": "bridge.png",
+      "x": 190,
+      "y": 176,
+      "width": 72,
+      "height": 40,
+      "depth": 110,
+      "renderGroup": "decor",
+      "visible": true
+    },
+    {
+      "id": "obj-sign",
+      "key": "objSignControls",
+      "filename": "sign_board.png",
+      "x": 224,
+      "y": 188,
+      "width": 24,
+      "height": 28,
+      "depth": 121,
+      "poiId": "sign-controls",
+      "collision": false,
+      "renderGroup": "decor",
+      "visible": true
+    }
+  ],
+  "colliders": [
+    {
+      "id": "col-company",
+      "objectId": "obj-company-hall",
+      "shape": {
+        "type": "rect",
+        "rect": {
+          "x": 20,
+          "y": 32,
+          "width": 55,
+          "height": 40
+        }
+      },
+      "solid": true
+    },
+    {
+      "id": "col-linkedin",
+      "objectId": "obj-linkedin",
+      "shape": {
+        "type": "rect",
+        "rect": {
+          "x": 16,
+          "y": 34,
+          "width": 44,
+          "height": 48
+        }
+      },
+      "solid": true
+    }
+  ],
+  "triggers": [
+    {
+      "id": "door-company",
+      "type": "door",
+      "label": "Company Eingang",
+      "shape": {
+        "type": "rect",
+        "rect": {
+          "x": 156,
+          "y": 160,
+          "width": 20,
+          "height": 18
+        }
+      },
+      "objectId": "obj-company-hall",
+      "interactionId": "int-company",
+      "enabled": true
+    },
+    {
+      "id": "sign-controls-trigger",
+      "type": "interact",
+      "label": "Steuerungsschild",
+      "shape": {
+        "type": "rect",
+        "rect": {
+          "x": 214,
+          "y": 176,
+          "width": 24,
+          "height": 24
+        }
+      },
+      "objectId": "obj-sign",
+      "interactionId": "int-sign-controls",
+      "enabled": true
+    }
+  ],
+  "interactions": [
+    {
+      "id": "int-company",
+      "triggerId": "door-company",
+      "actions": [
+        {
+          "id": "open-company-dialog",
+          "label": "Company Dialog",
+          "type": "open_dialogue",
+          "dialogueId": "dlg-company"
+        },
+        {
+          "id": "open-company-site",
+          "label": "Firmenwebsite",
+          "type": "open_link_confirm",
+          "href": "https://example.com",
+          "confirmMessage": "Zur Firmenwebsite wechseln?"
+        }
+      ]
+    },
+    {
+      "id": "int-sign-controls",
+      "triggerId": "sign-controls-trigger",
+      "actions": [
+        {
+          "id": "open-controls-dialog",
+          "label": "Controls lesen",
+          "type": "open_dialogue",
+          "dialogueId": "dlg-controls"
+        }
+      ]
+    }
+  ],
+  "dialogues": [
+    {
+      "id": "dlg-company",
+      "title": "Company Welcome",
+      "startNodeId": "line-1",
+      "nodes": [
+        {
+          "id": "line-1",
+          "type": "line",
+          "speaker": "Company",
+          "text": "Willkommen im Company HQ."
+        },
+        {
+          "id": "choice-1",
+          "type": "choice",
+          "text": "Was moechtest du sehen?",
+          "choices": [
+            {
+              "id": "c1",
+              "label": "Leistungen",
+              "targetNodeId": "line-services"
+            },
+            {
+              "id": "c2",
+              "label": "Ende",
+              "targetNodeId": "end-1"
+            }
+          ]
+        },
+        {
+          "id": "line-services",
+          "type": "line",
+          "speaker": "Company",
+          "text": "Fullstack Apps, Produktdesign und Automationen."
+        },
+        {
+          "id": "end-1",
+          "type": "end",
+          "text": "Bis bald."
+        }
+      ]
+    },
+    {
+      "id": "dlg-controls",
+      "title": "Controls",
+      "startNodeId": "controls-line",
+      "nodes": [
+        {
+          "id": "controls-line",
+          "type": "line",
+          "speaker": "Sign",
+          "text": "Desktop: WASD/Pfeile. Interaktion: E, Enter, Space."
+        },
+        {
+          "id": "controls-end",
+          "type": "end"
+        }
+      ]
+    }
+  ],
+  "npcs": [
+    {
+      "id": "guide",
+      "spriteKey": "guide",
+      "x": 198,
+      "y": 160,
+      "facing": "south",
+      "movement": "static",
+      "interactionId": "int-sign-controls"
+    },
+    {
+      "id": "recruiter",
+      "spriteKey": "recruiter",
+      "x": 144,
+      "y": 192,
+      "facing": "east",
+      "movement": "patrol"
+    },
+    {
+      "id": "villageNpc",
+      "spriteKey": "villager",
+      "x": 240,
+      "y": 208,
+      "facing": "south",
+      "movement": "static"
+    },
+    {
+      "id": "guideNpc2",
+      "spriteKey": "guide",
+      "x": 290,
+      "y": 236,
+      "facing": "south",
+      "movement": "static"
+    },
+    {
+      "id": "playerSpawn",
+      "spriteKey": "player",
+      "x": 186,
+      "y": 168,
+      "facing": "south",
+      "movement": "static"
+    }
+  ],
+  "poiIndex": [
+    {
+      "id": "company-hq",
+      "name": "Company HQ",
+      "kind": "company",
+      "status": "live",
+      "description": "Das Hauptgebaeude deiner Firma.",
+      "accentColor": "#e59d39",
+      "spriteHint": "hq_gold",
+      "dialog": {
+        "title": "Company HQ",
+        "body": "Hier sieht man dein Business-Profil."
+      },
+      "tags": ["company", "services", "contact"],
+      "district": "Company Quarter",
+      "world": {
+        "x": 123,
+        "y": 96,
+        "width": 95,
+        "height": 79,
+        "hitbox": {
+          "x": 20,
+          "y": 32,
+          "width": 55,
+          "height": 40
+        },
+        "interactRadius": 72,
+        "visual": "house",
+        "solid": true
+      },
+      "actions": [
+        {
+          "id": "company-services",
+          "label": "Leistungen anzeigen",
+          "type": "open_modal"
+        }
+      ],
+      "linkedObjectId": "obj-company-hall",
+      "linkedInteractionId": "int-company"
+    },
+    {
+      "id": "linkedin-house",
+      "name": "LinkedIn Haus",
+      "kind": "external_link",
+      "status": "live",
+      "description": "Lebenslauf und professionelle Timeline.",
+      "accentColor": "#0a66c2",
+      "spriteHint": "house_linkedin",
+      "dialog": {
+        "title": "LinkedIn",
+        "body": "Hier geht es direkt zu deinem Lebenslauf."
+      },
+      "tags": ["linkedin", "cv", "career"],
+      "district": "Career Lane",
+      "world": {
+        "x": 222,
+        "y": 88,
+        "width": 72,
+        "height": 88,
+        "hitbox": {
+          "x": 16,
+          "y": 34,
+          "width": 44,
+          "height": 48
+        },
+        "interactRadius": 68,
+        "visual": "house",
+        "solid": true
+      },
+      "actions": [
+        {
+          "id": "linkedin-open",
+          "label": "LinkedIn oeffnen",
+          "type": "open_link",
+          "href": "https://www.linkedin.com/in/your-handle",
+          "confirmMessage": "LinkedIn in neuem Tab oeffnen?"
+        }
+      ],
+      "linkedObjectId": "obj-linkedin"
+    },
+    {
+      "id": "github-house",
+      "name": "GitHub Werkstatt",
+      "kind": "external_link",
+      "status": "live",
+      "description": "Code, Repositories und Open-Source-Projekte.",
+      "accentColor": "#24292f",
+      "spriteHint": "house_github",
+      "dialog": {
+        "title": "GitHub Werkstatt",
+        "body": "Hier sehen Besucher deinen Code."
+      },
+      "tags": ["github", "code", "opensource"],
+      "district": "South District",
+      "world": {
+        "x": 91,
+        "y": 176,
+        "width": 74,
+        "height": 71,
+        "interactRadius": 72,
+        "visual": "house",
+        "solid": true
+      },
+      "actions": [
+        {
+          "id": "github-open",
+          "label": "GitHub oeffnen",
+          "type": "open_link",
+          "href": "https://github.com/your-handle",
+          "confirmMessage": "GitHub in neuem Tab oeffnen?"
+        }
+      ],
+      "linkedObjectId": "obj-github"
+    },
+    {
+      "id": "npc-guide",
+      "name": "Guide NPC",
+      "kind": "npc",
+      "status": "live",
+      "description": "Der Start-NPC erklaert die Welt.",
+      "accentColor": "#69b578",
+      "spriteHint": "npc_guide",
+      "dialog": {
+        "title": "Welcome",
+        "body": "Erkunde die Stadt und entdecke Inhalte."
+      },
+      "tags": ["npc", "tutorial"],
+      "district": "Town Plaza",
+      "world": {
+        "x": 182,
+        "y": 146,
+        "width": 32,
+        "height": 32,
+        "interactRadius": 56,
+        "visual": "npc",
+        "solid": true
+      },
+      "actions": [
+        {
+          "id": "guide-controls",
+          "label": "Controls anzeigen",
+          "type": "open_modal"
+        }
+      ]
+    },
+    {
+      "id": "sign-controls",
+      "name": "Steuerungs-Schild",
+      "kind": "sign",
+      "status": "live",
+      "description": "Kurze Steuerungsinfo fuer Desktop und Mobile.",
+      "accentColor": "#8b6b4a",
+      "spriteHint": "sign_controls",
+      "dialog": {
+        "title": "Controls",
+        "body": "Desktop: WASD/Pfeile, Interaktion mit E/Enter/Space."
+      },
+      "tags": ["sign", "controls"],
+      "district": "Town Plaza",
+      "world": {
+        "x": 214,
+        "y": 176,
+        "width": 24,
+        "height": 24,
+        "interactRadius": 48,
+        "visual": "sign",
+        "solid": false
+      },
+      "actions": [
+        {
+          "id": "controls-read",
+          "label": "Schild lesen",
+          "type": "open_modal"
+        }
+      ],
+      "linkedObjectId": "obj-sign",
+      "linkedInteractionId": "int-sign-controls"
+    }
+  ],
+  "uiTexts": {
+    "hud.title": "Leonaderi Pixel World",
+    "hud.subtitle": "Bewege dich mit WASD/Pfeiltasten und erkunde die Stadt.",
+    "hud.helpButton": "Hilfe",
+    "intro.title": "Willkommen in deiner Pixel Portfolio World",
+    "intro.body": "Du spawnst als Charakter in einer Pixel-Stadt.",
+    "intro.desktopTitle": "Desktop",
+    "intro.desktopMove": "Bewegung: WASD oder Pfeiltasten",
+    "intro.desktopInteract": "Interaktion: E, Enter, Space oder Mausklick",
+    "intro.mobileTitle": "Mobile",
+    "intro.mobileMove": "Nutze das D-Pad unten links",
+    "intro.mobileInteract": "Mit Interact unten rechts sprichst du mit NPCs",
+    "intro.startButton": "Spiel starten",
+    "confirm.cancel": "Zurueck",
+    "confirm.proceed": "OK, weiter",
+    "entry.close": "Schliessen",
+    "entry.status.live": "Live",
+    "entry.status.wip": "In Produktion",
+    "entry.status.coming_soon": "Coming Soon",
+    "entry.status.ruins": "Ruine",
+    "scene.hint.default": "Folge den Wegen und druecke E / Enter / Space.",
+    "scene.hint.prefix": "Interaktion:"
+  }
+}
