@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type Konva from 'konva'
 import { Layer, Rect, Stage, Text, Transformer, Group, Circle } from 'react-konva'
 import ReactFlow, {
@@ -29,6 +29,7 @@ type Selection =
   | { kind: 'poi'; id: string }
 
 type Tabs = 'canvas' | 'dialogue' | 'validation' | 'json'
+type StatusTone = 'ok' | 'warn' | 'error'
 
 type FileHandleLike = {
   createWritable?: () => Promise<{
@@ -41,10 +42,31 @@ declare global {
   interface Window {
     showOpenFilePicker?: (options?: unknown) => Promise<Array<{ getFile: () => Promise<File> }>>
     showSaveFilePicker?: (options?: unknown) => Promise<FileHandleLike>
+    render_game_to_text?: () => string
+    advanceTime?: (ms: number) => Promise<void>
   }
 }
 
 const seedWorld = AuthoringWorldSchema.parse(seedWorldJson)
+const WORLD_LOCAL_STORAGE_KEY = 'worldbuilder:v2:draft'
+const SESSION_LOCAL_STORAGE_KEY = 'worldbuilder:v2:session'
+const CAMERA_MIN_PADDING = 24
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value))
+}
+
+function clampRectToMap(
+  rect: { x: number; y: number; width: number; height: number },
+  mapWidth: number,
+  mapHeight: number,
+): { x: number; y: number; width: number; height: number } {
+  const width = Math.max(1, Math.min(rect.width, mapWidth))
+  const height = Math.max(1, Math.min(rect.height, mapHeight))
+  const x = clamp(rect.x, 0, Math.max(0, mapWidth - width))
+  const y = clamp(rect.y, 0, Math.max(0, mapHeight - height))
+  return { x, y, width, height }
+}
 
 function toNodeLabel(node: AuthoringWorldV1['dialogues'][number]['nodes'][number]): string {
   switch (node.type) {
@@ -114,15 +136,30 @@ function terrainColor(id: number): string {
   }
 }
 
-function numberInput(value: number, onChange: (next: number) => void) {
+function numberInput(
+  id: string,
+  value: number,
+  onChange: (next: number) => void,
+  options?: { min?: number; max?: number; step?: number },
+) {
   return (
     <input
+      id={id}
+      name={id}
+      type="number"
       className="wb-input"
-      value={value}
+      value={Number.isFinite(value) ? value : 0}
+      step={options?.step ?? 1}
+      min={options?.min}
+      max={options?.max}
+      aria-label={id}
       onChange={(event) => {
         const next = Number(event.target.value)
         if (!Number.isFinite(next)) return
-        onChange(next)
+        let clamped = next
+        if (typeof options?.min === 'number') clamped = Math.max(options.min, clamped)
+        if (typeof options?.max === 'number') clamped = Math.min(options.max, clamped)
+        onChange(clamped)
       }}
     />
   )
@@ -165,16 +202,67 @@ function validateWorld(world: AuthoringWorldV1): string[] {
   return issues
 }
 
+type SavedSessionV1 = {
+  tab: Tabs
+  zoom: number
+  camera: { x: number; y: number }
+  panMode: boolean
+}
+
+function loadDraftWorld(): AuthoringWorldV1 {
+  if (typeof window === 'undefined') return seedWorld
+  try {
+    const raw = window.localStorage.getItem(WORLD_LOCAL_STORAGE_KEY)
+    if (!raw) return seedWorld
+    const parsed = AuthoringWorldSchema.parse(JSON.parse(raw))
+    return parsed
+  } catch {
+    return seedWorld
+  }
+}
+
+function loadSessionDefaults(): SavedSessionV1 {
+  const fallback: SavedSessionV1 = {
+    tab: 'canvas',
+    zoom: 1,
+    camera: { x: 20, y: 20 },
+    panMode: false,
+  }
+  if (typeof window === 'undefined') return fallback
+  try {
+    const raw = window.localStorage.getItem(SESSION_LOCAL_STORAGE_KEY)
+    if (!raw) return fallback
+    const parsed = JSON.parse(raw) as Partial<SavedSessionV1>
+    return {
+      tab: parsed.tab === 'canvas' || parsed.tab === 'dialogue' || parsed.tab === 'validation' || parsed.tab === 'json' ? parsed.tab : fallback.tab,
+      zoom: clamp(typeof parsed.zoom === 'number' ? parsed.zoom : fallback.zoom, 0.35, 2.5),
+      camera: {
+        x: typeof parsed.camera?.x === 'number' ? parsed.camera.x : fallback.camera.x,
+        y: typeof parsed.camera?.y === 'number' ? parsed.camera.y : fallback.camera.y,
+      },
+      panMode: Boolean(parsed.panMode),
+    }
+  } catch {
+    return fallback
+  }
+}
+
 function App() {
-  const [world, setWorld] = useState<AuthoringWorldV1>(seedWorld)
+  const [world, setWorld] = useState<AuthoringWorldV1>(() => loadDraftWorld())
   const [selection, setSelection] = useState<Selection>({ kind: 'none', id: '' })
-  const [tab, setTab] = useState<Tabs>('canvas')
-  const [dialogueId, setDialogueId] = useState<string>(seedWorld.dialogues[0]?.id ?? '')
+  const sessionDefaults = useMemo(() => loadSessionDefaults(), [])
+  const [tab, setTab] = useState<Tabs>(sessionDefaults.tab)
+  const [dialogueId, setDialogueId] = useState<string>(world.dialogues[0]?.id ?? '')
   const [fileHandle, setFileHandle] = useState<FileHandleLike | null>(null)
-  const [jsonBuffer, setJsonBuffer] = useState(() => JSON.stringify(seedWorld, null, 2))
-  const [zoom, setZoom] = useState(1)
-  const [camera, setCamera] = useState({ x: 20, y: 20 })
-  const [panMode, setPanMode] = useState(false)
+  const [jsonBuffer, setJsonBuffer] = useState(() => JSON.stringify(world, null, 2))
+  const [zoom, setZoom] = useState(sessionDefaults.zoom)
+  const [camera, setCamera] = useState(sessionDefaults.camera)
+  const [panMode, setPanMode] = useState(sessionDefaults.panMode)
+  const [spaceHeld, setSpaceHeld] = useState(false)
+  const [snapToGrid, setSnapToGrid] = useState(false)
+  const [showLabels, setShowLabels] = useState(true)
+  const [status, setStatus] = useState<{ tone: StatusTone; text: string } | null>(null)
+  const [frameCounter, setFrameCounter] = useState(0)
 
   const selectedDialogue = useMemo(
     () => world.dialogues.find((item) => item.id === dialogueId) ?? world.dialogues[0] ?? null,
@@ -192,28 +280,63 @@ function App() {
 
   const selectedRef = useRef<Konva.Node | null>(null)
   const transformerRef = useRef<Konva.Transformer | null>(null)
+  const stageRef = useRef<Konva.Stage | null>(null)
+  const autosaveTimerRef = useRef<number | null>(null)
+  const statusTimerRef = useRef<number | null>(null)
+  const deleteSelectionRef = useRef<() => void>(() => undefined)
+  const duplicateSelectionRef = useRef<() => void>(() => undefined)
 
   const mapWidth = world.map.columns * world.map.tileSize
   const mapHeight = world.map.rows * world.map.tileSize
+  const stageWidth = 1000
+  const stageHeight = 640
 
   const validationIssues = useMemo(() => validateWorld(world), [world])
 
   const onNodesChange: OnNodesChange = (changes) => setFlowNodes((nds) => applyNodeChanges(changes, nds))
   const onEdgesChange: OnEdgesChange = (changes) => setFlowEdges((eds) => applyEdgeChanges(changes, eds))
 
-  const refreshJsonBuffer = (nextWorld: AuthoringWorldV1) => {
-    setJsonBuffer(JSON.stringify(nextWorld, null, 2))
-  }
+  const snapValue = (value: number) => (snapToGrid ? Math.round(value / world.map.tileSize) * world.map.tileSize : value)
 
-  const updateWorld = (nextWorld: AuthoringWorldV1) => {
+  const clampWorldPoint = (x: number, y: number) => ({
+    x: clamp(x, 0, mapWidth),
+    y: clamp(y, 0, mapHeight),
+  })
+
+  const showStatus = useCallback((tone: StatusTone, text: string) => {
+    setStatus({ tone, text })
+    if (statusTimerRef.current) window.clearTimeout(statusTimerRef.current)
+    statusTimerRef.current = window.setTimeout(() => setStatus(null), 2800)
+  }, [])
+
+  const refreshJsonBuffer = useCallback((nextWorld: AuthoringWorldV1) => {
+    setJsonBuffer(JSON.stringify(nextWorld, null, 2))
+  }, [])
+
+  const updateWorld = useCallback((nextWorld: AuthoringWorldV1) => {
     setWorld(nextWorld)
     refreshJsonBuffer(nextWorld)
-  }
+  }, [refreshJsonBuffer])
 
   const updateObject = (id: string, patch: Partial<AuthoringWorldV1['objects'][number]>) => {
     updateWorld({
       ...world,
-      objects: world.objects.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+      objects: world.objects.map((item) => {
+        if (item.id !== id) return item
+        const width = Math.max(8, patch.width ?? item.width)
+        const height = Math.max(8, patch.height ?? item.height)
+        const requestedX = patch.x ?? item.x
+        const requestedY = patch.y ?? item.y
+        const center = clampWorldPoint(snapValue(requestedX), snapValue(requestedY))
+        return {
+          ...item,
+          ...patch,
+          width,
+          height,
+          x: center.x,
+          y: center.y,
+        }
+      }),
       meta: { ...world.meta, updatedAt: new Date().toISOString() },
     })
   }
@@ -223,14 +346,21 @@ function App() {
       ...world,
       colliders: world.colliders.map((item) => {
         if (item.id !== id || item.shape.type !== 'rect') return item
+        const nextRect = clampRectToMap(
+          {
+            x: snapValue(patch.x ?? item.shape.rect.x),
+            y: snapValue(patch.y ?? item.shape.rect.y),
+            width: Math.max(4, patch.width ?? item.shape.rect.width),
+            height: Math.max(4, patch.height ?? item.shape.rect.height),
+          },
+          mapWidth,
+          mapHeight,
+        )
         return {
           ...item,
           shape: {
             ...item.shape,
-            rect: {
-              ...item.shape.rect,
-              ...patch,
-            },
+            rect: nextRect,
           },
         }
       }),
@@ -243,14 +373,21 @@ function App() {
       ...world,
       triggers: world.triggers.map((item) => {
         if (item.id !== id || item.shape.type !== 'rect') return item
+        const nextRect = clampRectToMap(
+          {
+            x: snapValue(patch.x ?? item.shape.rect.x),
+            y: snapValue(patch.y ?? item.shape.rect.y),
+            width: Math.max(4, patch.width ?? item.shape.rect.width),
+            height: Math.max(4, patch.height ?? item.shape.rect.height),
+          },
+          mapWidth,
+          mapHeight,
+        )
         return {
           ...item,
           shape: {
             ...item.shape,
-            rect: {
-              ...item.shape.rect,
-              ...patch,
-            },
+            rect: nextRect,
           },
         }
       }),
@@ -261,7 +398,11 @@ function App() {
   const updateNpc = (id: string, patch: Partial<AuthoringWorldV1['npcs'][number]>) => {
     updateWorld({
       ...world,
-      npcs: world.npcs.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+      npcs: world.npcs.map((item) => {
+        if (item.id !== id) return item
+        const nextPos = clampWorldPoint(snapValue(patch.x ?? item.x), snapValue(patch.y ?? item.y))
+        return { ...item, ...patch, x: nextPos.x, y: nextPos.y }
+      }),
       meta: { ...world.meta, updatedAt: new Date().toISOString() },
     })
   }
@@ -274,6 +415,15 @@ function App() {
     })
   }
 
+  const parseAndLoadWorld = (source: string, context: string) => {
+    const parsed = AuthoringWorldSchema.parse(JSON.parse(source))
+    updateWorld(parsed)
+    if (!parsed.dialogues.find((item) => item.id === dialogueId)) {
+      setDialogueId(parsed.dialogues[0]?.id ?? '')
+    }
+    showStatus('ok', `${context}: OK`)
+  }
+
   const exportJson = () => {
     const content = `${JSON.stringify(world, null, 2)}\n`
     const blob = new Blob([content], { type: 'application/json' })
@@ -283,67 +433,79 @@ function App() {
     a.download = `project.world.v1.${new Date().toISOString().slice(0, 10)}.json`
     a.click()
     URL.revokeObjectURL(url)
+    showStatus('ok', 'JSON exportiert')
   }
 
   const importFromFile = async () => {
-    if (window.showOpenFilePicker) {
-      const [handle] = await window.showOpenFilePicker({
-        multiple: false,
-        types: [{
-          description: 'World JSON',
-          accept: { 'application/json': ['.json'] },
-        }],
-      })
-      const file = await handle.getFile()
-      const text = await file.text()
-      const parsed = AuthoringWorldSchema.parse(JSON.parse(text))
-      setFileHandle(handle)
-      updateWorld(parsed)
-      return
-    }
+    try {
+      if (window.showOpenFilePicker) {
+        const [handle] = await window.showOpenFilePicker({
+          multiple: false,
+          types: [{
+            description: 'World JSON',
+            accept: { 'application/json': ['.json'] },
+          }],
+        })
+        const file = await handle.getFile()
+        const text = await file.text()
+        parseAndLoadWorld(text, 'Datei importiert')
+        setFileHandle(handle)
+        return
+      }
 
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = '.json,application/json'
-    input.onchange = async () => {
-      const file = input.files?.[0]
-      if (!file) return
-      const text = await file.text()
-      const parsed = AuthoringWorldSchema.parse(JSON.parse(text))
-      updateWorld(parsed)
+      const input = document.createElement('input')
+      input.type = 'file'
+      input.accept = '.json,application/json'
+      input.onchange = async () => {
+        const file = input.files?.[0]
+        if (!file) return
+        try {
+          const text = await file.text()
+          parseAndLoadWorld(text, 'Datei importiert')
+        } catch (error) {
+          showStatus('error', error instanceof Error ? error.message : 'Import fehlgeschlagen')
+        }
+      }
+      input.click()
+    } catch (error) {
+      showStatus('error', error instanceof Error ? error.message : 'Import fehlgeschlagen')
     }
-    input.click()
   }
 
   const saveToFile = async () => {
     const payload = `${JSON.stringify(world, null, 2)}\n`
-
-    if (fileHandle?.createWritable) {
-      const writer = await fileHandle.createWritable()
-      await writer.write(payload)
-      await writer.close()
-      return
-    }
-
-    if (window.showSaveFilePicker) {
-      const handle = await window.showSaveFilePicker({
-        suggestedName: 'project.world.v1.json',
-        types: [{
-          description: 'World JSON',
-          accept: { 'application/json': ['.json'] },
-        }],
-      })
-
-      const writer = await handle.createWritable?.()
-      if (writer) {
+    try {
+      if (fileHandle?.createWritable) {
+        const writer = await fileHandle.createWritable()
         await writer.write(payload)
         await writer.close()
-        setFileHandle(handle)
+        showStatus('ok', 'Datei gespeichert')
         return
       }
-    }
 
-    exportJson()
+      if (window.showSaveFilePicker) {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: 'project.world.v1.json',
+          types: [{
+            description: 'World JSON',
+            accept: { 'application/json': ['.json'] },
+          }],
+        })
+
+        const writer = await handle.createWritable?.()
+        if (writer) {
+          await writer.write(payload)
+          await writer.close()
+          setFileHandle(handle)
+          showStatus('ok', 'Datei gespeichert')
+          return
+        }
+      }
+
+      exportJson()
+    } catch (error) {
+      showStatus('error', error instanceof Error ? error.message : 'Speichern fehlgeschlagen')
+    }
   }
 
   const addObject = () => {
@@ -367,6 +529,7 @@ function App() {
       meta: { ...world.meta, updatedAt: new Date().toISOString() },
     })
     setSelection({ kind: 'object', id })
+    showStatus('ok', 'Objekt erstellt')
   }
 
   const addCollider = () => {
@@ -390,6 +553,7 @@ function App() {
       meta: { ...world.meta, updatedAt: new Date().toISOString() },
     })
     setSelection({ kind: 'collider', id })
+    showStatus('ok', 'Collider erstellt')
   }
 
   const addTrigger = () => {
@@ -435,6 +599,7 @@ function App() {
       meta: { ...world.meta, updatedAt: new Date().toISOString() },
     })
     setSelection({ kind: 'trigger', id })
+    showStatus('ok', 'Trigger erstellt')
   }
 
   const addNpc = () => {
@@ -455,17 +620,182 @@ function App() {
       meta: { ...world.meta, updatedAt: new Date().toISOString() },
     })
     setSelection({ kind: 'npc', id })
+    showStatus('ok', 'NPC erstellt')
   }
 
   const applyJsonBuffer = () => {
-    const parsed = AuthoringWorldSchema.parse(JSON.parse(jsonBuffer))
-    updateWorld(parsed)
+    try {
+      parseAndLoadWorld(jsonBuffer, 'JSON angewendet')
+    } catch (error) {
+      showStatus('error', error instanceof Error ? error.message : 'JSON konnte nicht geparst werden')
+    }
   }
 
   const resetSeed = () => {
+    const ok = window.confirm('Seed wirklich wiederherstellen? Nicht gespeicherte Aenderungen gehen verloren.')
+    if (!ok) return
     updateWorld(seedWorld)
     setSelection({ kind: 'none', id: '' })
+    setDialogueId(seedWorld.dialogues[0]?.id ?? '')
+    showStatus('warn', 'Seed wiederhergestellt')
   }
+
+  const clearLocalDraft = () => {
+    window.localStorage.removeItem(WORLD_LOCAL_STORAGE_KEY)
+    window.localStorage.removeItem(SESSION_LOCAL_STORAGE_KEY)
+    showStatus('warn', 'Lokaler Draft geloescht')
+  }
+
+  const deleteSelection = useCallback(() => {
+    if (selection.kind === 'none' || selection.kind === 'poi') return
+    const ok = window.confirm(`Element ${selection.id} wirklich loeschen?`)
+    if (!ok) return
+    if (selection.kind === 'object') {
+      updateWorld({
+        ...world,
+        objects: world.objects.filter((item) => item.id !== selection.id),
+        colliders: world.colliders.filter((item) => item.objectId !== selection.id),
+        triggers: world.triggers.filter((item) => item.objectId !== selection.id),
+        meta: { ...world.meta, updatedAt: new Date().toISOString() },
+      })
+    }
+    if (selection.kind === 'collider') {
+      updateWorld({
+        ...world,
+        colliders: world.colliders.filter((item) => item.id !== selection.id),
+        meta: { ...world.meta, updatedAt: new Date().toISOString() },
+      })
+    }
+    if (selection.kind === 'trigger') {
+      const trigger = world.triggers.find((item) => item.id === selection.id)
+      updateWorld({
+        ...world,
+        triggers: world.triggers.filter((item) => item.id !== selection.id),
+        interactions: trigger?.interactionId ? world.interactions.filter((item) => item.id !== trigger.interactionId) : world.interactions,
+        meta: { ...world.meta, updatedAt: new Date().toISOString() },
+      })
+    }
+    if (selection.kind === 'npc') {
+      updateWorld({
+        ...world,
+        npcs: world.npcs.filter((item) => item.id !== selection.id),
+        meta: { ...world.meta, updatedAt: new Date().toISOString() },
+      })
+    }
+    setSelection({ kind: 'none', id: '' })
+    showStatus('warn', 'Element geloescht')
+  }, [selection, world, showStatus, updateWorld])
+
+  const duplicateSelection = useCallback(() => {
+    const now = Date.now()
+    if (selection.kind === 'object') {
+      const item = world.objects.find((object) => object.id === selection.id)
+      if (!item) return
+      const id = `${item.id}-copy-${now}`
+      const copy = {
+        ...item,
+        id,
+        key: `${item.key}Copy`,
+        x: clamp(item.x + 16, 0, mapWidth),
+        y: clamp(item.y + 16, 0, mapHeight),
+      }
+      updateWorld({
+        ...world,
+        objects: [...world.objects, copy],
+        meta: { ...world.meta, updatedAt: new Date().toISOString() },
+      })
+      setSelection({ kind: 'object', id })
+      showStatus('ok', 'Objekt dupliziert')
+      return
+    }
+    if (selection.kind === 'collider') {
+      const item = world.colliders.find((collider) => collider.id === selection.id)
+      if (!item || item.shape.type !== 'rect') return
+      const id = `${item.id}-copy-${now}`
+      const copy = {
+        ...item,
+        id,
+        shape: {
+          ...item.shape,
+          rect: clampRectToMap(
+            {
+              ...item.shape.rect,
+              x: item.shape.rect.x + 16,
+              y: item.shape.rect.y + 16,
+            },
+            mapWidth,
+            mapHeight,
+          ),
+        },
+      }
+      updateWorld({
+        ...world,
+        colliders: [...world.colliders, copy],
+        meta: { ...world.meta, updatedAt: new Date().toISOString() },
+      })
+      setSelection({ kind: 'collider', id })
+      showStatus('ok', 'Collider dupliziert')
+      return
+    }
+    if (selection.kind === 'trigger') {
+      const item = world.triggers.find((trigger) => trigger.id === selection.id)
+      if (!item || item.shape.type !== 'rect') return
+      const id = `${item.id}-copy-${now}`
+      const copyInteractionId = item.interactionId ? `${item.interactionId}-copy-${now}` : undefined
+      const copy = {
+        ...item,
+        id,
+        interactionId: copyInteractionId,
+        shape: {
+          ...item.shape,
+          rect: clampRectToMap(
+            {
+              ...item.shape.rect,
+              x: item.shape.rect.x + 16,
+              y: item.shape.rect.y + 16,
+            },
+            mapWidth,
+            mapHeight,
+          ),
+        },
+      }
+      const originalInteraction = item.interactionId ? world.interactions.find((entry) => entry.id === item.interactionId) : undefined
+      const copiedInteraction = originalInteraction && copyInteractionId
+        ? {
+          ...originalInteraction,
+          id: copyInteractionId,
+          triggerId: id,
+          actions: originalInteraction.actions.map((action) => ({ ...action, id: `${action.id}-copy-${now}` })),
+        }
+        : undefined
+      updateWorld({
+        ...world,
+        triggers: [...world.triggers, copy],
+        interactions: copiedInteraction ? [...world.interactions, copiedInteraction] : world.interactions,
+        meta: { ...world.meta, updatedAt: new Date().toISOString() },
+      })
+      setSelection({ kind: 'trigger', id })
+      showStatus('ok', 'Trigger dupliziert')
+      return
+    }
+    if (selection.kind === 'npc') {
+      const item = world.npcs.find((npc) => npc.id === selection.id)
+      if (!item) return
+      const id = `${item.id}-copy-${now}`
+      updateWorld({
+        ...world,
+        npcs: [...world.npcs, { ...item, id, x: clamp(item.x + 16, 0, mapWidth), y: clamp(item.y + 16, 0, mapHeight) }],
+        meta: { ...world.meta, updatedAt: new Date().toISOString() },
+      })
+      setSelection({ kind: 'npc', id })
+      showStatus('ok', 'NPC dupliziert')
+    }
+  }, [selection, world, mapWidth, mapHeight, showStatus, updateWorld])
+
+  useEffect(() => {
+    deleteSelectionRef.current = deleteSelection
+    duplicateSelectionRef.current = duplicateSelection
+  }, [deleteSelection, duplicateSelection])
 
   const showDialogue = (id: string) => {
     setDialogueId(id)
@@ -491,6 +821,75 @@ function App() {
     transformer.getLayer()?.batchDraw()
   }, [selection, world.objects, world.colliders, world.triggers])
 
+  useEffect(() => {
+    if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current)
+    autosaveTimerRef.current = window.setTimeout(() => {
+      window.localStorage.setItem(WORLD_LOCAL_STORAGE_KEY, JSON.stringify(world))
+      const session: SavedSessionV1 = { tab, zoom, camera, panMode }
+      window.localStorage.setItem(SESSION_LOCAL_STORAGE_KEY, JSON.stringify(session))
+    }, 200)
+    return () => {
+      if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current)
+    }
+  }, [world, tab, zoom, camera, panMode])
+
+  useEffect(() => {
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === ' ') {
+        setSpaceHeld(true)
+        event.preventDefault()
+      }
+      if (event.key === 'Delete' || event.key === 'Backspace') {
+        if (selection.kind !== 'none' && selection.kind !== 'poi') {
+          deleteSelectionRef.current()
+          event.preventDefault()
+        }
+      }
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'd') {
+        duplicateSelectionRef.current()
+        event.preventDefault()
+      }
+    }
+    const keyup = (event: KeyboardEvent) => {
+      if (event.key === ' ') setSpaceHeld(false)
+    }
+    window.addEventListener('keydown', keydown)
+    window.addEventListener('keyup', keyup)
+    return () => {
+      window.removeEventListener('keydown', keydown)
+      window.removeEventListener('keyup', keyup)
+    }
+  }, [selection])
+
+  useEffect(() => {
+    window.render_game_to_text = () => JSON.stringify({
+      mode: tab,
+      selection,
+      zoom,
+      camera,
+      panMode: panMode || spaceHeld,
+      map: { width: mapWidth, height: mapHeight, tileSize: world.map.tileSize },
+      counts: {
+        objects: world.objects.length,
+        colliders: world.colliders.length,
+        triggers: world.triggers.length,
+        npcs: world.npcs.length,
+        pois: world.poiIndex.length,
+      },
+      frameCounter,
+      coordinateSystem: 'origin: top-left, +x right, +y down',
+    })
+    window.advanceTime = async (ms: number) => {
+      const ticks = Math.max(1, Math.round(ms / (1000 / 60)))
+      setFrameCounter((prev) => prev + ticks)
+      await Promise.resolve()
+    }
+    return () => {
+      delete window.render_game_to_text
+      delete window.advanceTime
+    }
+  }, [tab, selection, zoom, camera, panMode, spaceHeld, mapWidth, mapHeight, world.map.tileSize, world.objects.length, world.colliders.length, world.triggers.length, world.npcs.length, world.poiIndex.length, frameCounter])
+
   return (
     <div className="wb-root">
       <header className="wb-topbar">
@@ -499,16 +898,25 @@ function App() {
           <p>Lokales Authoring-Tool. Runtime-Dateien werden ueber `npm run world:compile` generiert.</p>
         </div>
         <div className="wb-actions">
-          <button onClick={importFromFile}>Open JSON</button>
-          <button onClick={saveToFile}>Save JSON</button>
-          <button onClick={exportJson}>Export</button>
-          <button onClick={addObject}>+ Object</button>
-          <button onClick={addCollider}>+ Collider</button>
-          <button onClick={addTrigger}>+ Trigger</button>
-          <button onClick={addNpc}>+ NPC</button>
+          <button data-testid="open-json-btn" onClick={importFromFile}>Open JSON</button>
+          <button data-testid="save-json-btn" onClick={saveToFile}>Save JSON</button>
+          <button data-testid="export-json-btn" onClick={exportJson}>Export</button>
+          <button data-testid="add-object-btn" onClick={addObject}>+ Object</button>
+          <button data-testid="add-collider-btn" onClick={addCollider}>+ Collider</button>
+          <button data-testid="add-trigger-btn" onClick={addTrigger}>+ Trigger</button>
+          <button data-testid="add-npc-btn" onClick={addNpc}>+ NPC</button>
+          <button onClick={duplicateSelection} disabled={selection.kind === 'none' || selection.kind === 'poi'}>Duplicate</button>
+          <button onClick={deleteSelection} disabled={selection.kind === 'none' || selection.kind === 'poi'}>Delete</button>
           <button onClick={resetSeed}>Reset Seed</button>
+          <button onClick={clearLocalDraft}>Reset Local Draft</button>
         </div>
       </header>
+
+      {status ? (
+        <div className={`wb-status ${status.tone}`} role="status" aria-live="polite">
+          {status.text}
+        </div>
+      ) : null}
 
       <nav className="wb-tabs">
         {(['canvas', 'dialogue', 'validation', 'json'] as Tabs[]).map((item) => (
@@ -553,9 +961,10 @@ function App() {
           {tab === 'canvas' ? (
             <div className="wb-canvas">
               <div className="wb-canvas-toolbar">
-                <label>
+                <label htmlFor="zoom-range">
                   Zoom
                   <input
+                    id="zoom-range"
                     type="range"
                     min="0.4"
                     max="2.5"
@@ -564,6 +973,12 @@ function App() {
                     onChange={(event) => setZoom(clampZoom(Number(event.target.value)))}
                   />
                 </label>
+                <button onClick={() => setSnapToGrid((prev) => !prev)}>
+                  {snapToGrid ? 'Snap: ON' : 'Snap: OFF'}
+                </button>
+                <button onClick={() => setShowLabels((prev) => !prev)}>
+                  {showLabels ? 'Labels: ON' : 'Labels: OFF'}
+                </button>
                 <button onClick={() => setPanMode((prev) => !prev)}>
                   {panMode ? 'Pan: ON' : 'Pan: OFF'}
                 </button>
@@ -571,6 +986,7 @@ function App() {
                   onClick={() => {
                     setZoom(1)
                     setCamera({ x: 20, y: 20 })
+                    setSelection({ kind: 'none', id: '' })
                   }}
                 >
                   Reset View
@@ -578,14 +994,41 @@ function App() {
               </div>
 
               <Stage
-                width={1000}
-                height={640}
+                ref={stageRef}
+                width={stageWidth}
+                height={stageHeight}
                 className="wb-stage"
+                onMouseDown={(event) => {
+                  const target = event.target
+                  if (target === event.target.getStage()) {
+                    setSelection({ kind: 'none', id: '' })
+                  }
+                }}
                 onWheel={(event) => {
                   event.evt.preventDefault()
-                  const direction = event.evt.deltaY > 0 ? -1 : 1
-                  const nextZoom = clampZoom(zoom + direction * 0.05)
+                  const stage = event.target.getStage()
+                  if (!stage) return
+                  const pointer = stage.getPointerPosition()
+                  if (!pointer) return
+                  const mousePointTo = {
+                    x: (pointer.x - camera.x) / zoom,
+                    y: (pointer.y - camera.y) / zoom,
+                  }
+                  const zoomDelta = event.evt.deltaY > 0 ? -0.08 : 0.08
+                  const nextZoom = clampZoom(zoom + zoomDelta)
+                  const unclampedCamera = {
+                    x: pointer.x - mousePointTo.x * nextZoom,
+                    y: pointer.y - mousePointTo.y * nextZoom,
+                  }
+                  const minX = stageWidth - mapWidth * nextZoom - CAMERA_MIN_PADDING
+                  const minY = stageHeight - mapHeight * nextZoom - CAMERA_MIN_PADDING
+                  const maxX = CAMERA_MIN_PADDING
+                  const maxY = CAMERA_MIN_PADDING
                   setZoom(nextZoom)
+                  setCamera({
+                    x: clamp(unclampedCamera.x, minX, maxX),
+                    y: clamp(unclampedCamera.y, minY, maxY),
+                  })
                 }}
               >
                 <Layer>
@@ -593,11 +1036,15 @@ function App() {
                     x={camera.x}
                     y={camera.y}
                     scale={{ x: zoom, y: zoom }}
-                    draggable={panMode}
+                    draggable={panMode || spaceHeld}
                     onDragEnd={(event) => {
+                      const minX = stageWidth - mapWidth * zoom - CAMERA_MIN_PADDING
+                      const minY = stageHeight - mapHeight * zoom - CAMERA_MIN_PADDING
+                      const maxX = CAMERA_MIN_PADDING
+                      const maxY = CAMERA_MIN_PADDING
                       setCamera({
-                        x: Number(event.target.x().toFixed(2)),
-                        y: Number(event.target.y().toFixed(2)),
+                        x: Number(clamp(event.target.x(), minX, maxX).toFixed(2)),
+                        y: Number(clamp(event.target.y(), minY, maxY).toFixed(2)),
                       })
                     }}
                   >
@@ -613,39 +1060,77 @@ function App() {
                       />
                     )))}
 
+                    {snapToGrid ? (
+                      <>
+                        {Array.from({ length: world.map.columns + 1 }, (_, index) => (
+                          <Rect
+                            key={`grid-v-${index}`}
+                            x={index * world.map.tileSize}
+                            y={0}
+                            width={0.5}
+                            height={mapHeight}
+                            fill="rgba(255,255,255,0.14)"
+                            listening={false}
+                          />
+                        ))}
+                        {Array.from({ length: world.map.rows + 1 }, (_, index) => (
+                          <Rect
+                            key={`grid-h-${index}`}
+                            x={0}
+                            y={index * world.map.tileSize}
+                            width={mapWidth}
+                            height={0.5}
+                            fill="rgba(255,255,255,0.14)"
+                            listening={false}
+                          />
+                        ))}
+                      </>
+                    ) : null}
+
                     {world.objects.map((object) => (
-                      <Rect
-                        key={object.id}
-                        ref={selection.kind === 'object' && selection.id === object.id ? selectedRef : undefined}
-                        x={object.x - object.width / 2}
-                        y={object.y - object.height / 2}
-                        width={object.width}
-                        height={object.height}
-                        fill="rgba(255, 157, 58, 0.15)"
-                        stroke={selection.kind === 'object' && selection.id === object.id ? '#ffd250' : '#ff7a59'}
-                        strokeWidth={selection.kind === 'object' && selection.id === object.id ? 3 : 2}
-                        draggable
-                        onClick={() => setSelection({ kind: 'object', id: object.id })}
-                        onDragEnd={(event) => {
-                          updateObject(object.id, {
-                            x: Number((event.target.x() + object.width / 2).toFixed(2)),
-                            y: Number((event.target.y() + object.height / 2).toFixed(2)),
-                          })
-                        }}
-                        onTransformEnd={(event) => {
-                          const node = event.target
-                          const scaleX = node.scaleX()
-                          const scaleY = node.scaleY()
-                          node.scaleX(1)
-                          node.scaleY(1)
-                          updateObject(object.id, {
-                            x: Number((node.x() + (object.width * scaleX) / 2).toFixed(2)),
-                            y: Number((node.y() + (object.height * scaleY) / 2).toFixed(2)),
-                            width: Number(Math.max(8, object.width * scaleX).toFixed(2)),
-                            height: Number(Math.max(8, object.height * scaleY).toFixed(2)),
-                          })
-                        }}
-                      />
+                      <Group key={object.id}>
+                        <Rect
+                          ref={selection.kind === 'object' && selection.id === object.id ? selectedRef : undefined}
+                          x={object.x - object.width / 2}
+                          y={object.y - object.height / 2}
+                          width={object.width}
+                          height={object.height}
+                          fill="rgba(255, 157, 58, 0.15)"
+                          stroke={selection.kind === 'object' && selection.id === object.id ? '#ffd250' : '#ff7a59'}
+                          strokeWidth={selection.kind === 'object' && selection.id === object.id ? 3 : 2}
+                          draggable={!(panMode || spaceHeld)}
+                          onClick={() => setSelection({ kind: 'object', id: object.id })}
+                          onDragEnd={(event) => {
+                            updateObject(object.id, {
+                              x: Number((event.target.x() + object.width / 2).toFixed(2)),
+                              y: Number((event.target.y() + object.height / 2).toFixed(2)),
+                            })
+                          }}
+                          onTransformEnd={(event) => {
+                            const node = event.target
+                            const scaleX = node.scaleX()
+                            const scaleY = node.scaleY()
+                            node.scaleX(1)
+                            node.scaleY(1)
+                            updateObject(object.id, {
+                              x: Number((node.x() + (object.width * scaleX) / 2).toFixed(2)),
+                              y: Number((node.y() + (object.height * scaleY) / 2).toFixed(2)),
+                              width: Number(Math.max(8, object.width * scaleX).toFixed(2)),
+                              height: Number(Math.max(8, object.height * scaleY).toFixed(2)),
+                            })
+                          }}
+                        />
+                        {showLabels ? (
+                          <Text
+                            x={object.x - object.width / 2}
+                            y={object.y - object.height / 2 - 16}
+                            text={object.key}
+                            fontSize={11}
+                            fill="#ffe8ca"
+                            listening={false}
+                          />
+                        ) : null}
+                      </Group>
                     ))}
 
                     {world.colliders.map((collider) => collider.shape.type === 'rect' ? (
@@ -659,7 +1144,7 @@ function App() {
                         fill="rgba(41, 232, 255, 0.1)"
                         stroke={selection.kind === 'collider' && selection.id === collider.id ? '#9af7ff' : '#3cc8ff'}
                         strokeWidth={selection.kind === 'collider' && selection.id === collider.id ? 3 : 2}
-                        draggable
+                        draggable={!(panMode || spaceHeld)}
                         onClick={() => setSelection({ kind: 'collider', id: collider.id })}
                         onDragEnd={(event) => {
                           updateColliderRect(collider.id, {
@@ -695,12 +1180,25 @@ function App() {
                         dash={[6, 4]}
                         stroke={selection.kind === 'trigger' && selection.id === trigger.id ? '#ff8bd8' : '#ff47b6'}
                         strokeWidth={selection.kind === 'trigger' && selection.id === trigger.id ? 3 : 2}
-                        draggable
+                        draggable={!(panMode || spaceHeld)}
                         onClick={() => setSelection({ kind: 'trigger', id: trigger.id })}
                         onDragEnd={(event) => {
                           updateTriggerRect(trigger.id, {
                             x: Number(event.target.x().toFixed(2)),
                             y: Number(event.target.y().toFixed(2)),
+                          })
+                        }}
+                        onTransformEnd={(event) => {
+                          const node = event.target
+                          const scaleX = node.scaleX()
+                          const scaleY = node.scaleY()
+                          node.scaleX(1)
+                          node.scaleY(1)
+                          updateTriggerRect(trigger.id, {
+                            x: Number(node.x().toFixed(2)),
+                            y: Number(node.y().toFixed(2)),
+                            width: Number(Math.max(4, trigger.shape.rect.width * scaleX).toFixed(2)),
+                            height: Number(Math.max(4, trigger.shape.rect.height * scaleY).toFixed(2)),
                           })
                         }}
                       />
@@ -715,7 +1213,7 @@ function App() {
                         fill={selection.kind === 'npc' && selection.id === npc.id ? '#ffe88f' : '#f4d35e'}
                         stroke="#7d5c00"
                         strokeWidth={2}
-                        draggable
+                        draggable={!(panMode || spaceHeld)}
                         onClick={() => setSelection({ kind: 'npc', id: npc.id })}
                         onDragEnd={(event) => {
                           updateNpc(npc.id, {
@@ -726,9 +1224,10 @@ function App() {
                       />
                     ))}
 
-                    <Text x={8} y={8} text="Orange=Object  Cyan=Collider  Pink=Trigger  Yellow=NPC" fontSize={12} fill="#fefefe" />
+                    <Text x={8} y={8} text="Orange=Object  Cyan=Collider  Pink=Trigger  Yellow=NPC" fontSize={12} fill="#fefefe" listening={false} />
+                    <Text x={8} y={22} text="Space+Drag = Pan, Wheel = Zoom, Del = Delete, Cmd/Ctrl+D = Duplicate" fontSize={11} fill="#d1d5db" listening={false} />
                   </Group>
-                  <Transformer ref={transformerRef} rotateEnabled enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right']} />
+                  <Transformer ref={transformerRef} rotateEnabled={false} enabledAnchors={['top-left', 'top-center', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right']} />
                 </Layer>
               </Stage>
             </div>
@@ -737,7 +1236,7 @@ function App() {
           {tab === 'dialogue' ? (
             <div className="wb-dialogue-tab">
               <div className="wb-dialogue-head">
-                <select value={selectedDialogue?.id ?? ''} onChange={(event) => showDialogue(event.target.value)}>
+                <select id="dialogue-select" name="dialogue-select" aria-label="dialogue-select" value={selectedDialogue?.id ?? ''} onChange={(event) => showDialogue(event.target.value)}>
                   {world.dialogues.map((dialogue) => (
                     <option key={dialogue.id} value={dialogue.id}>{dialogue.title}</option>
                   ))}
@@ -779,8 +1278,11 @@ function App() {
               </div>
               {selectedDialogue ? (
                 <div className="wb-dialogue-edit">
-                  <label>Title</label>
+                  <label htmlFor="dialogue-title">Title</label>
                   <input
+                    id="dialogue-title"
+                    name="dialogue-title"
+                    aria-label="dialogue-title"
                     className="wb-input"
                     value={selectedDialogue.title}
                     onChange={(event) => {
@@ -809,7 +1311,7 @@ function App() {
 
           {tab === 'json' ? (
             <div className="wb-json-tab">
-              <textarea value={jsonBuffer} onChange={(event) => setJsonBuffer(event.target.value)} />
+              <textarea id="json-editor" name="json-editor" aria-label="json-editor" value={jsonBuffer} onChange={(event) => setJsonBuffer(event.target.value)} />
               <button onClick={applyJsonBuffer}>Apply JSON</button>
             </div>
           ) : null}
@@ -817,41 +1319,45 @@ function App() {
 
         <aside className="wb-sidebar right">
           <h3>Inspector</h3>
+          <p className="wb-legend"><strong>Shortcuts:</strong> Space+Drag pan, Wheel zoom, Del delete, Cmd/Ctrl+D duplicate.</p>
           {selectedObject ? (
             <>
               <h4>Object: {selectedObject.key}</h4>
-              <label>X</label>
-              {numberInput(selectedObject.x, (next) => updateObject(selectedObject.id, { x: next }))}
-              <label>Y</label>
-              {numberInput(selectedObject.y, (next) => updateObject(selectedObject.id, { y: next }))}
-              <label>Width</label>
-              {numberInput(selectedObject.width, (next) => updateObject(selectedObject.id, { width: Math.max(8, next) }))}
-              <label>Height</label>
-              {numberInput(selectedObject.height, (next) => updateObject(selectedObject.id, { height: Math.max(8, next) }))}
-              <label>Depth</label>
-              {numberInput(selectedObject.depth, (next) => updateObject(selectedObject.id, { depth: next }))}
+              <label htmlFor="obj-x">X</label>
+              {numberInput('obj-x', selectedObject.x, (next) => updateObject(selectedObject.id, { x: next }))}
+              <label htmlFor="obj-y">Y</label>
+              {numberInput('obj-y', selectedObject.y, (next) => updateObject(selectedObject.id, { y: next }))}
+              <label htmlFor="obj-width">Width</label>
+              {numberInput('obj-width', selectedObject.width, (next) => updateObject(selectedObject.id, { width: Math.max(8, next) }), { min: 8 })}
+              <label htmlFor="obj-height">Height</label>
+              {numberInput('obj-height', selectedObject.height, (next) => updateObject(selectedObject.id, { height: Math.max(8, next) }), { min: 8 })}
+              <label htmlFor="obj-depth">Depth</label>
+              {numberInput('obj-depth', selectedObject.depth, (next) => updateObject(selectedObject.id, { depth: next }))}
             </>
           ) : null}
 
           {selectedCollider && selectedCollider.shape.type === 'rect' ? (
             <>
               <h4>Collider: {selectedCollider.id}</h4>
-              <label>X</label>
-              {numberInput(selectedCollider.shape.rect.x, (next) => updateColliderRect(selectedCollider.id, { x: next }))}
-              <label>Y</label>
-              {numberInput(selectedCollider.shape.rect.y, (next) => updateColliderRect(selectedCollider.id, { y: next }))}
-              <label>Width</label>
-              {numberInput(selectedCollider.shape.rect.width, (next) => updateColliderRect(selectedCollider.id, { width: Math.max(4, next) }))}
-              <label>Height</label>
-              {numberInput(selectedCollider.shape.rect.height, (next) => updateColliderRect(selectedCollider.id, { height: Math.max(4, next) }))}
+              <label htmlFor="collider-x">X</label>
+              {numberInput('collider-x', selectedCollider.shape.rect.x, (next) => updateColliderRect(selectedCollider.id, { x: next }))}
+              <label htmlFor="collider-y">Y</label>
+              {numberInput('collider-y', selectedCollider.shape.rect.y, (next) => updateColliderRect(selectedCollider.id, { y: next }))}
+              <label htmlFor="collider-width">Width</label>
+              {numberInput('collider-width', selectedCollider.shape.rect.width, (next) => updateColliderRect(selectedCollider.id, { width: Math.max(4, next) }), { min: 4 })}
+              <label htmlFor="collider-height">Height</label>
+              {numberInput('collider-height', selectedCollider.shape.rect.height, (next) => updateColliderRect(selectedCollider.id, { height: Math.max(4, next) }), { min: 4 })}
             </>
           ) : null}
 
           {selectedTrigger && selectedTrigger.shape.type === 'rect' ? (
             <>
               <h4>Trigger: {selectedTrigger.id}</h4>
-              <label>Label</label>
+              <label htmlFor="trigger-label">Label</label>
               <input
+                id="trigger-label"
+                name="trigger-label"
+                aria-label="trigger-label"
                 className="wb-input"
                 value={selectedTrigger.label}
                 onChange={(event) => {
@@ -862,26 +1368,81 @@ function App() {
                   })
                 }}
               />
-              <label>X</label>
-              {numberInput(selectedTrigger.shape.rect.x, (next) => updateTriggerRect(selectedTrigger.id, { x: next }))}
-              <label>Y</label>
-              {numberInput(selectedTrigger.shape.rect.y, (next) => updateTriggerRect(selectedTrigger.id, { y: next }))}
-              <label>Width</label>
-              {numberInput(selectedTrigger.shape.rect.width, (next) => updateTriggerRect(selectedTrigger.id, { width: Math.max(4, next) }))}
-              <label>Height</label>
-              {numberInput(selectedTrigger.shape.rect.height, (next) => updateTriggerRect(selectedTrigger.id, { height: Math.max(4, next) }))}
+              <label htmlFor="trigger-type">Type</label>
+              <select
+                id="trigger-type"
+                name="trigger-type"
+                aria-label="trigger-type"
+                className="wb-input"
+                value={selectedTrigger.type}
+                onChange={(event) => {
+                  updateWorld({
+                    ...world,
+                    triggers: world.triggers.map((item) => item.id === selectedTrigger.id ? { ...item, type: event.target.value as AuthoringWorldV1['triggers'][number]['type'] } : item),
+                    meta: { ...world.meta, updatedAt: new Date().toISOString() },
+                  })
+                }}
+              >
+                <option value="door">door</option>
+                <option value="interact">interact</option>
+                <option value="proximity">proximity</option>
+                <option value="click_zone">click_zone</option>
+                <option value="area_enter">area_enter</option>
+              </select>
+              <label htmlFor="trigger-interaction">Interaction ID</label>
+              <input
+                id="trigger-interaction"
+                name="trigger-interaction"
+                aria-label="trigger-interaction"
+                className="wb-input"
+                value={selectedTrigger.interactionId ?? ''}
+                onChange={(event) => {
+                  updateWorld({
+                    ...world,
+                    triggers: world.triggers.map((item) => item.id === selectedTrigger.id ? { ...item, interactionId: event.target.value || undefined } : item),
+                    meta: { ...world.meta, updatedAt: new Date().toISOString() },
+                  })
+                }}
+              />
+              <label className="wb-inline-check" htmlFor="trigger-enabled">
+                <input
+                  id="trigger-enabled"
+                  name="trigger-enabled"
+                  type="checkbox"
+                  checked={selectedTrigger.enabled}
+                  onChange={(event) => {
+                    updateWorld({
+                      ...world,
+                      triggers: world.triggers.map((item) => item.id === selectedTrigger.id ? { ...item, enabled: event.target.checked } : item),
+                      meta: { ...world.meta, updatedAt: new Date().toISOString() },
+                    })
+                  }}
+                />
+                Enabled
+              </label>
+              <label htmlFor="trigger-x">X</label>
+              {numberInput('trigger-x', selectedTrigger.shape.rect.x, (next) => updateTriggerRect(selectedTrigger.id, { x: next }))}
+              <label htmlFor="trigger-y">Y</label>
+              {numberInput('trigger-y', selectedTrigger.shape.rect.y, (next) => updateTriggerRect(selectedTrigger.id, { y: next }))}
+              <label htmlFor="trigger-width">Width</label>
+              {numberInput('trigger-width', selectedTrigger.shape.rect.width, (next) => updateTriggerRect(selectedTrigger.id, { width: Math.max(4, next) }), { min: 4 })}
+              <label htmlFor="trigger-height">Height</label>
+              {numberInput('trigger-height', selectedTrigger.shape.rect.height, (next) => updateTriggerRect(selectedTrigger.id, { height: Math.max(4, next) }), { min: 4 })}
             </>
           ) : null}
 
           {selectedNpc ? (
             <>
               <h4>NPC: {selectedNpc.id}</h4>
-              <label>X</label>
-              {numberInput(selectedNpc.x, (next) => updateNpc(selectedNpc.id, { x: next }))}
-              <label>Y</label>
-              {numberInput(selectedNpc.y, (next) => updateNpc(selectedNpc.id, { y: next }))}
-              <label>Facing</label>
+              <label htmlFor="npc-x">X</label>
+              {numberInput('npc-x', selectedNpc.x, (next) => updateNpc(selectedNpc.id, { x: next }))}
+              <label htmlFor="npc-y">Y</label>
+              {numberInput('npc-y', selectedNpc.y, (next) => updateNpc(selectedNpc.id, { y: next }))}
+              <label htmlFor="npc-facing">Facing</label>
               <select
+                id="npc-facing"
+                name="npc-facing"
+                aria-label="npc-facing"
                 className="wb-input"
                 value={selectedNpc.facing}
                 onChange={(event) => updateNpc(selectedNpc.id, { facing: event.target.value as AuthoringWorldV1['npcs'][number]['facing'] })}
@@ -891,22 +1452,37 @@ function App() {
                 <option value="east">east</option>
                 <option value="west">west</option>
               </select>
+              <label htmlFor="npc-interaction-id">Interaction ID</label>
+              <input
+                id="npc-interaction-id"
+                name="npc-interaction-id"
+                aria-label="npc-interaction-id"
+                className="wb-input"
+                value={selectedNpc.interactionId ?? ''}
+                onChange={(event) => updateNpc(selectedNpc.id, { interactionId: event.target.value || undefined })}
+              />
             </>
           ) : null}
 
           {selectedPoi ? (
             <>
               <h4>POI: {selectedPoi.name}</h4>
-              <label>Name</label>
-              <input className="wb-input" value={selectedPoi.name} onChange={(event) => updatePoi(selectedPoi.id, { name: event.target.value })} />
-              <label>Dialog Title</label>
+              <label htmlFor="poi-name">Name</label>
+              <input id="poi-name" name="poi-name" aria-label="poi-name" className="wb-input" value={selectedPoi.name} onChange={(event) => updatePoi(selectedPoi.id, { name: event.target.value })} />
+              <label htmlFor="poi-dialog-title">Dialog Title</label>
               <input
+                id="poi-dialog-title"
+                name="poi-dialog-title"
+                aria-label="poi-dialog-title"
                 className="wb-input"
                 value={selectedPoi.dialog.title}
                 onChange={(event) => updatePoi(selectedPoi.id, { dialog: { ...selectedPoi.dialog, title: event.target.value } })}
               />
-              <label>Dialog Body</label>
+              <label htmlFor="poi-dialog-body">Dialog Body</label>
               <textarea
+                id="poi-dialog-body"
+                name="poi-dialog-body"
+                aria-label="poi-dialog-body"
                 className="wb-input"
                 value={selectedPoi.dialog.body}
                 onChange={(event) => updatePoi(selectedPoi.id, { dialog: { ...selectedPoi.dialog, body: event.target.value } })}
