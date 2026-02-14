@@ -55,3 +55,14 @@ Original prompt: verbessere den weiter! der ist immer noch buggy und viele sache
   - Added keyboard camera panning (arrows, Shift for faster panning).
   - Updated state telemetry to include layer visibility/lock.
 - Playwright run: output/worldbuilder-loop/loop-3 (shots + state, no errors file).
+- Loop 4 completed:
+  - Added real rendered map background mode in canvas using map-v1 composite image.
+  - Added background mode switch: Abstract / Rendered / Blend with blend opacity slider.
+  - Added trigger-action inspector editing for interaction actions (dialogue/link/toast/flag/teleport/modal).
+  - Verified rendered mode visually in browser snapshot (manual-rendered-view.png).
+- Playwright run: output/worldbuilder-loop/loop-4 (shots + state, no errors file).
+
+## Research Notes (editor UX references)
+- Tiled editor emphasizes layer visibility/lock and map-level editing workflows.
+- Unity scene workflow emphasizes framing selection and camera navigation speed.
+- Godot 2D editor emphasizes intuitive viewport pan/zoom and tool-mode shortcuts.
