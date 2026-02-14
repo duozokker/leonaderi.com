@@ -104,6 +104,10 @@ button:hover {
   gap: 0.25rem;
 }
 
+.wb-sidebar.left > .wb-input {
+  margin-bottom: 0.6rem;
+}
+
 .wb-legend {
   margin: 0 0 0.65rem;
   color: var(--muted);
