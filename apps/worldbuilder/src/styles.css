@@ -326,6 +326,17 @@ textarea {
   color: var(--warn);
 }
 
+.wb-validation-issue {
+  text-align: left;
+  color: #fecaca;
+  border-color: #7f1d1d;
+  background: rgba(127, 29, 29, 0.28);
+}
+
+.wb-validation-issue:hover {
+  border-color: #ef4444;
+}
+
 @media (max-width: 1300px) {
   .wb-layout {
     grid-template-columns: 1fr;
