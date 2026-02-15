@@ -269,3 +269,20 @@ Original prompt: verbessere den weiter! der ist immer noch buggy und viele sache
   - https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key
   - https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code
   - https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage
+- Loop editor-hardening + overlay-ux (2026-02-15, pass 2):
+  - Added keyboard-layout-robust shortcut detection helpers in worldbuilder (`key` + `code` fallback for zoom/fit shortcuts).
+  - Added safe localStorage wrappers for autosave + reset flows to avoid uncaught exceptions in storage-restricted contexts.
+  - Updated solo-layer presets to preserve current minimap visibility instead of forcing minimap on.
+  - Reduced portfolio modal backdrop darkness for better map readability while intro/modal is open.
+- Verification:
+  - `npm run lint` ✅
+  - `npm test` ✅
+  - `npm run build` ✅
+  - `npm run build -w @leonaderi/worldbuilder` ✅
+  - Playwright worldbuilder: `output/worldbuilder-loop/loop-shortcuts-persist` (no errors file)
+  - Playwright portfolio: `output/portfolio-loop/loop-overlay-contrast` (no errors file)
+- Research references used for this pass:
+  - Konva snapping docs: https://konvajs.org/docs/sandbox/Objects_Snapping.html
+  - Tiled object editing controls/snapping: https://doc.mapeditor.org/en/stable/manual/objects/
+  - Tiled layer visibility/lock workflows: https://doc.mapeditor.org/en/stable/manual/layers/
+  - MDN keyboard semantics: https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key and https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code
