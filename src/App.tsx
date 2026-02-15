@@ -32,6 +32,29 @@ const defaultConfirmState: ConfirmState = {
   href: '',
 }
 
+function shouldOpenIntroByDefault(): boolean {
+  if (typeof window === 'undefined') return true
+  const params = new URLSearchParams(window.location.search)
+  if (params.get('intro') === '0') return false
+  if (params.get('skipIntro') === '1') return false
+  return true
+}
+
+function toSafeExternalHref(rawHref: string): string | null {
+  const href = rawHref.trim()
+  if (!href) return null
+  try {
+    const base = typeof window !== 'undefined' ? window.location.origin : 'https://example.com'
+    const url = new URL(href, base)
+    if (url.protocol === 'http:' || url.protocol === 'https:' || url.protocol === 'mailto:') {
+      return url.toString()
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
 function getActionModalMessage(entry: PoiEntry, action: PoiAction): string {
   if (action.id === 'company-services') {
     return 'Service-Ideen: Fullstack Apps, Produkt-Design, technische Umsetzung und iterative Optimierung.'
@@ -75,7 +98,7 @@ function App() {
     replacePatch,
     resetPatch,
   } = admin
-  const [introOpen, setIntroOpen] = useState(true)
+  const [introOpen, setIntroOpen] = useState(() => shouldOpenIntroByDefault())
   const [hoverLabel, setHoverLabel] = useState<string | null>(null)
   const [activeEntry, setActiveEntry] = useState<PoiEntry | null>(null)
   const [entryNote, setEntryNote] = useState<string | null>(null)
@@ -178,11 +201,16 @@ function App() {
 
   const handleEntryAction = (entry: PoiEntry, action: PoiAction): void => {
     if (action.type === 'open_link' && action.href) {
+      const safeHref = toSafeExternalHref(action.href)
+      if (!safeHref) {
+        setEntryNote('Link ist ungueltig oder unsicher konfiguriert.')
+        return
+      }
       setConfirmState({
         open: true,
         title: `Externer Link: ${entry.name}`,
         message: action.confirmMessage ?? `Moechtest du ${entry.name} oeffnen?`,
-        href: action.href,
+        href: safeHref,
       })
       return
     }
@@ -195,9 +223,11 @@ function App() {
   }, [])
 
   const proceedConfirm = useCallback((): void => {
-    const href = confirmState.href
+    const href = toSafeExternalHref(confirmState.href)
     if (href) {
       window.open(href, '_blank', 'noopener,noreferrer')
+    } else {
+      setEntryNote('Link ist ungueltig oder unsicher konfiguriert.')
     }
 
     setConfirmState(defaultConfirmState)
