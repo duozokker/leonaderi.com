@@ -185,3 +185,10 @@ Original prompt: verbessere den weiter! der ist immer noch buggy und viele sache
   - Playwright reruns:
     - portfolio: `output/portfolio-loop/loop-4`
     - worldbuilder: `output/worldbuilder-loop/loop-17`
+- Worldbuilder validation UX pass:
+  - Validation issues are now clickable (`wb-validation-issue`) and jump directly to affected entities.
+  - Jump targets supported: Object, Collider, Trigger, POI/POI hitbox, Dialogue.
+  - Dialogue issues switch to dialogue tab and focus corresponding graph.
+- Verification:
+  - lint/test/build (worldbuilder) ✅
+  - Playwright run: `output/worldbuilder-loop/loop-18`.

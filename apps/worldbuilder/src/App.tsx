@@ -1189,14 +1189,53 @@ function App() {
     duplicateSelectionRef.current = duplicateSelection
   }, [deleteSelection, duplicateSelection])
 
-  const showDialogue = (id: string) => {
+  const showDialogue = useCallback((id: string) => {
     setDialogueId(id)
     const target = world.dialogues.find((item) => item.id === id)
     if (!target) return
     const flow = buildDialogueFlow(target)
     setFlowNodes(flow.nodes)
     setFlowEdges(flow.edges)
-  }
+  }, [world.dialogues])
+
+  const jumpToValidationIssue = useCallback((issue: string) => {
+    const objectMatch = issue.match(/^Object (\S+)/)
+    if (objectMatch) {
+      setTab('canvas')
+      selectObject(objectMatch[1])
+      return
+    }
+
+    const colliderMatch = issue.match(/^Collider (\S+)/)
+    if (colliderMatch) {
+      setTab('canvas')
+      selectEntity({ kind: 'collider', id: colliderMatch[1] })
+      return
+    }
+
+    const triggerMatch = issue.match(/^Trigger (\S+)/)
+    if (triggerMatch) {
+      setTab('canvas')
+      selectEntity({ kind: 'trigger', id: triggerMatch[1] })
+      return
+    }
+
+    const poiMatch = issue.match(/^POI(?: hitbox)? (\S+)/)
+    if (poiMatch) {
+      setTab('canvas')
+      selectEntity({ kind: 'poi', id: poiMatch[1] })
+      return
+    }
+
+    const dialogueMatch = issue.match(/^Dialogue (\S+)/)
+    if (dialogueMatch) {
+      setTab('dialogue')
+      showDialogue(dialogueMatch[1])
+      return
+    }
+
+    showStatus('warn', 'Issue konnte nicht automatisch zugeordnet werden')
+  }, [selectEntity, selectObject, showDialogue, showStatus])
 
   const clampZoom = (value: number) => Math.max(0.35, Math.min(2.5, value))
   const clampCameraToBounds = useCallback((nextX: number, nextY: number, zoomValue: number) => {
@@ -2385,7 +2424,14 @@ function App() {
               <h3>Validation</h3>
               {validationIssues.length === 0 ? <p>Keine Probleme gefunden.</p> : null}
               {validationIssues.map((issue) => (
-                <p key={issue} className="err">{issue}</p>
+                <button
+                  key={issue}
+                  type="button"
+                  className="wb-validation-issue"
+                  onClick={() => jumpToValidationIssue(issue)}
+                >
+                  {issue}
+                </button>
               ))}
               <p>Compile Runtime: <code>npm run world:compile</code></p>
             </div>
