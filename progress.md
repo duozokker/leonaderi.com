@@ -213,3 +213,7 @@ Original prompt: verbessere den weiter! der ist immer noch buggy und viele sache
   - `Reset Local Draft` now clears all draft/session/bookmark storage and reloads the canonical seed world immediately.
   - Added `applyZoom(...)` so slider zoom also clamps camera bounds (prevents out-of-bounds blank space after manual zoom).
   - Re-verified lint/test/build and manual screenshots (`manual-loop-final.png`, `manual-world-final.png`).
+- Build/perf loop:
+  - Added Vite manual chunking for runtime app (`vendor-phaser`, `vendor-react`, `vendor-misc`) to improve cacheability and reduce monolithic main bundle.
+  - Added focused manual chunking in worldbuilder for `reactflow` and `konva` without cross-vendor circular chunking.
+  - Verified with `npm run build` and `npm run build -w @leonaderi/worldbuilder`.
