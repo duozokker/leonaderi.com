@@ -217,3 +217,16 @@ Original prompt: verbessere den weiter! der ist immer noch buggy und viele sache
   - Added Vite manual chunking for runtime app (`vendor-phaser`, `vendor-react`, `vendor-misc`) to improve cacheability and reduce monolithic main bundle.
   - Added focused manual chunking in worldbuilder for `reactflow` and `konva` without cross-vendor circular chunking.
   - Verified with `npm run build` and `npm run build -w @leonaderi/worldbuilder`.
+- Loop clamp-fix (2026-02-15):
+  - Fixed camera clamp edge case when map projected size < viewport size.
+  - Unified clamp logic in both `syncSize` and `clampCameraToBounds` using `clampAxisToViewport`.
+  - Result: no off-canvas jump/invalid clamp when resizing viewport or loading bookmark/import.
+- Validation after fix:
+  - npm run lint ✅
+  - npm test ✅
+  - npm run build ✅
+  - npm run build -w @leonaderi/worldbuilder ✅
+- Playwright verification:
+  - worldbuilder: output/worldbuilder-loop/loop-clamp-fix (shots + state, no errors files)
+  - portfolio: output/portfolio-loop/loop-clamp-fix (shots + state, no errors files)
+- Observed state snapshot (worldbuilder): camera now stable at centered bounds after fit, no invalid clamp oscillation.

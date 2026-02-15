@@ -232,6 +232,10 @@ textarea {
   font-size: 0.8rem;
 }
 
+.wb-layer-toggles input[type='range'] {
+  width: 92px;
+}
+
 .wb-bookmarks {
   display: inline-flex;
   gap: 0.25rem;
