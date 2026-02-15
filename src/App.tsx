@@ -9,6 +9,12 @@ import { IntroModal } from './ui/components/IntroModal'
 import { MobileControls } from './ui/components/MobileControls'
 import { TopHud } from './ui/components/TopHud'
 import { useTouchDevice } from './ui/hooks/useTouchDevice'
+import {
+  INTRO_DISMISSED_STORAGE_KEY,
+  readIntroDismissedFlag,
+  shouldOpenIntroByDefault,
+} from './ui/utils/introPreferences'
+import { toSafeExternalHref } from './ui/utils/linkSafety'
 import { useAdminStore } from './ui/admin/state/adminStore'
 import { isAdminFeatureEnabled, verifyAdminPassword } from './ui/admin/services/authGuard'
 import './App.css'
@@ -30,29 +36,6 @@ const defaultConfirmState: ConfirmState = {
   title: '',
   message: '',
   href: '',
-}
-
-function shouldOpenIntroByDefault(): boolean {
-  if (typeof window === 'undefined') return true
-  const params = new URLSearchParams(window.location.search)
-  if (params.get('intro') === '0') return false
-  if (params.get('skipIntro') === '1') return false
-  return true
-}
-
-function toSafeExternalHref(rawHref: string): string | null {
-  const href = rawHref.trim()
-  if (!href) return null
-  try {
-    const base = typeof window !== 'undefined' ? window.location.origin : 'https://example.com'
-    const url = new URL(href, base)
-    if (url.protocol === 'http:' || url.protocol === 'https:' || url.protocol === 'mailto:') {
-      return url.toString()
-    }
-    return null
-  } catch {
-    return null
-  }
 }
 
 function getActionModalMessage(entry: PoiEntry, action: PoiAction): string {
@@ -98,7 +81,11 @@ function App() {
     replacePatch,
     resetPatch,
   } = admin
-  const [introOpen, setIntroOpen] = useState(() => shouldOpenIntroByDefault())
+  const [introOpen, setIntroOpen] = useState(() => {
+    if (typeof window === 'undefined') return true
+    const dismissed = readIntroDismissedFlag(window.localStorage.getItem(INTRO_DISMISSED_STORAGE_KEY))
+    return shouldOpenIntroByDefault(window.location.search, dismissed)
+  })
   const [hoverLabel, setHoverLabel] = useState<string | null>(null)
   const [activeEntry, setActiveEntry] = useState<PoiEntry | null>(null)
   const [entryNote, setEntryNote] = useState<string | null>(null)
@@ -199,6 +186,13 @@ function App() {
     setEntryNote(null)
   }, [])
 
+  const closeIntro = useCallback(() => {
+    setIntroOpen(false)
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(INTRO_DISMISSED_STORAGE_KEY, '1')
+    }
+  }, [])
+
   const handleEntryAction = (entry: PoiEntry, action: PoiAction): void => {
     if (action.type === 'open_link' && action.href) {
       const safeHref = toSafeExternalHref(action.href)
@@ -253,13 +247,13 @@ function App() {
 
       if (introOpen) {
         event.preventDefault()
-        setIntroOpen(false)
+        closeIntro()
       }
     }
 
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [activeEntry, closeConfirm, closeEntryModal, confirmState.open, introOpen])
+  }, [activeEntry, closeConfirm, closeEntryModal, closeIntro, confirmState.open, introOpen])
 
   const uiText = patch.global.uiTextOverrides ?? {}
   const statusLabels = {
@@ -322,7 +316,7 @@ function App() {
 
       {introOpen ? (
         <IntroModal
-          onClose={() => setIntroOpen(false)}
+          onClose={closeIntro}
           texts={{
             title: getUIText('intro.title', uiText),
             body: getUIText('intro.body', uiText),
