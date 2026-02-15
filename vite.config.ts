@@ -9,4 +9,15 @@ const isUserOrOrgPage = repositoryName.endsWith('.github.io')
 export default defineConfig({
   plugins: [react()],
   base: isGithubActions && !isUserOrOrgPage ? `/${repositoryName}/` : '/',
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/phaser')) return 'vendor-phaser'
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) return 'vendor-react'
+          if (id.includes('node_modules')) return 'vendor-misc'
+        },
+      },
+    },
+  },
 })
