@@ -55,6 +55,8 @@ const WORLD_LOCAL_STORAGE_KEY = 'worldbuilder:v2:draft'
 const SESSION_LOCAL_STORAGE_KEY = 'worldbuilder:v2:session'
 const BOOKMARKS_STORAGE_KEY = 'worldbuilder:v2:camera-bookmarks'
 const CAMERA_MIN_PADDING = 24
+const MIN_ZOOM = 0.4
+const MAX_ZOOM = 2.5
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value))
@@ -84,6 +86,28 @@ function clampAxisToViewport(
     return Number(((viewportSize - worldSize) / 2).toFixed(2))
   }
   return Number(clamp(value, min, max).toFixed(2))
+}
+
+function mapCoverageInViewport(
+  camera: { x: number; y: number },
+  zoom: number,
+  viewportWidth: number,
+  viewportHeight: number,
+  mapWidth: number,
+  mapHeight: number,
+): number {
+  if (zoom <= 0 || viewportWidth <= 0 || viewportHeight <= 0 || mapWidth <= 0 || mapHeight <= 0) return 0
+  const viewLeft = -camera.x / zoom
+  const viewTop = -camera.y / zoom
+  const viewRight = viewLeft + viewportWidth / zoom
+  const viewBottom = viewTop + viewportHeight / zoom
+  const overlapLeft = Math.max(0, viewLeft)
+  const overlapTop = Math.max(0, viewTop)
+  const overlapRight = Math.min(mapWidth, viewRight)
+  const overlapBottom = Math.min(mapHeight, viewBottom)
+  const overlapWidth = Math.max(0, overlapRight - overlapLeft)
+  const overlapHeight = Math.max(0, overlapBottom - overlapTop)
+  return (overlapWidth * overlapHeight) / (mapWidth * mapHeight)
 }
 
 function safeSetLocalStorage(key: string, value: string): boolean {
@@ -234,8 +258,15 @@ type SavedSessionV1 = {
   backgroundBlendOpacity: number
   snapToGrid: boolean
   showLabels: boolean
+  showCanvasHints: boolean
+  showAdvancedCanvas: boolean
   showCrosshair: boolean
   showDepthGuides: boolean
+  sidebarVisibility: {
+    left: boolean
+    right: boolean
+  }
+  focusCanvas: boolean
   layerVisibility: {
     objects: boolean
     colliders: boolean
@@ -281,8 +312,15 @@ function loadSessionDefaults(): SavedSessionV1 {
     backgroundBlendOpacity: 0.4,
     snapToGrid: false,
     showLabels: true,
+    showCanvasHints: true,
+    showAdvancedCanvas: false,
     showCrosshair: true,
     showDepthGuides: true,
+    sidebarVisibility: {
+      left: true,
+      right: true,
+    },
+    focusCanvas: false,
     layerVisibility: {
       objects: true,
       colliders: true,
@@ -312,9 +350,10 @@ function loadSessionDefaults(): SavedSessionV1 {
     const parsedLayerVisibility = parsed.layerVisibility ?? {}
     const parsedLayerLock = parsed.layerLock ?? {}
     const parsedLayerOpacity = parsed.layerOpacity ?? {}
+    const parsedSidebarVisibility = parsed.sidebarVisibility ?? {}
     return {
       tab: parsed.tab === 'canvas' || parsed.tab === 'dialogue' || parsed.tab === 'validation' || parsed.tab === 'json' ? parsed.tab : fallback.tab,
-      zoom: clamp(typeof parsed.zoom === 'number' ? parsed.zoom : fallback.zoom, 0.35, 2.5),
+      zoom: clamp(typeof parsed.zoom === 'number' ? parsed.zoom : fallback.zoom, MIN_ZOOM, MAX_ZOOM),
       camera: {
         x: typeof parsed.camera?.x === 'number' ? parsed.camera.x : fallback.camera.x,
         y: typeof parsed.camera?.y === 'number' ? parsed.camera.y : fallback.camera.y,
@@ -329,8 +368,15 @@ function loadSessionDefaults(): SavedSessionV1 {
       ),
       snapToGrid: typeof parsed.snapToGrid === 'boolean' ? parsed.snapToGrid : fallback.snapToGrid,
       showLabels: typeof parsed.showLabels === 'boolean' ? parsed.showLabels : fallback.showLabels,
+      showCanvasHints: typeof parsed.showCanvasHints === 'boolean' ? parsed.showCanvasHints : fallback.showCanvasHints,
+      showAdvancedCanvas: typeof parsed.showAdvancedCanvas === 'boolean' ? parsed.showAdvancedCanvas : fallback.showAdvancedCanvas,
       showCrosshair: typeof parsed.showCrosshair === 'boolean' ? parsed.showCrosshair : fallback.showCrosshair,
       showDepthGuides: typeof parsed.showDepthGuides === 'boolean' ? parsed.showDepthGuides : fallback.showDepthGuides,
+      sidebarVisibility: {
+        left: typeof parsedSidebarVisibility.left === 'boolean' ? parsedSidebarVisibility.left : fallback.sidebarVisibility.left,
+        right: typeof parsedSidebarVisibility.right === 'boolean' ? parsedSidebarVisibility.right : fallback.sidebarVisibility.right,
+      },
+      focusCanvas: typeof parsed.focusCanvas === 'boolean' ? parsed.focusCanvas : fallback.focusCanvas,
       layerVisibility: {
         objects: typeof parsedLayerVisibility.objects === 'boolean' ? parsedLayerVisibility.objects : fallback.layerVisibility.objects,
         colliders: typeof parsedLayerVisibility.colliders === 'boolean' ? parsedLayerVisibility.colliders : fallback.layerVisibility.colliders,
@@ -373,6 +419,8 @@ function App() {
   const [middlePanActive, setMiddlePanActive] = useState(false)
   const [snapToGrid, setSnapToGrid] = useState(sessionDefaults.snapToGrid)
   const [showLabels, setShowLabels] = useState(sessionDefaults.showLabels)
+  const [showCanvasHints, setShowCanvasHints] = useState(sessionDefaults.showCanvasHints)
+  const [showAdvancedCanvas, setShowAdvancedCanvas] = useState(sessionDefaults.showAdvancedCanvas)
   const [status, setStatus] = useState<{ tone: StatusTone; text: string } | null>(null)
   const [frameCounter, setFrameCounter] = useState(0)
   const [history, setHistory] = useState<AuthoringWorldV1[]>([])
@@ -383,6 +431,8 @@ function App() {
   const [hoverWorld, setHoverWorld] = useState<{ x: number; y: number } | null>(null)
   const [showCrosshair, setShowCrosshair] = useState(sessionDefaults.showCrosshair)
   const [showDepthGuides, setShowDepthGuides] = useState(sessionDefaults.showDepthGuides)
+  const [sidebarVisibility, setSidebarVisibility] = useState(sessionDefaults.sidebarVisibility)
+  const [focusCanvas, setFocusCanvas] = useState(sessionDefaults.focusCanvas)
   const [depthPreviewY, setDepthPreviewY] = useState<number | null>(null)
   const [cameraBookmarks, setCameraBookmarks] = useState<Record<number, { x: number; y: number; zoom: number } | null>>(() => {
     if (typeof window === 'undefined') return { 1: null, 2: null, 3: null, 4: null }
@@ -479,9 +529,9 @@ function App() {
       if (!initialCameraSyncRef.current) {
         if (!sessionDefaults.fromStorage) {
           const fitZoom = Math.max(
-            0.35,
+            MIN_ZOOM,
             Math.min(
-              2.5,
+              MAX_ZOOM,
               Math.min(
                 (nextWidth - CAMERA_MIN_PADDING * 2) / mapWidth,
                 (nextHeight - CAMERA_MIN_PADDING * 2) / mapHeight,
@@ -494,7 +544,50 @@ function App() {
             y: Number(((nextHeight - mapHeight * fitZoom) / 2).toFixed(2)),
           })
         } else {
-          setCamera((prev) => clampPoint(prev.x, prev.y))
+          const clampedFromStorage = clampPoint(sessionDefaults.camera.x, sessionDefaults.camera.y)
+          const coverage = mapCoverageInViewport(
+            clampedFromStorage,
+            activeZoom,
+            nextWidth,
+            nextHeight,
+            mapWidth,
+            mapHeight,
+          )
+          const looksCollapsedFromSession = (
+            activeZoom <= MIN_ZOOM + 0.0001
+            && !sessionDefaults.layerVisibility.objects
+            && !sessionDefaults.layerVisibility.colliders
+            && !sessionDefaults.layerVisibility.triggers
+            && sessionDefaults.layerVisibility.npcs
+          )
+          if (coverage < 0.025 || looksCollapsedFromSession) {
+            const fitZoom = Math.max(
+              MIN_ZOOM,
+              Math.min(
+                MAX_ZOOM,
+                Math.min(
+                  (nextWidth - CAMERA_MIN_PADDING * 2) / mapWidth,
+                  (nextHeight - CAMERA_MIN_PADDING * 2) / mapHeight,
+                ),
+              ),
+            )
+            setZoom(fitZoom)
+            setCamera({
+              x: Number(((nextWidth - mapWidth * fitZoom) / 2).toFixed(2)),
+              y: Number(((nextHeight - mapHeight * fitZoom) / 2).toFixed(2)),
+            })
+            setLayerVisibility({
+              objects: true,
+              colliders: true,
+              triggers: true,
+              npcs: true,
+              minimap: sessionDefaults.layerVisibility.minimap,
+            })
+            setCanvasTool('select')
+            setPanMode(false)
+          } else {
+            setCamera(clampedFromStorage)
+          }
         }
         initialCameraSyncRef.current = true
         return
@@ -513,7 +606,18 @@ function App() {
 
     window.addEventListener('resize', syncSize)
     return () => window.removeEventListener('resize', syncSize)
-  }, [mapHeight, mapWidth, sessionDefaults.fromStorage])
+  }, [
+    mapHeight,
+    mapWidth,
+    sessionDefaults.camera.x,
+    sessionDefaults.camera.y,
+    sessionDefaults.fromStorage,
+    sessionDefaults.layerVisibility.objects,
+    sessionDefaults.layerVisibility.colliders,
+    sessionDefaults.layerVisibility.triggers,
+    sessionDefaults.layerVisibility.npcs,
+    sessionDefaults.layerVisibility.minimap,
+  ])
 
   const drawOrderedObjects = useMemo(
     () => [...world.objects].sort((a, b) => {
@@ -1065,9 +1169,9 @@ function App() {
     const targetMapWidth = columns * tileSize
     const targetMapHeight = rows * tileSize
     const fitZoom = Math.max(
-      0.35,
+      MIN_ZOOM,
       Math.min(
-        2.5,
+        MAX_ZOOM,
         Math.min(
           (stageWidth - CAMERA_MIN_PADDING * 2) / targetMapWidth,
           (stageHeight - CAMERA_MIN_PADDING * 2) / targetMapHeight,
@@ -1538,7 +1642,7 @@ function App() {
     showStatus('warn', 'Issue konnte nicht automatisch zugeordnet werden')
   }, [selectEntity, selectObject, showDialogue, showStatus])
 
-  const clampZoom = (value: number) => Math.max(0.35, Math.min(2.5, value))
+  const clampZoom = (value: number) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value))
   const clampCameraToBounds = useCallback((nextX: number, nextY: number, zoomValue: number) => {
     const worldWidthAtZoom = mapWidth * zoomValue
     const worldHeightAtZoom = mapHeight * zoomValue
@@ -1699,8 +1803,12 @@ function App() {
         backgroundBlendOpacity,
         snapToGrid,
         showLabels,
+        showCanvasHints,
+        showAdvancedCanvas,
         showCrosshair,
         showDepthGuides,
+        sidebarVisibility,
+        focusCanvas,
         layerVisibility,
         layerLock,
         layerOpacity,
@@ -1735,8 +1843,12 @@ function App() {
     backgroundBlendOpacity,
     snapToGrid,
     showLabels,
+    showCanvasHints,
+    showAdvancedCanvas,
     showCrosshair,
     showDepthGuides,
+    sidebarVisibility,
+    focusCanvas,
     layerVisibility,
     layerLock,
     layerOpacity,
@@ -1804,6 +1916,26 @@ function App() {
       }
       if (!isTypingTarget && event.key.toLowerCase() === 'g') {
         cycleBackgroundMode()
+        event.preventDefault()
+      }
+      if (!isTypingTarget && event.key === '\\') {
+        setFocusCanvas((prev) => !prev)
+        event.preventDefault()
+      }
+      if (!isTypingTarget && event.key.toLowerCase() === 'h') {
+        setShowCanvasHints((prev) => !prev)
+        event.preventDefault()
+      }
+      if (!isTypingTarget && event.key.toLowerCase() === 'x') {
+        setShowAdvancedCanvas((prev) => !prev)
+        event.preventDefault()
+      }
+      if (!isTypingTarget && event.altKey && event.code === 'Digit1') {
+        setSidebarVisibility((prev) => ({ ...prev, left: !prev.left }))
+        event.preventDefault()
+      }
+      if (!isTypingTarget && event.altKey && event.code === 'Digit2') {
+        setSidebarVisibility((prev) => ({ ...prev, right: !prev.right }))
         event.preventDefault()
       }
 
@@ -1907,6 +2039,30 @@ function App() {
   }, [applyZoom, bumpSelectedDepth, camera, clearSelection, clampCameraToBounds, cycleBackgroundMode, fitMapView, frameSelection, importFromFile, loadCameraBookmark, nudgeSelectedObjects, redo, saveCameraBookmark, saveToFile, selectAllObjects, selection, selectedObjectIds.length, showStatus, undo, zoom])
 
   useEffect(() => {
+    const clearTransientInteractionState = () => {
+      middlePanStartRef.current = null
+      setMiddlePanActive(false)
+      setSpaceHeld(false)
+      setMarqueeRect(null)
+    }
+    const onPointerUp = () => {
+      middlePanStartRef.current = null
+      setMiddlePanActive(false)
+    }
+    const onVisibilityChange = () => {
+      if (document.hidden) clearTransientInteractionState()
+    }
+    window.addEventListener('blur', clearTransientInteractionState)
+    window.addEventListener('mouseup', onPointerUp)
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => {
+      window.removeEventListener('blur', clearTransientInteractionState)
+      window.removeEventListener('mouseup', onPointerUp)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+    }
+  }, [])
+
+  useEffect(() => {
     window.render_game_to_text = () => JSON.stringify({
       mode: tab,
       selection,
@@ -1918,6 +2074,8 @@ function App() {
       backgroundMode,
       backgroundBlendOpacity,
       hoverWorld,
+      showCanvasHints,
+      showAdvancedCanvas,
       showCrosshair,
       showDepthGuides,
       depthPreviewY,
@@ -1931,6 +2089,7 @@ function App() {
         pois: world.poiIndex.length,
       },
       history: { undo: history.length, redo: future.length },
+      ui: { sidebarVisibility, focusCanvas },
       layers: { visibility: layerVisibility, lock: layerLock, opacity: layerOpacity },
       bookmarks: cameraBookmarks,
       topLayers: drawOrderedObjects.slice(-5).map((item) => ({ id: item.id, key: item.key, depth: item.depth })),
@@ -1946,7 +2105,7 @@ function App() {
       delete window.render_game_to_text
       delete window.advanceTime
     }
-  }, [tab, selection, selectedObjectIds, zoom, camera, canvasTool, panMode, spaceHeld, middlePanActive, backgroundMode, backgroundBlendOpacity, hoverWorld, showCrosshair, showDepthGuides, depthPreviewY, normalizedMarquee, mapWidth, mapHeight, world.map.tileSize, world.objects.length, world.colliders.length, world.triggers.length, world.npcs.length, world.poiIndex.length, frameCounter, history.length, future.length, layerLock, layerOpacity, layerVisibility, cameraBookmarks, drawOrderedObjects])
+  }, [tab, selection, selectedObjectIds, zoom, camera, canvasTool, panMode, spaceHeld, middlePanActive, backgroundMode, backgroundBlendOpacity, hoverWorld, showCanvasHints, showAdvancedCanvas, showCrosshair, showDepthGuides, depthPreviewY, normalizedMarquee, mapWidth, mapHeight, world.map.tileSize, world.objects.length, world.colliders.length, world.triggers.length, world.npcs.length, world.poiIndex.length, frameCounter, history.length, future.length, sidebarVisibility, focusCanvas, layerLock, layerOpacity, layerVisibility, cameraBookmarks, drawOrderedObjects])
 
   const minimapMaxWidth = Math.max(120, Math.min(220, stageWidth * 0.28))
   const minimapMaxHeight = Math.max(90, Math.min(150, stageHeight * 0.28))
@@ -1961,6 +2120,14 @@ function App() {
     width: clamp(stageWidth / zoom, 1, mapWidth),
     height: clamp(stageHeight / zoom, 1, mapHeight),
   }
+  const showLeftSidebar = !focusCanvas && sidebarVisibility.left
+  const showRightSidebar = !focusCanvas && sidebarVisibility.right
+  const layoutClassName = [
+    'wb-layout',
+    showLeftSidebar ? '' : 'hide-left',
+    showRightSidebar ? '' : 'hide-right',
+    focusCanvas ? 'focus-canvas' : '',
+  ].filter(Boolean).join(' ')
 
   return (
     <div className="wb-root">
@@ -1977,6 +2144,27 @@ function App() {
           <button data-testid="add-collider-btn" onClick={addCollider}>+ Collider</button>
           <button data-testid="add-trigger-btn" onClick={addTrigger}>+ Trigger</button>
           <button data-testid="add-npc-btn" onClick={addNpc}>+ NPC</button>
+          <button
+            onClick={() => setSidebarVisibility((prev) => ({ ...prev, left: !prev.left }))}
+            className={showLeftSidebar ? 'active' : ''}
+            title="Alt+1"
+          >
+            {showLeftSidebar ? 'Hide Left' : 'Show Left'}
+          </button>
+          <button
+            onClick={() => setSidebarVisibility((prev) => ({ ...prev, right: !prev.right }))}
+            className={showRightSidebar ? 'active' : ''}
+            title="Alt+2"
+          >
+            {showRightSidebar ? 'Hide Right' : 'Show Right'}
+          </button>
+          <button
+            onClick={() => setFocusCanvas((prev) => !prev)}
+            className={focusCanvas ? 'active' : ''}
+            title="\\"
+          >
+            {focusCanvas ? 'Exit Focus' : 'Focus Canvas'}
+          </button>
           <button onClick={undo} disabled={history.length === 0}>Undo</button>
           <button onClick={redo} disabled={future.length === 0}>Redo</button>
           <button onClick={duplicateSelection} disabled={selectedObjectIds.length === 0 && !selectedObject && !selectedCollider && !selectedTrigger && !selectedNpc}>Duplicate</button>
@@ -2004,7 +2192,8 @@ function App() {
         ))}
       </nav>
 
-      <section className="wb-layout">
+      <section className={layoutClassName}>
+        {showLeftSidebar ? (
         <aside className="wb-sidebar left">
           <h3 className="wb-panel-title">Entities</h3>
           <input
@@ -2045,6 +2234,7 @@ function App() {
             ))}
           </div>
         </aside>
+        ) : null}
 
         <main className="wb-main">
           {tab === 'canvas' ? (
@@ -2068,6 +2258,9 @@ function App() {
                 <button onClick={() => setShowLabels((prev) => !prev)}>
                   {showLabels ? 'Labels: ON' : 'Labels: OFF'}
                 </button>
+                <button onClick={() => setShowCanvasHints((prev) => !prev)} title="H">
+                  {showCanvasHints ? 'Hints: ON' : 'Hints: OFF'}
+                </button>
                 <button onClick={() => setPanMode((prev) => !prev)}>
                   {panMode ? 'Pan: ON' : 'Pan: OFF'}
                 </button>
@@ -2084,6 +2277,9 @@ function App() {
                 <button
                   onClick={() => {
                     fitMapView()
+                    setLayerVisibilityPreset('all')
+                    setCanvasTool('select')
+                    setPanMode(false)
                     clearSelection()
                   }}
                 >
@@ -2128,145 +2324,154 @@ function App() {
                     />
                   </label>
                 ) : null}
-                <label className="wb-inline-check" htmlFor="toggle-crosshair">
-                  <input id="toggle-crosshair" name="toggle-crosshair" type="checkbox" checked={showCrosshair} onChange={(event) => setShowCrosshair(event.target.checked)} />
-                  Crosshair
-                </label>
-                <label className="wb-inline-check" htmlFor="toggle-depth-guides">
-                  <input id="toggle-depth-guides" name="toggle-depth-guides" type="checkbox" checked={showDepthGuides} onChange={(event) => setShowDepthGuides(event.target.checked)} />
-                  Depth Guides
-                </label>
-                <label className="wb-inline-check" htmlFor="toggle-depth-preview">
-                  <input
-                    id="toggle-depth-preview"
-                    name="toggle-depth-preview"
-                    type="checkbox"
-                    checked={depthPreviewY !== null}
-                    onChange={(event) => setDepthPreviewY(event.target.checked ? Math.round(mapHeight / 2) : null)}
-                  />
-                  Player Depth Preview
-                </label>
-                {depthPreviewY !== null ? (
-                  <label className="wb-inline-check" htmlFor="depth-preview-range">
-                    Y
-                    <input
-                      id="depth-preview-range"
-                      type="range"
-                      min="0"
-                      max={mapHeight}
-                      step="1"
-                      value={depthPreviewY}
-                      onChange={(event) => setDepthPreviewY(Number(event.target.value))}
-                    />
-                    <span>{depthPreviewY}</span>
-                  </label>
-                ) : null}
-                <button onClick={normalizeAllDepthByY}>Normalize Depth by Y</button>
+                <button onClick={() => setShowAdvancedCanvas((prev) => !prev)} title="X">
+                  {showAdvancedCanvas ? 'Advanced: ON' : 'Advanced: OFF'}
+                </button>
                 <span className="wb-history-pill">
                   Cursor {hoverWorld ? `${Math.round(hoverWorld.x)},${Math.round(hoverWorld.y)} (tile ${Math.floor(hoverWorld.x / world.map.tileSize)},${Math.floor(hoverWorld.y / world.map.tileSize)})` : '--'}
                 </span>
               </div>
-              <div className="wb-layer-toggles">
-                <label className="wb-inline-check" htmlFor="visibility-objects">
-                  <input id="visibility-objects" name="visibility-objects" type="checkbox" checked={layerVisibility.objects} onChange={(event) => setLayerVisibility((prev) => ({ ...prev, objects: event.target.checked }))} />
-                  Objects
-                </label>
-                <label className="wb-inline-check" htmlFor="visibility-colliders">
-                  <input id="visibility-colliders" name="visibility-colliders" type="checkbox" checked={layerVisibility.colliders} onChange={(event) => setLayerVisibility((prev) => ({ ...prev, colliders: event.target.checked }))} />
-                  Colliders
-                </label>
-                <label className="wb-inline-check" htmlFor="visibility-triggers">
-                  <input id="visibility-triggers" name="visibility-triggers" type="checkbox" checked={layerVisibility.triggers} onChange={(event) => setLayerVisibility((prev) => ({ ...prev, triggers: event.target.checked }))} />
-                  Triggers
-                </label>
-                <label className="wb-inline-check" htmlFor="visibility-npcs">
-                  <input id="visibility-npcs" name="visibility-npcs" type="checkbox" checked={layerVisibility.npcs} onChange={(event) => setLayerVisibility((prev) => ({ ...prev, npcs: event.target.checked }))} />
-                  NPCs
-                </label>
-                <label className="wb-inline-check" htmlFor="visibility-minimap">
-                  <input id="visibility-minimap" name="visibility-minimap" type="checkbox" checked={layerVisibility.minimap} onChange={(event) => setLayerVisibility((prev) => ({ ...prev, minimap: event.target.checked }))} />
-                  Minimap
-                </label>
-              </div>
-              <div className="wb-layer-toggles">
-                <button onClick={() => setLayerVisibilityPreset('all')}>Show All</button>
-                <button onClick={() => setLayerVisibilityPreset('objects')}>Solo Objects</button>
-                <button onClick={() => setLayerVisibilityPreset('colliders')}>Solo Colliders</button>
-                <button onClick={() => setLayerVisibilityPreset('triggers')}>Solo Triggers</button>
-                <button onClick={() => setLayerVisibilityPreset('npcs')}>Solo NPCs</button>
-              </div>
-              <div className="wb-layer-toggles">
-                <label className="wb-inline-check" htmlFor="opacity-objects">
-                  Obj Opacity
-                  <input
-                    id="opacity-objects"
-                    name="opacity-objects"
-                    type="range"
-                    min="0.15"
-                    max="1"
-                    step="0.05"
-                    value={layerOpacity.objects}
-                    onChange={(event) => setLayerOpacity((prev) => ({ ...prev, objects: Number(event.target.value) }))}
-                  />
-                </label>
-                <label className="wb-inline-check" htmlFor="opacity-colliders">
-                  Col Opacity
-                  <input
-                    id="opacity-colliders"
-                    name="opacity-colliders"
-                    type="range"
-                    min="0.15"
-                    max="1"
-                    step="0.05"
-                    value={layerOpacity.colliders}
-                    onChange={(event) => setLayerOpacity((prev) => ({ ...prev, colliders: Number(event.target.value) }))}
-                  />
-                </label>
-                <label className="wb-inline-check" htmlFor="opacity-triggers">
-                  Trigger Opacity
-                  <input
-                    id="opacity-triggers"
-                    name="opacity-triggers"
-                    type="range"
-                    min="0.15"
-                    max="1"
-                    step="0.05"
-                    value={layerOpacity.triggers}
-                    onChange={(event) => setLayerOpacity((prev) => ({ ...prev, triggers: Number(event.target.value) }))}
-                  />
-                </label>
-                <label className="wb-inline-check" htmlFor="opacity-npcs">
-                  NPC Opacity
-                  <input
-                    id="opacity-npcs"
-                    name="opacity-npcs"
-                    type="range"
-                    min="0.15"
-                    max="1"
-                    step="0.05"
-                    value={layerOpacity.npcs}
-                    onChange={(event) => setLayerOpacity((prev) => ({ ...prev, npcs: Number(event.target.value) }))}
-                  />
-                </label>
-              </div>
-              <div className="wb-layer-toggles">
-                <label className="wb-inline-check" htmlFor="lock-objects">
-                  <input id="lock-objects" name="lock-objects" type="checkbox" checked={layerLock.objects} onChange={(event) => setLayerLock((prev) => ({ ...prev, objects: event.target.checked }))} />
-                  Lock Objects
-                </label>
-                <label className="wb-inline-check" htmlFor="lock-colliders">
-                  <input id="lock-colliders" name="lock-colliders" type="checkbox" checked={layerLock.colliders} onChange={(event) => setLayerLock((prev) => ({ ...prev, colliders: event.target.checked }))} />
-                  Lock Colliders
-                </label>
-                <label className="wb-inline-check" htmlFor="lock-triggers">
-                  <input id="lock-triggers" name="lock-triggers" type="checkbox" checked={layerLock.triggers} onChange={(event) => setLayerLock((prev) => ({ ...prev, triggers: event.target.checked }))} />
-                  Lock Triggers
-                </label>
-                <label className="wb-inline-check" htmlFor="lock-npcs">
-                  <input id="lock-npcs" name="lock-npcs" type="checkbox" checked={layerLock.npcs} onChange={(event) => setLayerLock((prev) => ({ ...prev, npcs: event.target.checked }))} />
-                  Lock NPCs
-                </label>
-              </div>
+              {showAdvancedCanvas ? (
+                <div className="wb-advanced-canvas-panel">
+                  <div className="wb-layer-toggles">
+                    <label className="wb-inline-check" htmlFor="toggle-crosshair">
+                      <input id="toggle-crosshair" name="toggle-crosshair" type="checkbox" checked={showCrosshair} onChange={(event) => setShowCrosshair(event.target.checked)} />
+                      Crosshair
+                    </label>
+                    <label className="wb-inline-check" htmlFor="toggle-depth-guides">
+                      <input id="toggle-depth-guides" name="toggle-depth-guides" type="checkbox" checked={showDepthGuides} onChange={(event) => setShowDepthGuides(event.target.checked)} />
+                      Depth Guides
+                    </label>
+                    <label className="wb-inline-check" htmlFor="toggle-depth-preview">
+                      <input
+                        id="toggle-depth-preview"
+                        name="toggle-depth-preview"
+                        type="checkbox"
+                        checked={depthPreviewY !== null}
+                        onChange={(event) => setDepthPreviewY(event.target.checked ? Math.round(mapHeight / 2) : null)}
+                      />
+                      Player Depth Preview
+                    </label>
+                    {depthPreviewY !== null ? (
+                      <label className="wb-inline-check" htmlFor="depth-preview-range">
+                        Y
+                        <input
+                          id="depth-preview-range"
+                          type="range"
+                          min="0"
+                          max={mapHeight}
+                          step="1"
+                          value={depthPreviewY}
+                          onChange={(event) => setDepthPreviewY(Number(event.target.value))}
+                        />
+                        <span>{depthPreviewY}</span>
+                      </label>
+                    ) : null}
+                    <button onClick={normalizeAllDepthByY}>Normalize Depth by Y</button>
+                  </div>
+                  <div className="wb-layer-toggles">
+                    <label className="wb-inline-check" htmlFor="visibility-objects">
+                      <input id="visibility-objects" name="visibility-objects" type="checkbox" checked={layerVisibility.objects} onChange={(event) => setLayerVisibility((prev) => ({ ...prev, objects: event.target.checked }))} />
+                      Objects
+                    </label>
+                    <label className="wb-inline-check" htmlFor="visibility-colliders">
+                      <input id="visibility-colliders" name="visibility-colliders" type="checkbox" checked={layerVisibility.colliders} onChange={(event) => setLayerVisibility((prev) => ({ ...prev, colliders: event.target.checked }))} />
+                      Colliders
+                    </label>
+                    <label className="wb-inline-check" htmlFor="visibility-triggers">
+                      <input id="visibility-triggers" name="visibility-triggers" type="checkbox" checked={layerVisibility.triggers} onChange={(event) => setLayerVisibility((prev) => ({ ...prev, triggers: event.target.checked }))} />
+                      Triggers
+                    </label>
+                    <label className="wb-inline-check" htmlFor="visibility-npcs">
+                      <input id="visibility-npcs" name="visibility-npcs" type="checkbox" checked={layerVisibility.npcs} onChange={(event) => setLayerVisibility((prev) => ({ ...prev, npcs: event.target.checked }))} />
+                      NPCs
+                    </label>
+                    <label className="wb-inline-check" htmlFor="visibility-minimap">
+                      <input id="visibility-minimap" name="visibility-minimap" type="checkbox" checked={layerVisibility.minimap} onChange={(event) => setLayerVisibility((prev) => ({ ...prev, minimap: event.target.checked }))} />
+                      Minimap
+                    </label>
+                  </div>
+                  <div className="wb-layer-toggles">
+                    <button onClick={() => setLayerVisibilityPreset('all')}>Show All</button>
+                    <button onClick={() => setLayerVisibilityPreset('objects')}>Solo Objects</button>
+                    <button onClick={() => setLayerVisibilityPreset('colliders')}>Solo Colliders</button>
+                    <button onClick={() => setLayerVisibilityPreset('triggers')}>Solo Triggers</button>
+                    <button onClick={() => setLayerVisibilityPreset('npcs')}>Solo NPCs</button>
+                  </div>
+                  <div className="wb-layer-toggles">
+                    <label className="wb-inline-check" htmlFor="opacity-objects">
+                      Obj Opacity
+                      <input
+                        id="opacity-objects"
+                        name="opacity-objects"
+                        type="range"
+                        min="0.15"
+                        max="1"
+                        step="0.05"
+                        value={layerOpacity.objects}
+                        onChange={(event) => setLayerOpacity((prev) => ({ ...prev, objects: Number(event.target.value) }))}
+                      />
+                    </label>
+                    <label className="wb-inline-check" htmlFor="opacity-colliders">
+                      Col Opacity
+                      <input
+                        id="opacity-colliders"
+                        name="opacity-colliders"
+                        type="range"
+                        min="0.15"
+                        max="1"
+                        step="0.05"
+                        value={layerOpacity.colliders}
+                        onChange={(event) => setLayerOpacity((prev) => ({ ...prev, colliders: Number(event.target.value) }))}
+                      />
+                    </label>
+                    <label className="wb-inline-check" htmlFor="opacity-triggers">
+                      Trigger Opacity
+                      <input
+                        id="opacity-triggers"
+                        name="opacity-triggers"
+                        type="range"
+                        min="0.15"
+                        max="1"
+                        step="0.05"
+                        value={layerOpacity.triggers}
+                        onChange={(event) => setLayerOpacity((prev) => ({ ...prev, triggers: Number(event.target.value) }))}
+                      />
+                    </label>
+                    <label className="wb-inline-check" htmlFor="opacity-npcs">
+                      NPC Opacity
+                      <input
+                        id="opacity-npcs"
+                        name="opacity-npcs"
+                        type="range"
+                        min="0.15"
+                        max="1"
+                        step="0.05"
+                        value={layerOpacity.npcs}
+                        onChange={(event) => setLayerOpacity((prev) => ({ ...prev, npcs: Number(event.target.value) }))}
+                      />
+                    </label>
+                  </div>
+                  <div className="wb-layer-toggles">
+                    <label className="wb-inline-check" htmlFor="lock-objects">
+                      <input id="lock-objects" name="lock-objects" type="checkbox" checked={layerLock.objects} onChange={(event) => setLayerLock((prev) => ({ ...prev, objects: event.target.checked }))} />
+                      Lock Objects
+                    </label>
+                    <label className="wb-inline-check" htmlFor="lock-colliders">
+                      <input id="lock-colliders" name="lock-colliders" type="checkbox" checked={layerLock.colliders} onChange={(event) => setLayerLock((prev) => ({ ...prev, colliders: event.target.checked }))} />
+                      Lock Colliders
+                    </label>
+                    <label className="wb-inline-check" htmlFor="lock-triggers">
+                      <input id="lock-triggers" name="lock-triggers" type="checkbox" checked={layerLock.triggers} onChange={(event) => setLayerLock((prev) => ({ ...prev, triggers: event.target.checked }))} />
+                      Lock Triggers
+                    </label>
+                    <label className="wb-inline-check" htmlFor="lock-npcs">
+                      <input id="lock-npcs" name="lock-npcs" type="checkbox" checked={layerLock.npcs} onChange={(event) => setLayerLock((prev) => ({ ...prev, npcs: event.target.checked }))} />
+                      Lock NPCs
+                    </label>
+                  </div>
+                </div>
+              ) : null}
 
               <div ref={canvasViewportRef} className="wb-stage-wrap">
                 <Stage
@@ -2761,8 +2966,12 @@ function App() {
                         <Rect x={0} y={hoverWorld.y} width={mapWidth} height={1} fill="rgba(255,255,255,0.25)" listening={false} />
                       </>
                     ) : null}
-                    <Text x={8} y={8} text="Orange=Object  Cyan=Collider  Pink=Trigger  Yellow=NPC" fontSize={12} fill="#fefefe" listening={false} />
-                    <Text x={8} y={22} text="Q/W/E or V/M/R = Pan/Move/Resize, G = View mode, Cmd/Ctrl+S/O = Save/Open, Space/MiddleMouse+Drag = Pan, Alt+Arrows = Nudge" fontSize={11} fill="#d1d5db" listening={false} />
+                    {showCanvasHints ? (
+                      <>
+                        <Text x={8} y={8} text="Orange=Object  Cyan=Collider  Pink=Trigger  Yellow=NPC" fontSize={12} fill="#fefefe" listening={false} />
+                        <Text x={8} y={22} text="Q/W/E or V/M/R = Pan/Move/Resize, G = View mode, H = hints, Cmd/Ctrl+S/O = Save/Open, Space/MiddleMouse+Drag = Pan, Alt+Arrows = Nudge" fontSize={11} fill="#d1d5db" listening={false} />
+                      </>
+                    ) : null}
                   </Group>
                   {layerVisibility.minimap ? (
                     <>
@@ -2922,18 +3131,19 @@ function App() {
           ) : null}
         </main>
 
+        {showRightSidebar ? (
         <aside className="wb-sidebar right">
           <h3>Inspector</h3>
-          <p className="wb-legend"><strong>Shortcuts:</strong> Q/W/E oder V/M/R Tool wechseln, G View wechseln, Space+Drag oder MiddleMouse+Drag pan, Wheel zoom, Pfeile pan, Alt+Pfeile nudge selection, [ ] depth nudge (Shift = x10), F frame, Shift+F fit, Cmd/Ctrl+0 100% zoom, Cmd/Ctrl+Plus/Minus zoom, Cmd/Ctrl+/ fit map, Cmd/Ctrl+A select all objects, Cmd/Ctrl+O open, Cmd/Ctrl+S save, Esc clear selection, Del delete, Cmd/Ctrl+D duplicate, Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z redo, 1-4 load bookmark, Shift+1-4 save bookmark, Minimap klicken/ziehen = jump camera.</p>
+          <p className="wb-legend"><strong>Shortcuts:</strong> Q/W/E oder V/M/R Tool wechseln, G View wechseln, H Hints, X Advanced Panel, Alt+1/Alt+2 Sidebars, \\ Focus Canvas, Space+Drag oder MiddleMouse+Drag pan, Wheel zoom, Pfeile pan, Alt+Pfeile nudge selection, [ ] depth nudge (Shift = x10), F frame, Shift+F fit, Cmd/Ctrl+0 100% zoom, Cmd/Ctrl+Plus/Minus zoom, Cmd/Ctrl+/ fit map, Cmd/Ctrl+A select all objects, Cmd/Ctrl+O open, Cmd/Ctrl+S save, Esc clear selection, Del delete, Cmd/Ctrl+D duplicate, Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z redo, 1-4 load bookmark, Shift+1-4 save bookmark, Minimap klicken/ziehen = jump camera.</p>
           <div className="wb-command-legend">
             <h4>Command Legend</h4>
             <p><strong>Camera:</strong> Space/MiddleMouse + Drag pan, Wheel zoom, Pfeile pan, F frame selection, Shift+F oder Cmd/Ctrl+/ fit map, Cmd/Ctrl+0 reset zoom, Cmd/Ctrl+Plus/Minus zoom, Minimap click/drag jump.</p>
-            <p><strong>Tools:</strong> Q toggles Pan Mode, W/M move, E/R resize, V select, G cycles Abstract/Rendered/Blend, Drag empty area marquee, Shift+Click additive selection.</p>
+            <p><strong>Tools:</strong> Q toggles Pan Mode, W/M move, E/R resize, V select, H toggle canvas hints, X toggle advanced canvas panel, G cycles Abstract/Rendered/Blend, Drag empty area marquee, Shift+Click additive selection.</p>
             <p><strong>Edit:</strong> Del/Backspace delete, Cmd/Ctrl+D duplicate, Alt+Pfeile nudge selected objects (Shift = coarse), [ ] depth nudge (Shift = 10x).</p>
             <p><strong>History:</strong> Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z oder Cmd/Ctrl+Y redo.</p>
             <p><strong>Selection:</strong> Cmd/Ctrl+A select all objects, Esc clear selection, Cmd/Ctrl+O open JSON, Cmd/Ctrl+S save JSON.</p>
             <p><strong>Depth:</strong> Depth Guides + Player Depth Preview zeigen Front/Back-Layering gegen Player-Y.</p>
-            <p><strong>Layers:</strong> Show All / Solo Buttons plus Opacity-Slider helfen beim exakten Collider- und Trigger-Editing auf Rendered View.</p>
+            <p><strong>Layout:</strong> Alt+1 links ein/aus, Alt+2 rechts ein/aus, Backslash fokusiert nur Canvas. Show All / Solo plus Opacity-Slider helfen beim exakten Collider- und Trigger-Editing auf Rendered View.</p>
           </div>
           {selectedObjectIds.length > 1 ? (
             <>
@@ -3423,6 +3633,7 @@ function App() {
 
           {selection.kind === 'none' ? <p>Waehle links oder auf der Canvas ein Element aus.</p> : null}
         </aside>
+        ) : null}
       </section>
     </div>
   )

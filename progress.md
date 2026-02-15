@@ -303,3 +303,40 @@ Original prompt: verbessere den weiter! der ist immer noch buggy und viele sache
 - Reference notes used:
   - MDN localStorage exceptions/behavior: https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage
   - MDN KeyboardEvent key/code behavior: https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key and https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code
+- Loop UI/UX polish (2026-02-15, pass 4):
+  - Added collapsible layout controls in worldbuilder topbar:
+    - left sidebar toggle (Alt+1)
+    - right sidebar toggle (Alt+2)
+    - focus-canvas mode (\\)
+  - Added canvas hint toggle (`H`) and persisted it in session state.
+  - Added transient input safety reset on `blur` / `mouseup` / `visibilitychange` to prevent stuck pan/space states.
+  - Improved session persistence model with additional fields:
+    - `showCanvasHints`, `sidebarVisibility`, `focusCanvas`.
+- Layout stability fixes:
+  - Constrained app shell to viewport height (`height: 100vh`) to avoid runaway page height / giant stage artifacts.
+  - Converted main canvas area to strict flex+overflow layout so stage remains usable and panels scroll independently.
+  - Added active button styling for layout toggles.
+- Startup camera/session hardening:
+  - Introduced `mapCoverageInViewport(...)` guard.
+  - On startup, if stored session viewport is effectively off-map OR appears collapsed (min zoom + hidden object/collider/trigger layers), editor auto-refits map, restores key layer visibility, and exits pan tool state.
+  - Standardized min zoom (`MIN_ZOOM = 0.4`) across session load, fit-map, and clamp logic.
+  - `Reset View` now also restores layer preset `Show All`, selects the select-tool, disables pan mode, and clears selection.
+- Canvas density optimization:
+  - Added `Advanced: ON/OFF` panel (`X`) to collapse less-frequent controls and preserve more vertical space for the map.
+  - Moved depth preview/layer visibility/solo/opacity/lock controls into the advanced panel.
+  - Persisted `showAdvancedCanvas` in session state and telemetry.
+- Verification (automated + manual):
+  - `npm run lint` ✅
+  - `npm test` ✅
+  - `npm run build -w @leonaderi/worldbuilder` ✅
+  - `npm run build` ✅
+  - Playwright worldbuilder:
+    - `output/worldbuilder-loop/loop-focus-layout`
+    - `output/worldbuilder-loop/loop-advanced-panel`
+  - Playwright portfolio:
+    - `output/portfolio-loop/loop-worldbuilder-ui-pass`
+  - Manual Chrome checks/screenshots:
+    - `output/worldbuilder-loop/manual-focus-canvas.png`
+    - `output/worldbuilder-loop/manual-layout-polish-fixed-v4.png`
+    - `output/worldbuilder-loop/manual-layout-polish-fixed-v3.png`
+  - Console check on worldbuilder page: no app errors/warnings (only vite/react-devtools info).

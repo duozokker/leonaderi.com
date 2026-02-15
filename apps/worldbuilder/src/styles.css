@@ -33,6 +33,7 @@
 html,
 body,
 #root {
+  height: 100%;
   min-height: 100%;
 }
 
@@ -56,11 +57,14 @@ select {
 }
 
 .wb-root {
+  height: 100vh;
+  max-height: 100vh;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   gap: 0.8rem;
   padding: clamp(0.65rem, 1vw, 1rem);
+  overflow: hidden;
 }
 
 .wb-topbar {
@@ -175,7 +179,21 @@ button:disabled {
   display: grid;
   grid-template-columns: minmax(240px, 280px) minmax(640px, 1fr) minmax(300px, 360px);
   gap: 0.78rem;
-  min-height: 76vh;
+  min-height: 0;
+  flex: 1;
+}
+
+.wb-layout.hide-left {
+  grid-template-columns: minmax(640px, 1fr) minmax(300px, 360px);
+}
+
+.wb-layout.hide-right {
+  grid-template-columns: minmax(240px, 280px) minmax(640px, 1fr);
+}
+
+.wb-layout.hide-left.hide-right,
+.wb-layout.focus-canvas {
+  grid-template-columns: 1fr;
 }
 
 .wb-sidebar,
@@ -185,6 +203,17 @@ button:disabled {
   box-shadow: var(--shadow-sm);
   padding: 0.75rem;
   overflow: auto;
+  min-height: 0;
+}
+
+.wb-main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.wb-main > * {
+  min-height: 0;
 }
 
 .wb-panel-title,
@@ -292,6 +321,9 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 .wb-canvas-toolbar {
@@ -369,6 +401,14 @@ textarea {
   background: rgba(8, 20, 39, 0.68);
 }
 
+.wb-advanced-canvas-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.42rem;
+  padding: 0.3rem 0.18rem 0;
+  border-top: 1px dashed rgba(118, 176, 245, 0.32);
+}
+
 .wb-layer-toggles .wb-inline-check {
   margin: 0;
   font-size: 0.73rem;
@@ -390,8 +430,9 @@ textarea {
 
 .wb-stage-wrap {
   width: 100%;
-  height: clamp(390px, 67vh, 860px);
-  min-height: 340px;
+  flex: 1;
+  min-height: clamp(340px, 58vh, 880px);
+  height: auto;
   border: 1px solid rgba(105, 170, 250, 0.45);
   border-radius: 12px;
   background:
@@ -407,6 +448,7 @@ textarea {
   flex-direction: column;
   gap: 0.55rem;
   height: 100%;
+  overflow: auto;
 }
 
 .wb-dialogue-head {
@@ -454,6 +496,12 @@ textarea {
 .wb-status.error {
   border-color: rgba(255, 92, 131, 0.72);
   background: rgba(77, 18, 36, 0.9);
+}
+
+.wb-actions button.active {
+  border-color: rgba(255, 213, 110, 0.9);
+  background: linear-gradient(180deg, rgba(98, 76, 31, 0.94), rgba(73, 54, 18, 0.92));
+  color: #fff2c3;
 }
 
 .wb-inline-buttons {
