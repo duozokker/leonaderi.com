@@ -208,3 +208,8 @@ Original prompt: verbessere den weiter! der ist immer noch buggy und viele sache
   - `npm run build`
   - `npm run build -w @leonaderi/worldbuilder`
   - manual browser checks + screenshots (`output/worldbuilder-loop/manual-loop-responsive.png`, `output/worldbuilder-loop/manual-loop-rendered-mode.png`, `output/portfolio-loop/manual-world-4173.png`).
+- Follow-up loop: map-import/seed reset camera fitting hardened.
+  - Added `fitMapToDimensions(...)` helper and wired it into JSON import/apply, `Reset Seed`, and `Reset Local Draft`.
+  - `Reset Local Draft` now clears all draft/session/bookmark storage and reloads the canonical seed world immediately.
+  - Added `applyZoom(...)` so slider zoom also clamps camera bounds (prevents out-of-bounds blank space after manual zoom).
+  - Re-verified lint/test/build and manual screenshots (`manual-loop-final.png`, `manual-world-final.png`).
