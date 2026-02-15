@@ -230,3 +230,24 @@ Original prompt: verbessere den weiter! der ist immer noch buggy und viele sache
   - worldbuilder: output/worldbuilder-loop/loop-clamp-fix (shots + state, no errors files)
   - portfolio: output/portfolio-loop/loop-clamp-fix (shots + state, no errors files)
 - Observed state snapshot (worldbuilder): camera now stable at centered bounds after fit, no invalid clamp oscillation.
+- Loop session+ux (2026-02-15):
+  - Added robust session persistence for worldbuilder view state (background mode, blend opacity, snap, labels/crosshair/depth guides, layer visibility/lock/opacity).
+  - Added adaptive minimap sizing/clamped positioning based on viewport dimensions.
+  - Added pro shortcuts: Q/W/E aliases (pan/move/resize), Cmd/Ctrl+0 (100% zoom), Cmd/Ctrl+Plus/Minus (zoom), Cmd/Ctrl+/ (fit map).
+  - Fixed keyboard bug: pressing Space while typing in inputs no longer gets swallowed by pan-mode handler.
+  - Added canvas fallback fill rect to remove black empty capture areas in automated screenshots.
+- Portfolio hardening:
+  - Moved intro gating and link normalization into dedicated utilities.
+  - Intro dismissal now persists via localStorage with query overrides: `?intro=1` (force show), `?intro=0`/`?skipIntro=1` (force skip).
+  - Added safer external href normalization helper usage in confirm flow.
+- New tests:
+  - `tests/introPreferences.test.ts`
+  - `tests/linkSafety.test.ts`
+- Manual/automation verification:
+  - Playwright worldbuilder: `output/worldbuilder-loop/loop-session-minimap`, `output/worldbuilder-loop/loop-bg-fill`.
+  - Playwright portfolio: `output/portfolio-loop/loop-intro-persist`, `output/portfolio-loop/loop-post-utils`.
+  - Manual DevTools check: verified space character input works in `entity-filter` (no pan-mode interception while typing).
+- External UX references consulted for shortcut/layer workflow parity:
+  - Tiled keyboard shortcuts + layer workflows.
+  - Unity Scene view navigation shortcuts.
+  - Godot 2D editor navigation references.

@@ -189,6 +189,31 @@ type SavedSessionV1 = {
   camera: { x: number; y: number }
   panMode: boolean
   canvasTool: CanvasTool
+  backgroundMode: BackgroundMode
+  backgroundBlendOpacity: number
+  snapToGrid: boolean
+  showLabels: boolean
+  showCrosshair: boolean
+  showDepthGuides: boolean
+  layerVisibility: {
+    objects: boolean
+    colliders: boolean
+    triggers: boolean
+    npcs: boolean
+    minimap: boolean
+  }
+  layerLock: {
+    objects: boolean
+    colliders: boolean
+    triggers: boolean
+    npcs: boolean
+  }
+  layerOpacity: {
+    objects: number
+    colliders: number
+    triggers: number
+    npcs: number
+  }
   fromStorage: boolean
 }
 
@@ -211,6 +236,31 @@ function loadSessionDefaults(): SavedSessionV1 {
     camera: { x: 20, y: 20 },
     panMode: false,
     canvasTool: 'select',
+    backgroundMode: 'abstract',
+    backgroundBlendOpacity: 0.4,
+    snapToGrid: false,
+    showLabels: true,
+    showCrosshair: true,
+    showDepthGuides: true,
+    layerVisibility: {
+      objects: true,
+      colliders: true,
+      triggers: true,
+      npcs: true,
+      minimap: true,
+    },
+    layerLock: {
+      objects: false,
+      colliders: false,
+      triggers: false,
+      npcs: false,
+    },
+    layerOpacity: {
+      objects: 1,
+      colliders: 1,
+      triggers: 1,
+      npcs: 1,
+    },
     fromStorage: false,
   }
   if (typeof window === 'undefined') return fallback
@@ -218,6 +268,9 @@ function loadSessionDefaults(): SavedSessionV1 {
     const raw = window.localStorage.getItem(SESSION_LOCAL_STORAGE_KEY)
     if (!raw) return fallback
     const parsed = JSON.parse(raw) as Partial<SavedSessionV1>
+    const parsedLayerVisibility = parsed.layerVisibility ?? {}
+    const parsedLayerLock = parsed.layerLock ?? {}
+    const parsedLayerOpacity = parsed.layerOpacity ?? {}
     return {
       tab: parsed.tab === 'canvas' || parsed.tab === 'dialogue' || parsed.tab === 'validation' || parsed.tab === 'json' ? parsed.tab : fallback.tab,
       zoom: clamp(typeof parsed.zoom === 'number' ? parsed.zoom : fallback.zoom, 0.35, 2.5),
@@ -227,6 +280,35 @@ function loadSessionDefaults(): SavedSessionV1 {
       },
       panMode: Boolean(parsed.panMode),
       canvasTool: parsed.canvasTool === 'move' || parsed.canvasTool === 'resize' ? parsed.canvasTool : 'select',
+      backgroundMode: parsed.backgroundMode === 'rendered' || parsed.backgroundMode === 'blend' ? parsed.backgroundMode : fallback.backgroundMode,
+      backgroundBlendOpacity: clamp(
+        typeof parsed.backgroundBlendOpacity === 'number' ? parsed.backgroundBlendOpacity : fallback.backgroundBlendOpacity,
+        0,
+        1,
+      ),
+      snapToGrid: typeof parsed.snapToGrid === 'boolean' ? parsed.snapToGrid : fallback.snapToGrid,
+      showLabels: typeof parsed.showLabels === 'boolean' ? parsed.showLabels : fallback.showLabels,
+      showCrosshair: typeof parsed.showCrosshair === 'boolean' ? parsed.showCrosshair : fallback.showCrosshair,
+      showDepthGuides: typeof parsed.showDepthGuides === 'boolean' ? parsed.showDepthGuides : fallback.showDepthGuides,
+      layerVisibility: {
+        objects: typeof parsedLayerVisibility.objects === 'boolean' ? parsedLayerVisibility.objects : fallback.layerVisibility.objects,
+        colliders: typeof parsedLayerVisibility.colliders === 'boolean' ? parsedLayerVisibility.colliders : fallback.layerVisibility.colliders,
+        triggers: typeof parsedLayerVisibility.triggers === 'boolean' ? parsedLayerVisibility.triggers : fallback.layerVisibility.triggers,
+        npcs: typeof parsedLayerVisibility.npcs === 'boolean' ? parsedLayerVisibility.npcs : fallback.layerVisibility.npcs,
+        minimap: typeof parsedLayerVisibility.minimap === 'boolean' ? parsedLayerVisibility.minimap : fallback.layerVisibility.minimap,
+      },
+      layerLock: {
+        objects: typeof parsedLayerLock.objects === 'boolean' ? parsedLayerLock.objects : fallback.layerLock.objects,
+        colliders: typeof parsedLayerLock.colliders === 'boolean' ? parsedLayerLock.colliders : fallback.layerLock.colliders,
+        triggers: typeof parsedLayerLock.triggers === 'boolean' ? parsedLayerLock.triggers : fallback.layerLock.triggers,
+        npcs: typeof parsedLayerLock.npcs === 'boolean' ? parsedLayerLock.npcs : fallback.layerLock.npcs,
+      },
+      layerOpacity: {
+        objects: clamp(typeof parsedLayerOpacity.objects === 'number' ? parsedLayerOpacity.objects : fallback.layerOpacity.objects, 0.15, 1),
+        colliders: clamp(typeof parsedLayerOpacity.colliders === 'number' ? parsedLayerOpacity.colliders : fallback.layerOpacity.colliders, 0.15, 1),
+        triggers: clamp(typeof parsedLayerOpacity.triggers === 'number' ? parsedLayerOpacity.triggers : fallback.layerOpacity.triggers, 0.15, 1),
+        npcs: clamp(typeof parsedLayerOpacity.npcs === 'number' ? parsedLayerOpacity.npcs : fallback.layerOpacity.npcs, 0.15, 1),
+      },
       fromStorage: true,
     }
   } catch {
@@ -248,18 +330,18 @@ function App() {
   const [canvasTool, setCanvasTool] = useState<CanvasTool>(sessionDefaults.canvasTool)
   const [spaceHeld, setSpaceHeld] = useState(false)
   const [middlePanActive, setMiddlePanActive] = useState(false)
-  const [snapToGrid, setSnapToGrid] = useState(false)
-  const [showLabels, setShowLabels] = useState(true)
+  const [snapToGrid, setSnapToGrid] = useState(sessionDefaults.snapToGrid)
+  const [showLabels, setShowLabels] = useState(sessionDefaults.showLabels)
   const [status, setStatus] = useState<{ tone: StatusTone; text: string } | null>(null)
   const [frameCounter, setFrameCounter] = useState(0)
   const [history, setHistory] = useState<AuthoringWorldV1[]>([])
   const [future, setFuture] = useState<AuthoringWorldV1[]>([])
-  const [backgroundMode, setBackgroundMode] = useState<BackgroundMode>('abstract')
-  const [backgroundBlendOpacity, setBackgroundBlendOpacity] = useState(0.4)
+  const [backgroundMode, setBackgroundMode] = useState<BackgroundMode>(sessionDefaults.backgroundMode)
+  const [backgroundBlendOpacity, setBackgroundBlendOpacity] = useState(sessionDefaults.backgroundBlendOpacity)
   const [renderedMapImage, setRenderedMapImage] = useState<HTMLImageElement | null>(null)
   const [hoverWorld, setHoverWorld] = useState<{ x: number; y: number } | null>(null)
-  const [showCrosshair, setShowCrosshair] = useState(true)
-  const [showDepthGuides, setShowDepthGuides] = useState(true)
+  const [showCrosshair, setShowCrosshair] = useState(sessionDefaults.showCrosshair)
+  const [showDepthGuides, setShowDepthGuides] = useState(sessionDefaults.showDepthGuides)
   const [depthPreviewY, setDepthPreviewY] = useState<number | null>(null)
   const [cameraBookmarks, setCameraBookmarks] = useState<Record<number, { x: number; y: number; zoom: number } | null>>(() => {
     if (typeof window === 'undefined') return { 1: null, 2: null, 3: null, 4: null }
@@ -277,25 +359,9 @@ function App() {
       return { 1: null, 2: null, 3: null, 4: null }
     }
   })
-  const [layerVisibility, setLayerVisibility] = useState({
-    objects: true,
-    colliders: true,
-    triggers: true,
-    npcs: true,
-    minimap: true,
-  })
-  const [layerLock, setLayerLock] = useState({
-    objects: false,
-    colliders: false,
-    triggers: false,
-    npcs: false,
-  })
-  const [layerOpacity, setLayerOpacity] = useState({
-    objects: 1,
-    colliders: 1,
-    triggers: 1,
-    npcs: 1,
-  })
+  const [layerVisibility, setLayerVisibility] = useState(sessionDefaults.layerVisibility)
+  const [layerLock, setLayerLock] = useState(sessionDefaults.layerLock)
+  const [layerOpacity, setLayerOpacity] = useState(sessionDefaults.layerOpacity)
   const [entityFilter, setEntityFilter] = useState('')
   const [selectedObjectIds, setSelectedObjectIds] = useState<string[]>([])
   const [marqueeRect, setMarqueeRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null)
@@ -1583,14 +1649,47 @@ function App() {
     if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current)
     autosaveTimerRef.current = window.setTimeout(() => {
       window.localStorage.setItem(WORLD_LOCAL_STORAGE_KEY, JSON.stringify(world))
-      const session: SavedSessionV1 = { tab, zoom, camera, panMode, canvasTool, fromStorage: true }
+      const session: SavedSessionV1 = {
+        tab,
+        zoom,
+        camera,
+        panMode,
+        canvasTool,
+        backgroundMode,
+        backgroundBlendOpacity,
+        snapToGrid,
+        showLabels,
+        showCrosshair,
+        showDepthGuides,
+        layerVisibility,
+        layerLock,
+        layerOpacity,
+        fromStorage: true,
+      }
       window.localStorage.setItem(SESSION_LOCAL_STORAGE_KEY, JSON.stringify(session))
       window.localStorage.setItem(BOOKMARKS_STORAGE_KEY, JSON.stringify(cameraBookmarks))
     }, 200)
     return () => {
       if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current)
     }
-  }, [world, tab, zoom, camera, panMode, canvasTool, cameraBookmarks])
+  }, [
+    world,
+    tab,
+    zoom,
+    camera,
+    panMode,
+    canvasTool,
+    backgroundMode,
+    backgroundBlendOpacity,
+    snapToGrid,
+    showLabels,
+    showCrosshair,
+    showDepthGuides,
+    layerVisibility,
+    layerLock,
+    layerOpacity,
+    cameraBookmarks,
+  ])
 
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
@@ -1603,6 +1702,28 @@ function App() {
           || target.isContentEditable
         ),
       )
+
+      if (!isTypingTarget && (event.metaKey || event.ctrlKey) && event.key === '0') {
+        applyZoom(1)
+        showStatus('ok', 'Zoom auf 100% gesetzt')
+        event.preventDefault()
+        return
+      }
+      if (!isTypingTarget && (event.metaKey || event.ctrlKey) && (event.key === '/' || event.key === '?')) {
+        fitMapView()
+        event.preventDefault()
+        return
+      }
+      if (!isTypingTarget && (event.metaKey || event.ctrlKey) && (event.key === '=' || event.key === '+')) {
+        applyZoom(zoom + 0.1)
+        event.preventDefault()
+        return
+      }
+      if (!isTypingTarget && (event.metaKey || event.ctrlKey) && event.key === '-') {
+        applyZoom(zoom - 0.1)
+        event.preventDefault()
+        return
+      }
 
       if (!isTypingTarget && (event.key === 'ArrowLeft' || event.key === 'ArrowRight' || event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
         if (event.altKey && selectedObjectIds.length > 0) {
@@ -1633,6 +1754,18 @@ function App() {
         event.preventDefault()
       }
 
+      if (!isTypingTarget && event.key.toLowerCase() === 'q') {
+        setPanMode((prev) => !prev)
+        event.preventDefault()
+      }
+      if (!isTypingTarget && event.key.toLowerCase() === 'w') {
+        setCanvasTool('move')
+        event.preventDefault()
+      }
+      if (!isTypingTarget && event.key.toLowerCase() === 'e') {
+        setCanvasTool('resize')
+        event.preventDefault()
+      }
       if (!isTypingTarget && event.key.toLowerCase() === 'v') {
         setCanvasTool('select')
         event.preventDefault()
@@ -1664,7 +1797,7 @@ function App() {
         event.preventDefault()
       }
 
-      if (event.key === ' ') {
+      if (!isTypingTarget && event.key === ' ') {
         setSpaceHeld(true)
         event.preventDefault()
       }
@@ -1718,7 +1851,7 @@ function App() {
       window.removeEventListener('keydown', keydown)
       window.removeEventListener('keyup', keyup)
     }
-  }, [bumpSelectedDepth, camera, clearSelection, clampCameraToBounds, cycleBackgroundMode, fitMapView, frameSelection, importFromFile, loadCameraBookmark, nudgeSelectedObjects, redo, saveCameraBookmark, saveToFile, selectAllObjects, selection, selectedObjectIds.length, undo, zoom])
+  }, [applyZoom, bumpSelectedDepth, camera, clearSelection, clampCameraToBounds, cycleBackgroundMode, fitMapView, frameSelection, importFromFile, loadCameraBookmark, nudgeSelectedObjects, redo, saveCameraBookmark, saveToFile, selectAllObjects, selection, selectedObjectIds.length, showStatus, undo, zoom])
 
   useEffect(() => {
     window.render_game_to_text = () => JSON.stringify({
@@ -1762,11 +1895,13 @@ function App() {
     }
   }, [tab, selection, selectedObjectIds, zoom, camera, canvasTool, panMode, spaceHeld, middlePanActive, backgroundMode, backgroundBlendOpacity, hoverWorld, showCrosshair, showDepthGuides, depthPreviewY, normalizedMarquee, mapWidth, mapHeight, world.map.tileSize, world.objects.length, world.colliders.length, world.triggers.length, world.npcs.length, world.poiIndex.length, frameCounter, history.length, future.length, layerLock, layerOpacity, layerVisibility, cameraBookmarks, drawOrderedObjects])
 
-  const minimapScale = Math.min(180 / mapWidth, 120 / mapHeight)
+  const minimapMaxWidth = Math.max(120, Math.min(220, stageWidth * 0.28))
+  const minimapMaxHeight = Math.max(90, Math.min(150, stageHeight * 0.28))
+  const minimapScale = Math.min(minimapMaxWidth / mapWidth, minimapMaxHeight / mapHeight)
   const minimapWidth = mapWidth * minimapScale
   const minimapHeight = mapHeight * minimapScale
-  const minimapX = stageWidth - minimapWidth - 14
-  const minimapY = stageHeight - minimapHeight - 14
+  const minimapX = Math.max(8, stageWidth - minimapWidth - 14)
+  const minimapY = Math.max(8, stageHeight - minimapHeight - 14)
   const viewportWorld = {
     x: clamp(-camera.x / zoom, 0, mapWidth),
     y: clamp(-camera.y / zoom, 0, mapHeight),
@@ -1885,11 +2020,12 @@ function App() {
                 </button>
                 <div className="wb-tool-group" role="group" aria-label="canvas-tools">
                   <button className={canvasTool === 'select' ? 'active' : ''} onClick={() => setCanvasTool('select')}>Select (V)</button>
-                  <button className={canvasTool === 'move' ? 'active' : ''} onClick={() => setCanvasTool('move')}>Move (M)</button>
-                  <button className={canvasTool === 'resize' ? 'active' : ''} onClick={() => setCanvasTool('resize')}>Resize (R)</button>
+                  <button className={canvasTool === 'move' ? 'active' : ''} onClick={() => setCanvasTool('move')}>Move (W/M)</button>
+                  <button className={canvasTool === 'resize' ? 'active' : ''} onClick={() => setCanvasTool('resize')}>Resize (E/R)</button>
                 </div>
                 <button onClick={frameSelection}>Frame Selected</button>
                 <button onClick={fitMapView}>Fit Map</button>
+                <button onClick={() => applyZoom(1)}>Zoom 100%</button>
                 <button onClick={selectAllObjects}>Select All Objects</button>
                 <button onClick={clearSelection}>Clear Selection</button>
                 <button
@@ -2242,6 +2378,14 @@ function App() {
                 }}
               >
                 <Layer>
+                  <Rect
+                    x={0}
+                    y={0}
+                    width={stageWidth}
+                    height={stageHeight}
+                    fill="#2f65d9"
+                    listening={false}
+                  />
                   <Group
                     x={camera.x}
                     y={camera.y}
@@ -2565,7 +2709,7 @@ function App() {
                       </>
                     ) : null}
                     <Text x={8} y={8} text="Orange=Object  Cyan=Collider  Pink=Trigger  Yellow=NPC" fontSize={12} fill="#fefefe" listening={false} />
-                    <Text x={8} y={22} text="V/M/R = Select/Move/Resize, G = View mode, Cmd/Ctrl+S/O = Save/Open, Space/MiddleMouse+Drag = Pan, Alt+Arrows = Nudge" fontSize={11} fill="#d1d5db" listening={false} />
+                    <Text x={8} y={22} text="Q/W/E or V/M/R = Pan/Move/Resize, G = View mode, Cmd/Ctrl+S/O = Save/Open, Space/MiddleMouse+Drag = Pan, Alt+Arrows = Nudge" fontSize={11} fill="#d1d5db" listening={false} />
                   </Group>
                   {layerVisibility.minimap ? (
                     <>
@@ -2727,11 +2871,11 @@ function App() {
 
         <aside className="wb-sidebar right">
           <h3>Inspector</h3>
-          <p className="wb-legend"><strong>Shortcuts:</strong> V/M/R Tool wechseln, G View wechseln, Space+Drag oder MiddleMouse+Drag pan, Wheel zoom, Pfeile pan, Alt+Pfeile nudge selection, [ ] depth nudge (Shift = x10), F frame, Shift+F fit, Cmd/Ctrl+A select all objects, Cmd/Ctrl+O open, Cmd/Ctrl+S save, Esc clear selection, Del delete, Cmd/Ctrl+D duplicate, Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z redo, 1-4 load bookmark, Shift+1-4 save bookmark, Minimap klicken/ziehen = jump camera.</p>
+          <p className="wb-legend"><strong>Shortcuts:</strong> Q/W/E oder V/M/R Tool wechseln, G View wechseln, Space+Drag oder MiddleMouse+Drag pan, Wheel zoom, Pfeile pan, Alt+Pfeile nudge selection, [ ] depth nudge (Shift = x10), F frame, Shift+F fit, Cmd/Ctrl+0 100% zoom, Cmd/Ctrl+Plus/Minus zoom, Cmd/Ctrl+/ fit map, Cmd/Ctrl+A select all objects, Cmd/Ctrl+O open, Cmd/Ctrl+S save, Esc clear selection, Del delete, Cmd/Ctrl+D duplicate, Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z redo, 1-4 load bookmark, Shift+1-4 save bookmark, Minimap klicken/ziehen = jump camera.</p>
           <div className="wb-command-legend">
             <h4>Command Legend</h4>
-            <p><strong>Camera:</strong> Space/MiddleMouse + Drag pan, Wheel zoom, Pfeile pan, F frame selection, Shift+F fit map, Minimap click/drag jump.</p>
-            <p><strong>Tools:</strong> V select, M move, R resize, G cycles Abstract/Rendered/Blend, Drag empty area marquee, Shift+Click additive selection.</p>
+            <p><strong>Camera:</strong> Space/MiddleMouse + Drag pan, Wheel zoom, Pfeile pan, F frame selection, Shift+F oder Cmd/Ctrl+/ fit map, Cmd/Ctrl+0 reset zoom, Cmd/Ctrl+Plus/Minus zoom, Minimap click/drag jump.</p>
+            <p><strong>Tools:</strong> Q toggles Pan Mode, W/M move, E/R resize, V select, G cycles Abstract/Rendered/Blend, Drag empty area marquee, Shift+Click additive selection.</p>
             <p><strong>Edit:</strong> Del/Backspace delete, Cmd/Ctrl+D duplicate, Alt+Pfeile nudge selected objects (Shift = coarse), [ ] depth nudge (Shift = 10x).</p>
             <p><strong>History:</strong> Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z oder Cmd/Ctrl+Y redo.</p>
             <p><strong>Selection:</strong> Cmd/Ctrl+A select all objects, Esc clear selection, Cmd/Ctrl+O open JSON, Cmd/Ctrl+S save JSON.</p>
