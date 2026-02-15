@@ -326,6 +326,26 @@ textarea {
   overflow: hidden;
 }
 
+.wb-canvas-status-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.38rem;
+  align-items: center;
+  padding: 0.28rem 0.34rem;
+  border: 1px solid rgba(101, 163, 235, 0.34);
+  border-radius: 10px;
+  background: rgba(7, 18, 35, 0.86);
+}
+
+.wb-chip {
+  border: 1px solid rgba(112, 177, 255, 0.42);
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.7rem;
+  color: #d6e9ff;
+  background: rgba(16, 35, 66, 0.88);
+}
+
 .wb-canvas-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -496,6 +516,117 @@ textarea {
 .wb-status.error {
   border-color: rgba(255, 92, 131, 0.72);
   background: rgba(77, 18, 36, 0.9);
+}
+
+.wb-command-palette-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: start center;
+  padding: clamp(1.1rem, 6vh, 4.5rem) 1rem 1rem;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(112, 188, 255, 0.2), transparent 48%),
+    radial-gradient(circle at 85% 5%, rgba(255, 209, 105, 0.14), transparent 40%),
+    rgba(4, 12, 24, 0.64);
+  backdrop-filter: blur(8px);
+}
+
+.wb-command-palette {
+  width: min(860px, calc(100vw - 2rem));
+  max-height: min(76vh, 840px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(140, 202, 255, 0.42);
+  border-radius: 14px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(8, 22, 44, 0.96), rgba(6, 16, 31, 0.97));
+  box-shadow: 0 32px 60px rgba(0, 0, 0, 0.5);
+}
+
+.wb-command-palette-head {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.72rem;
+  border-bottom: 1px solid rgba(118, 176, 245, 0.32);
+  background: rgba(11, 28, 57, 0.9);
+}
+
+.wb-command-palette-head .wb-input {
+  flex: 1;
+}
+
+.wb-command-kbd {
+  border: 1px solid rgba(124, 183, 255, 0.48);
+  border-bottom-width: 2px;
+  border-radius: 8px;
+  padding: 0.28rem 0.48rem;
+  color: #d1e5ff;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.wb-command-palette-list {
+  overflow: auto;
+  padding: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.wb-command-item {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.58rem;
+  text-align: left;
+  border-radius: 10px;
+  border: 1px solid rgba(104, 166, 240, 0.3);
+  background: linear-gradient(180deg, rgba(14, 33, 63, 0.9), rgba(10, 23, 46, 0.92));
+}
+
+.wb-command-item:hover {
+  border-color: rgba(167, 220, 255, 0.9);
+}
+
+.wb-command-main {
+  display: flex;
+  gap: 0.52rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.wb-command-label {
+  font-size: 0.79rem;
+  color: #ebf5ff;
+}
+
+.wb-command-section {
+  border: 1px solid rgba(131, 187, 255, 0.42);
+  border-radius: 999px;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.63rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #b8d7ff;
+}
+
+.wb-command-shortcut {
+  border: 1px solid rgba(116, 176, 249, 0.45);
+  border-radius: 8px;
+  padding: 0.16rem 0.45rem;
+  font-size: 0.68rem;
+  color: #d4e8ff;
+  white-space: nowrap;
+}
+
+.wb-command-empty {
+  padding: 0.72rem;
+  color: #a7c4e8;
+  font-size: 0.78rem;
 }
 
 .wb-actions button.active {

@@ -33,6 +33,13 @@ type Tabs = 'canvas' | 'dialogue' | 'validation' | 'json'
 type StatusTone = 'ok' | 'warn' | 'error'
 type BackgroundMode = 'abstract' | 'rendered' | 'blend'
 type CanvasTool = 'select' | 'move' | 'resize'
+type CommandAction = {
+  id: string
+  section: 'file' | 'view' | 'layout' | 'entity' | 'layer' | 'nav'
+  label: string
+  shortcut?: string
+  keywords: string
+}
 
 type FileHandleLike = {
   createWritable?: () => Promise<{
@@ -422,6 +429,9 @@ function App() {
   const [showCanvasHints, setShowCanvasHints] = useState(sessionDefaults.showCanvasHints)
   const [showAdvancedCanvas, setShowAdvancedCanvas] = useState(sessionDefaults.showAdvancedCanvas)
   const [status, setStatus] = useState<{ tone: StatusTone; text: string } | null>(null)
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
+  const [commandQuery, setCommandQuery] = useState('')
+  const [recentCommandIds, setRecentCommandIds] = useState<string[]>([])
   const [frameCounter, setFrameCounter] = useState(0)
   const [history, setHistory] = useState<AuthoringWorldV1[]>([])
   const [future, setFuture] = useState<AuthoringWorldV1[]>([])
@@ -490,6 +500,7 @@ function App() {
   const middlePanStartRef = useRef<{ pointerX: number; pointerY: number; cameraX: number; cameraY: number } | null>(null)
   const initialCameraSyncRef = useRef(false)
   const zoomRef = useRef(zoom)
+  const commandInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     zoomRef.current = zoom
@@ -1868,6 +1879,22 @@ function App() {
         ),
       )
 
+      if ((event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === 'k') {
+        setCommandPaletteOpen((prev) => !prev)
+        setCommandQuery('')
+        event.preventDefault()
+        return
+      }
+
+      if (commandPaletteOpen) {
+        if (event.key === 'Escape') {
+          setCommandPaletteOpen(false)
+          setCommandQuery('')
+          event.preventDefault()
+        }
+        return
+      }
+
       if (!isTypingTarget && isResetZoomShortcut(event)) {
         applyZoom(1)
         showStatus('ok', 'Zoom auf 100% gesetzt')
@@ -2036,7 +2063,16 @@ function App() {
       window.removeEventListener('keydown', keydown)
       window.removeEventListener('keyup', keyup)
     }
-  }, [applyZoom, bumpSelectedDepth, camera, clearSelection, clampCameraToBounds, cycleBackgroundMode, fitMapView, frameSelection, importFromFile, loadCameraBookmark, nudgeSelectedObjects, redo, saveCameraBookmark, saveToFile, selectAllObjects, selection, selectedObjectIds.length, showStatus, undo, zoom])
+  }, [applyZoom, bumpSelectedDepth, camera, clearSelection, clampCameraToBounds, commandPaletteOpen, cycleBackgroundMode, fitMapView, frameSelection, importFromFile, loadCameraBookmark, nudgeSelectedObjects, redo, saveCameraBookmark, saveToFile, selectAllObjects, selection, selectedObjectIds.length, showStatus, undo, zoom])
+
+  useEffect(() => {
+    if (!commandPaletteOpen) return
+    const timer = window.setTimeout(() => {
+      commandInputRef.current?.focus()
+      commandInputRef.current?.select()
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [commandPaletteOpen])
 
   useEffect(() => {
     const clearTransientInteractionState = () => {
@@ -2073,6 +2109,7 @@ function App() {
       panMode: panMode || spaceHeld || middlePanActive,
       backgroundMode,
       backgroundBlendOpacity,
+      commandPaletteOpen,
       hoverWorld,
       showCanvasHints,
       showAdvancedCanvas,
@@ -2105,7 +2142,7 @@ function App() {
       delete window.render_game_to_text
       delete window.advanceTime
     }
-  }, [tab, selection, selectedObjectIds, zoom, camera, canvasTool, panMode, spaceHeld, middlePanActive, backgroundMode, backgroundBlendOpacity, hoverWorld, showCanvasHints, showAdvancedCanvas, showCrosshair, showDepthGuides, depthPreviewY, normalizedMarquee, mapWidth, mapHeight, world.map.tileSize, world.objects.length, world.colliders.length, world.triggers.length, world.npcs.length, world.poiIndex.length, frameCounter, history.length, future.length, sidebarVisibility, focusCanvas, layerLock, layerOpacity, layerVisibility, cameraBookmarks, drawOrderedObjects])
+  }, [tab, selection, selectedObjectIds, zoom, camera, canvasTool, panMode, spaceHeld, middlePanActive, backgroundMode, backgroundBlendOpacity, commandPaletteOpen, hoverWorld, showCanvasHints, showAdvancedCanvas, showCrosshair, showDepthGuides, depthPreviewY, normalizedMarquee, mapWidth, mapHeight, world.map.tileSize, world.objects.length, world.colliders.length, world.triggers.length, world.npcs.length, world.poiIndex.length, frameCounter, history.length, future.length, sidebarVisibility, focusCanvas, layerLock, layerOpacity, layerVisibility, cameraBookmarks, drawOrderedObjects])
 
   const minimapMaxWidth = Math.max(120, Math.min(220, stageWidth * 0.28))
   const minimapMaxHeight = Math.max(90, Math.min(150, stageHeight * 0.28))
@@ -2128,6 +2165,154 @@ function App() {
     showRightSidebar ? '' : 'hide-right',
     focusCanvas ? 'focus-canvas' : '',
   ].filter(Boolean).join(' ')
+  const selectionSummary = selection.kind === 'none' ? 'none' : `${selection.kind}:${selection.id}`
+
+  const commandActions = useMemo<CommandAction[]>(() => ([
+    { id: 'save-json', section: 'file', label: 'Save JSON', shortcut: 'Cmd/Ctrl+S', keywords: 'save export file json' },
+    { id: 'open-json', section: 'file', label: 'Open JSON', shortcut: 'Cmd/Ctrl+O', keywords: 'open import file json' },
+    { id: 'export-json', section: 'file', label: 'Export JSON', keywords: 'export download file json' },
+    { id: 'fit-map', section: 'view', label: 'Fit Map', shortcut: 'Shift+F', keywords: 'camera fit map reset' },
+    { id: 'frame-selection', section: 'view', label: 'Frame Selection', shortcut: 'F', keywords: 'camera focus frame selected' },
+    { id: 'zoom-100', section: 'view', label: 'Zoom 100%', shortcut: 'Cmd/Ctrl+0', keywords: 'zoom reset actual size' },
+    { id: 'toggle-hints', section: 'view', label: showCanvasHints ? 'Hide Canvas Hints' : 'Show Canvas Hints', shortcut: 'H', keywords: 'hint overlay helper labels' },
+    { id: 'toggle-advanced', section: 'view', label: showAdvancedCanvas ? 'Hide Advanced Canvas' : 'Show Advanced Canvas', shortcut: 'X', keywords: 'advanced panel layers opacity lock' },
+    { id: 'view-abstract', section: 'view', label: 'View Mode: Abstract', shortcut: 'G', keywords: 'render background abstract' },
+    { id: 'view-rendered', section: 'view', label: 'View Mode: Rendered', shortcut: 'G', keywords: 'render background rendered' },
+    { id: 'view-blend', section: 'view', label: 'View Mode: Blend', shortcut: 'G', keywords: 'render background blend' },
+    { id: 'toggle-left-sidebar', section: 'layout', label: showLeftSidebar ? 'Hide Left Sidebar' : 'Show Left Sidebar', shortcut: 'Alt+1', keywords: 'layout sidebar left panel' },
+    { id: 'toggle-right-sidebar', section: 'layout', label: showRightSidebar ? 'Hide Right Sidebar' : 'Show Right Sidebar', shortcut: 'Alt+2', keywords: 'layout sidebar right inspector panel' },
+    { id: 'toggle-canvas-focus', section: 'layout', label: focusCanvas ? 'Exit Focus Canvas' : 'Focus Canvas', shortcut: '\\', keywords: 'layout focus canvas only' },
+    { id: 'add-object', section: 'entity', label: 'Add Object', keywords: 'create object entity' },
+    { id: 'add-collider', section: 'entity', label: 'Add Collider', keywords: 'create collider hitbox' },
+    { id: 'add-trigger', section: 'entity', label: 'Add Trigger', keywords: 'create trigger interaction' },
+    { id: 'add-npc', section: 'entity', label: 'Add NPC', keywords: 'create npc character' },
+    { id: 'show-all-layers', section: 'layer', label: 'Layer Preset: Show All', keywords: 'layers reset visibility' },
+    { id: 'solo-objects', section: 'layer', label: 'Layer Preset: Solo Objects', keywords: 'layers object visibility' },
+    { id: 'solo-colliders', section: 'layer', label: 'Layer Preset: Solo Colliders', keywords: 'layers collider visibility' },
+    { id: 'solo-triggers', section: 'layer', label: 'Layer Preset: Solo Triggers', keywords: 'layers trigger visibility' },
+    { id: 'solo-npcs', section: 'layer', label: 'Layer Preset: Solo NPCs', keywords: 'layers npc visibility' },
+    { id: 'go-canvas-tab', section: 'nav', label: 'Switch Tab: Canvas', keywords: 'tab navigation canvas' },
+    { id: 'go-dialogue-tab', section: 'nav', label: 'Switch Tab: Dialogue', keywords: 'tab navigation dialogue' },
+    { id: 'go-validation-tab', section: 'nav', label: 'Switch Tab: Validation', keywords: 'tab navigation validation' },
+    { id: 'go-json-tab', section: 'nav', label: 'Switch Tab: JSON', keywords: 'tab navigation json' },
+  ]), [focusCanvas, showAdvancedCanvas, showCanvasHints, showLeftSidebar, showRightSidebar])
+
+  const filteredCommandActions = useMemo(() => {
+    const query = commandQuery.trim().toLowerCase()
+    if (!query) return commandActions
+    return commandActions
+      .map((command) => {
+        const haystack = `${command.label} ${command.section} ${command.keywords} ${command.shortcut ?? ''}`.toLowerCase()
+        if (!haystack.includes(query)) return null
+        const exactPrefix = command.label.toLowerCase().startsWith(query) ? 0 : 1
+        const exactWord = haystack.includes(` ${query}`) ? 0 : 1
+        return { command, score: exactPrefix + exactWord }
+      })
+      .filter((item): item is { command: CommandAction; score: number } => Boolean(item))
+      .sort((a, b) => a.score - b.score || a.command.label.localeCompare(b.command.label))
+      .map((item) => item.command)
+  }, [commandActions, commandQuery])
+
+  const paletteCommandList = useMemo(() => {
+    if (commandQuery.trim()) return filteredCommandActions
+    const recent = recentCommandIds
+      .map((id) => commandActions.find((command) => command.id === id))
+      .filter((command): command is CommandAction => Boolean(command))
+    const recentIds = new Set(recent.map((command) => command.id))
+    const rest = commandActions.filter((command) => !recentIds.has(command.id))
+    return [...recent, ...rest]
+  }, [commandActions, commandQuery, filteredCommandActions, recentCommandIds])
+
+  const executeCommandById = (commandId: string) => {
+    switch (commandId) {
+      case 'save-json':
+        void saveToFile()
+        break
+      case 'open-json':
+        void importFromFile()
+        break
+      case 'export-json':
+        exportJson()
+        break
+      case 'fit-map':
+        fitMapView()
+        break
+      case 'frame-selection':
+        frameSelection()
+        break
+      case 'zoom-100':
+        applyZoom(1)
+        break
+      case 'toggle-hints':
+        setShowCanvasHints((prev) => !prev)
+        break
+      case 'toggle-advanced':
+        setShowAdvancedCanvas((prev) => !prev)
+        break
+      case 'view-abstract':
+        setBackgroundMode('abstract')
+        break
+      case 'view-rendered':
+        setBackgroundMode('rendered')
+        break
+      case 'view-blend':
+        setBackgroundMode('blend')
+        break
+      case 'toggle-left-sidebar':
+        setSidebarVisibility((prev) => ({ ...prev, left: !prev.left }))
+        break
+      case 'toggle-right-sidebar':
+        setSidebarVisibility((prev) => ({ ...prev, right: !prev.right }))
+        break
+      case 'toggle-canvas-focus':
+        setFocusCanvas((prev) => !prev)
+        break
+      case 'add-object':
+        addObject()
+        break
+      case 'add-collider':
+        addCollider()
+        break
+      case 'add-trigger':
+        addTrigger()
+        break
+      case 'add-npc':
+        addNpc()
+        break
+      case 'show-all-layers':
+        setLayerVisibilityPreset('all')
+        break
+      case 'solo-objects':
+        setLayerVisibilityPreset('objects')
+        break
+      case 'solo-colliders':
+        setLayerVisibilityPreset('colliders')
+        break
+      case 'solo-triggers':
+        setLayerVisibilityPreset('triggers')
+        break
+      case 'solo-npcs':
+        setLayerVisibilityPreset('npcs')
+        break
+      case 'go-canvas-tab':
+        setTab('canvas')
+        break
+      case 'go-dialogue-tab':
+        setTab('dialogue')
+        break
+      case 'go-validation-tab':
+        setTab('validation')
+        break
+      case 'go-json-tab':
+        setTab('json')
+        break
+      default:
+        break
+    }
+    setRecentCommandIds((prev) => [commandId, ...prev.filter((id) => id !== commandId)].slice(0, 8))
+    setCommandPaletteOpen(false)
+    setCommandQuery('')
+  }
 
   return (
     <div className="wb-root">
@@ -2140,6 +2325,13 @@ function App() {
           <button data-testid="open-json-btn" onClick={importFromFile}>Open JSON</button>
           <button data-testid="save-json-btn" onClick={saveToFile}>Save JSON</button>
           <button data-testid="export-json-btn" onClick={exportJson}>Export</button>
+          <button
+            onClick={() => setCommandPaletteOpen(true)}
+            className={commandPaletteOpen ? 'active' : ''}
+            title="Cmd/Ctrl+K"
+          >
+            Command Palette
+          </button>
           <button data-testid="add-object-btn" onClick={addObject}>+ Object</button>
           <button data-testid="add-collider-btn" onClick={addCollider}>+ Collider</button>
           <button data-testid="add-trigger-btn" onClick={addTrigger}>+ Trigger</button>
@@ -3037,6 +3229,14 @@ function App() {
                 </Layer>
                 </Stage>
               </div>
+              <div className="wb-canvas-status-strip" role="status" aria-live="polite">
+                <span className="wb-chip">Selection: {selectionSummary}</span>
+                <span className="wb-chip">Tool: {canvasTool}</span>
+                <span className="wb-chip">View: {backgroundMode}</span>
+                <span className="wb-chip">Zoom: {Math.round(zoom * 100)}%</span>
+                <span className="wb-chip">Camera: {Math.round(camera.x)},{Math.round(camera.y)}</span>
+                <span className="wb-chip">Layers: O{layerVisibility.objects ? 1 : 0} C{layerVisibility.colliders ? 1 : 0} T{layerVisibility.triggers ? 1 : 0} N{layerVisibility.npcs ? 1 : 0}</span>
+              </div>
             </div>
           ) : null}
 
@@ -3134,13 +3334,14 @@ function App() {
         {showRightSidebar ? (
         <aside className="wb-sidebar right">
           <h3>Inspector</h3>
-          <p className="wb-legend"><strong>Shortcuts:</strong> Q/W/E oder V/M/R Tool wechseln, G View wechseln, H Hints, X Advanced Panel, Alt+1/Alt+2 Sidebars, \\ Focus Canvas, Space+Drag oder MiddleMouse+Drag pan, Wheel zoom, Pfeile pan, Alt+Pfeile nudge selection, [ ] depth nudge (Shift = x10), F frame, Shift+F fit, Cmd/Ctrl+0 100% zoom, Cmd/Ctrl+Plus/Minus zoom, Cmd/Ctrl+/ fit map, Cmd/Ctrl+A select all objects, Cmd/Ctrl+O open, Cmd/Ctrl+S save, Esc clear selection, Del delete, Cmd/Ctrl+D duplicate, Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z redo, 1-4 load bookmark, Shift+1-4 save bookmark, Minimap klicken/ziehen = jump camera.</p>
+          <p className="wb-legend"><strong>Shortcuts:</strong> Cmd/Ctrl+K Command Palette, Q/W/E oder V/M/R Tool wechseln, G View wechseln, H Hints, X Advanced Panel, Alt+1/Alt+2 Sidebars, \\ Focus Canvas, Space+Drag oder MiddleMouse+Drag pan, Wheel zoom, Pfeile pan, Alt+Pfeile nudge selection, [ ] depth nudge (Shift = x10), F frame, Shift+F fit, Cmd/Ctrl+0 100% zoom, Cmd/Ctrl+Plus/Minus zoom, Cmd/Ctrl+/ fit map, Cmd/Ctrl+A select all objects, Cmd/Ctrl+O open, Cmd/Ctrl+S save, Esc clear selection, Del delete, Cmd/Ctrl+D duplicate, Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z redo, 1-4 load bookmark, Shift+1-4 save bookmark, Minimap klicken/ziehen = jump camera.</p>
           <div className="wb-command-legend">
             <h4>Command Legend</h4>
             <p><strong>Camera:</strong> Space/MiddleMouse + Drag pan, Wheel zoom, Pfeile pan, F frame selection, Shift+F oder Cmd/Ctrl+/ fit map, Cmd/Ctrl+0 reset zoom, Cmd/Ctrl+Plus/Minus zoom, Minimap click/drag jump.</p>
             <p><strong>Tools:</strong> Q toggles Pan Mode, W/M move, E/R resize, V select, H toggle canvas hints, X toggle advanced canvas panel, G cycles Abstract/Rendered/Blend, Drag empty area marquee, Shift+Click additive selection.</p>
             <p><strong>Edit:</strong> Del/Backspace delete, Cmd/Ctrl+D duplicate, Alt+Pfeile nudge selected objects (Shift = coarse), [ ] depth nudge (Shift = 10x).</p>
             <p><strong>History:</strong> Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z oder Cmd/Ctrl+Y redo.</p>
+            <p><strong>Palette:</strong> Cmd/Ctrl+K oeffnet die Command Palette fuer schnellen Zugriff auf Save/Open, Layer-Presets, View-Modes und Tab-Navigation.</p>
             <p><strong>Selection:</strong> Cmd/Ctrl+A select all objects, Esc clear selection, Cmd/Ctrl+O open JSON, Cmd/Ctrl+S save JSON.</p>
             <p><strong>Depth:</strong> Depth Guides + Player Depth Preview zeigen Front/Back-Layering gegen Player-Y.</p>
             <p><strong>Layout:</strong> Alt+1 links ein/aus, Alt+2 rechts ein/aus, Backslash fokusiert nur Canvas. Show All / Solo plus Opacity-Slider helfen beim exakten Collider- und Trigger-Editing auf Rendered View.</p>
@@ -3635,6 +3836,65 @@ function App() {
         </aside>
         ) : null}
       </section>
+      {commandPaletteOpen ? (
+        <div
+          className="wb-command-palette-backdrop"
+          onMouseDown={() => {
+            setCommandPaletteOpen(false)
+            setCommandQuery('')
+          }}
+        >
+          <div
+            className="wb-command-palette"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Command Palette"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="wb-command-palette-head">
+              <input
+                ref={commandInputRef}
+                id="command-palette-input"
+                name="command-palette-input"
+                className="wb-input"
+                placeholder="Befehl suchen (z.B. 'Fit Map', 'Solo Colliders', 'Open JSON')"
+                value={commandQuery}
+                onChange={(event) => setCommandQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && paletteCommandList[0]) {
+                    executeCommandById(paletteCommandList[0].id)
+                    event.preventDefault()
+                  }
+                  if (event.key === 'Escape') {
+                    setCommandPaletteOpen(false)
+                    setCommandQuery('')
+                    event.preventDefault()
+                  }
+                }}
+              />
+              <span className="wb-command-kbd">Cmd/Ctrl+K</span>
+            </div>
+            <div className="wb-command-palette-list">
+              {paletteCommandList.slice(0, 24).map((command) => (
+                <button
+                  key={command.id}
+                  className="wb-command-item"
+                  onClick={() => executeCommandById(command.id)}
+                >
+                  <span className="wb-command-main">
+                    <span className="wb-command-label">{command.label}</span>
+                    <span className="wb-command-section">{command.section}</span>
+                  </span>
+                  {command.shortcut ? <span className="wb-command-shortcut">{command.shortcut}</span> : null}
+                </button>
+              ))}
+              {paletteCommandList.length === 0 ? (
+                <div className="wb-command-empty">Kein Befehl passt zu deiner Suche.</div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

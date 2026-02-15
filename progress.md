@@ -340,3 +340,34 @@ Original prompt: verbessere den weiter! der ist immer noch buggy und viele sache
     - `output/worldbuilder-loop/manual-layout-polish-fixed-v4.png`
     - `output/worldbuilder-loop/manual-layout-polish-fixed-v3.png`
   - Console check on worldbuilder page: no app errors/warnings (only vite/react-devtools info).
+- Loop frontend-design pass (2026-02-15, pass 5):
+  - Introduced a productivity-first Command Palette (`Cmd/Ctrl+K`) with searchable actions and section labels.
+  - Added command execution flow for file ops, view mode switching, layout toggles, layer presets, and tab navigation.
+  - Added recent-command prioritization when palette query is empty.
+  - Added keyboard handling guard so global shortcuts pause while palette is open (except Escape / Cmd/Ctrl+K).
+  - Added immediate focus/select behavior on palette input for rapid command chaining.
+- Canvas efficiency and practical usability:
+  - Added compact always-visible status strip (selection, tool, view mode, zoom, camera, layer visibility snapshot).
+  - Kept advanced controls collapsed by default, with command-palette access to these controls.
+- UI polish additions:
+  - New command palette visual layer with blur backdrop, compact chips, command section tags, and shortcut badges.
+  - Added missing input attributes (`id`, `name`) for palette field to eliminate form-field warnings.
+- Manual + automated verification:
+  - `npm run lint` ✅
+  - `npm test` ✅
+  - `npm run build -w @leonaderi/worldbuilder` ✅
+  - `npm run build` ✅
+  - Playwright worldbuilder: `output/worldbuilder-loop/loop-command-palette`
+  - Playwright portfolio: `output/portfolio-loop/loop-command-palette-pass`
+  - Manual Chrome checks:
+    - command palette opens via toolbar and `Ctrl+K`
+    - filtered command execution via Enter works (e.g. `rendered` -> view mode changed)
+    - no runtime console errors after full reload
+  - Manual screenshots:
+    - `output/worldbuilder-loop/manual-command-palette-open-v2.png`
+    - `output/worldbuilder-loop/manual-command-palette-closed-v2.png`
+- UX research references consulted and applied:
+  - Figma keyboard-first workflow conventions: https://help.figma.com/hc/en-us/articles/360040328653-Use-keyboard-shortcuts-in-Figma
+  - VS Code command palette pattern: https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette
+  - Tiled panel/layer workflow patterns: https://doc.mapeditor.org/en/stable/manual/layers/
+  - Tiled object editing workflow: https://doc.mapeditor.org/en/stable/manual/objects/
