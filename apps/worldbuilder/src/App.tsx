@@ -86,6 +86,43 @@ function clampAxisToViewport(
   return Number(clamp(value, min, max).toFixed(2))
 }
 
+function safeSetLocalStorage(key: string, value: string): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(key, value)
+  } catch (error) {
+    console.warn('[worldbuilder] Failed to persist localStorage key', key, error)
+  }
+}
+
+function safeRemoveLocalStorage(key: string): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.removeItem(key)
+  } catch (error) {
+    console.warn('[worldbuilder] Failed to remove localStorage key', key, error)
+  }
+}
+
+function isResetZoomShortcut(event: KeyboardEvent): boolean {
+  return (event.metaKey || event.ctrlKey) && !event.altKey && (event.code === 'Digit0' || event.code === 'Numpad0' || event.key === '0')
+}
+
+function isFitMapShortcut(event: KeyboardEvent): boolean {
+  return (event.metaKey || event.ctrlKey) && !event.altKey
+    && (event.code === 'Slash' || event.code === 'NumpadDivide' || event.key === '/' || event.key === '?')
+}
+
+function isZoomInShortcut(event: KeyboardEvent): boolean {
+  return (event.metaKey || event.ctrlKey) && !event.altKey
+    && (event.code === 'Equal' || event.code === 'NumpadAdd' || event.key === '+' || event.key === '=')
+}
+
+function isZoomOutShortcut(event: KeyboardEvent): boolean {
+  return (event.metaKey || event.ctrlKey) && !event.altKey
+    && (event.code === 'Minus' || event.code === 'NumpadSubtract' || event.key === '-')
+}
+
 function toNodeLabel(node: AuthoringWorldV1['dialogues'][number]['nodes'][number]): string {
   switch (node.type) {
     case 'line':
@@ -620,24 +657,18 @@ function App() {
 
   const setLayerVisibilityPreset = useCallback((mode: 'all' | 'objects' | 'colliders' | 'triggers' | 'npcs') => {
     if (mode === 'all') {
-      setLayerVisibility({
-        objects: true,
-        colliders: true,
-        triggers: true,
-        npcs: true,
-        minimap: true,
-      })
+      setLayerVisibility((prev) => ({ ...prev, objects: true, colliders: true, triggers: true, npcs: true }))
       showStatus('ok', 'Layer preset: all')
       return
     }
 
-    setLayerVisibility({
+    setLayerVisibility((prev) => ({
+      ...prev,
       objects: mode === 'objects',
       colliders: mode === 'colliders',
       triggers: mode === 'triggers',
       npcs: mode === 'npcs',
-      minimap: true,
-    })
+    }))
     showStatus('ok', `Layer preset: solo ${mode}`)
   }, [showStatus])
 
@@ -1276,9 +1307,9 @@ function App() {
   }
 
   const clearLocalDraft = () => {
-    window.localStorage.removeItem(WORLD_LOCAL_STORAGE_KEY)
-    window.localStorage.removeItem(SESSION_LOCAL_STORAGE_KEY)
-    window.localStorage.removeItem(BOOKMARKS_STORAGE_KEY)
+    safeRemoveLocalStorage(WORLD_LOCAL_STORAGE_KEY)
+    safeRemoveLocalStorage(SESSION_LOCAL_STORAGE_KEY)
+    safeRemoveLocalStorage(BOOKMARKS_STORAGE_KEY)
     updateWorld(seedWorld)
     clearSelection()
     setDialogueId(seedWorld.dialogues[0]?.id ?? '')
@@ -1648,7 +1679,7 @@ function App() {
   useEffect(() => {
     if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current)
     autosaveTimerRef.current = window.setTimeout(() => {
-      window.localStorage.setItem(WORLD_LOCAL_STORAGE_KEY, JSON.stringify(world))
+      safeSetLocalStorage(WORLD_LOCAL_STORAGE_KEY, JSON.stringify(world))
       const session: SavedSessionV1 = {
         tab,
         zoom,
@@ -1666,8 +1697,8 @@ function App() {
         layerOpacity,
         fromStorage: true,
       }
-      window.localStorage.setItem(SESSION_LOCAL_STORAGE_KEY, JSON.stringify(session))
-      window.localStorage.setItem(BOOKMARKS_STORAGE_KEY, JSON.stringify(cameraBookmarks))
+      safeSetLocalStorage(SESSION_LOCAL_STORAGE_KEY, JSON.stringify(session))
+      safeSetLocalStorage(BOOKMARKS_STORAGE_KEY, JSON.stringify(cameraBookmarks))
     }, 200)
     return () => {
       if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current)
@@ -1703,23 +1734,23 @@ function App() {
         ),
       )
 
-      if (!isTypingTarget && (event.metaKey || event.ctrlKey) && event.key === '0') {
+      if (!isTypingTarget && isResetZoomShortcut(event)) {
         applyZoom(1)
         showStatus('ok', 'Zoom auf 100% gesetzt')
         event.preventDefault()
         return
       }
-      if (!isTypingTarget && (event.metaKey || event.ctrlKey) && (event.key === '/' || event.key === '?')) {
+      if (!isTypingTarget && isFitMapShortcut(event)) {
         fitMapView()
         event.preventDefault()
         return
       }
-      if (!isTypingTarget && (event.metaKey || event.ctrlKey) && (event.key === '=' || event.key === '+')) {
+      if (!isTypingTarget && isZoomInShortcut(event)) {
         applyZoom(zoom + 0.1)
         event.preventDefault()
         return
       }
-      if (!isTypingTarget && (event.metaKey || event.ctrlKey) && event.key === '-') {
+      if (!isTypingTarget && isZoomOutShortcut(event)) {
         applyZoom(zoom - 0.1)
         event.preventDefault()
         return
