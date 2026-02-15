@@ -918,6 +918,26 @@ function App() {
     showStatus('ok', 'Preset gesetzt: Roof/Occluder (Player laeuft dahinter)')
   }
 
+  const fitMapToDimensions = useCallback((columns: number, rows: number, tileSize: number) => {
+    const targetMapWidth = columns * tileSize
+    const targetMapHeight = rows * tileSize
+    const fitZoom = Math.max(
+      0.35,
+      Math.min(
+        2.5,
+        Math.min(
+          (stageWidth - CAMERA_MIN_PADDING * 2) / targetMapWidth,
+          (stageHeight - CAMERA_MIN_PADDING * 2) / targetMapHeight,
+        ),
+      ),
+    )
+    setZoom(fitZoom)
+    setCamera({
+      x: Number(((stageWidth - targetMapWidth * fitZoom) / 2).toFixed(2)),
+      y: Number(((stageHeight - targetMapHeight * fitZoom) / 2).toFixed(2)),
+    })
+  }, [stageHeight, stageWidth])
+
   const parseAndLoadWorld = useCallback((source: string, context: string) => {
     const parsed = AuthoringWorldSchema.parse(JSON.parse(source))
     updateWorld(parsed)
@@ -925,8 +945,10 @@ function App() {
     if (!parsed.dialogues.find((item) => item.id === dialogueId)) {
       setDialogueId(parsed.dialogues[0]?.id ?? '')
     }
+    fitMapToDimensions(parsed.map.columns, parsed.map.rows, parsed.map.tileSize)
+    initialCameraSyncRef.current = true
     showStatus('ok', `${context}: OK`)
-  }, [clearSelection, dialogueId, showStatus, updateWorld])
+  }, [clearSelection, dialogueId, fitMapToDimensions, showStatus, updateWorld])
 
   const exportJson = useCallback(() => {
     const content = `${JSON.stringify(world, null, 2)}\n`
@@ -1141,13 +1163,21 @@ function App() {
     updateWorld(seedWorld)
     clearSelection()
     setDialogueId(seedWorld.dialogues[0]?.id ?? '')
+    fitMapToDimensions(seedWorld.map.columns, seedWorld.map.rows, seedWorld.map.tileSize)
+    initialCameraSyncRef.current = true
     showStatus('warn', 'Seed wiederhergestellt')
   }
 
   const clearLocalDraft = () => {
     window.localStorage.removeItem(WORLD_LOCAL_STORAGE_KEY)
     window.localStorage.removeItem(SESSION_LOCAL_STORAGE_KEY)
-    showStatus('warn', 'Lokaler Draft geloescht')
+    window.localStorage.removeItem(BOOKMARKS_STORAGE_KEY)
+    updateWorld(seedWorld)
+    clearSelection()
+    setDialogueId(seedWorld.dialogues[0]?.id ?? '')
+    fitMapToDimensions(seedWorld.map.columns, seedWorld.map.rows, seedWorld.map.tileSize)
+    initialCameraSyncRef.current = true
+    showStatus('warn', 'Lokaler Draft geloescht und Seed geladen')
   }
 
   const deleteSelection = useCallback(() => {
@@ -1380,17 +1410,8 @@ function App() {
   }, [clampCameraToBounds])
 
   const fitMapView = useCallback(() => {
-    const fitZoom = clampZoom(Math.min(
-      (stageWidth - CAMERA_MIN_PADDING * 2) / mapWidth,
-      (stageHeight - CAMERA_MIN_PADDING * 2) / mapHeight,
-    ))
-    setZoom(fitZoom)
-    setCamera(clampCameraToBounds(
-      (stageWidth - mapWidth * fitZoom) / 2,
-      (stageHeight - mapHeight * fitZoom) / 2,
-      fitZoom,
-    ))
-  }, [clampCameraToBounds, mapHeight, mapWidth, stageHeight, stageWidth])
+    fitMapToDimensions(world.map.columns, world.map.rows, world.map.tileSize)
+  }, [fitMapToDimensions, world.map.columns, world.map.rows, world.map.tileSize])
 
   const saveCameraBookmark = useCallback((slot: 1 | 2 | 3 | 4) => {
     setCameraBookmarks((prev) => ({
