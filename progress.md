@@ -286,3 +286,20 @@ Original prompt: verbessere den weiter! der ist immer noch buggy und viele sache
   - Tiled object editing controls/snapping: https://doc.mapeditor.org/en/stable/manual/objects/
   - Tiled layer visibility/lock workflows: https://doc.mapeditor.org/en/stable/manual/layers/
   - MDN keyboard semantics: https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key and https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code
+- Loop storage-feedback + help-hotkey (2026-02-15, pass 3):
+  - Worldbuilder: introduced storage-safe write/remove wrappers with boolean return values.
+  - Autosave now surfaces one-time warning when local persistence fails and recovers with one-time success message once storage works again.
+  - Clear-local-draft now reports partial storage clear failures.
+  - Added keyboard-layout tolerant helper predicates for zoom/fit shortcuts and wired them into key handler.
+  - Portfolio: added `H` keyboard shortcut to open Help/Intro modal (ignored while typing in form fields).
+- Verification:
+  - `npm run lint` ✅
+  - `npm test` ✅
+  - `npm run build` ✅
+  - `npm run build -w @leonaderi/worldbuilder` ✅
+  - Playwright worldbuilder: `output/worldbuilder-loop/loop-storage-warn` (no errors file)
+  - Playwright portfolio: `output/portfolio-loop/loop-help-shortcut` (no errors file)
+  - Manual DevTools check: on runtime page `h` key opens intro modal successfully.
+- Reference notes used:
+  - MDN localStorage exceptions/behavior: https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage
+  - MDN KeyboardEvent key/code behavior: https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key and https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code

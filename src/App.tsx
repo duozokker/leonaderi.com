@@ -231,6 +231,20 @@ function App() {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null
+      const isTypingTarget = Boolean(
+        target && (
+          target.tagName === 'INPUT'
+          || target.tagName === 'TEXTAREA'
+          || target.tagName === 'SELECT'
+          || target.isContentEditable
+        ),
+      )
+      if (!isTypingTarget && event.key.toLowerCase() === 'h') {
+        event.preventDefault()
+        setIntroOpen(true)
+        return
+      }
       if (event.key !== 'Escape') return
 
       if (confirmState.open) {

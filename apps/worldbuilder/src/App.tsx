@@ -86,21 +86,25 @@ function clampAxisToViewport(
   return Number(clamp(value, min, max).toFixed(2))
 }
 
-function safeSetLocalStorage(key: string, value: string): void {
-  if (typeof window === 'undefined') return
+function safeSetLocalStorage(key: string, value: string): boolean {
+  if (typeof window === 'undefined') return true
   try {
     window.localStorage.setItem(key, value)
+    return true
   } catch (error) {
     console.warn('[worldbuilder] Failed to persist localStorage key', key, error)
+    return false
   }
 }
 
-function safeRemoveLocalStorage(key: string): void {
-  if (typeof window === 'undefined') return
+function safeRemoveLocalStorage(key: string): boolean {
+  if (typeof window === 'undefined') return true
   try {
     window.localStorage.removeItem(key)
+    return true
   } catch (error) {
     console.warn('[worldbuilder] Failed to remove localStorage key', key, error)
+    return false
   }
 }
 
@@ -430,6 +434,7 @@ function App() {
   const canvasViewportRef = useRef<HTMLDivElement | null>(null)
   const autosaveTimerRef = useRef<number | null>(null)
   const statusTimerRef = useRef<number | null>(null)
+  const storageWriteFailedRef = useRef(false)
   const deleteSelectionRef = useRef<() => void>(() => undefined)
   const duplicateSelectionRef = useRef<() => void>(() => undefined)
   const middlePanStartRef = useRef<{ pointerX: number; pointerY: number; cameraX: number; cameraY: number } | null>(null)
@@ -1307,14 +1312,18 @@ function App() {
   }
 
   const clearLocalDraft = () => {
-    safeRemoveLocalStorage(WORLD_LOCAL_STORAGE_KEY)
-    safeRemoveLocalStorage(SESSION_LOCAL_STORAGE_KEY)
-    safeRemoveLocalStorage(BOOKMARKS_STORAGE_KEY)
+    const removedWorld = safeRemoveLocalStorage(WORLD_LOCAL_STORAGE_KEY)
+    const removedSession = safeRemoveLocalStorage(SESSION_LOCAL_STORAGE_KEY)
+    const removedBookmarks = safeRemoveLocalStorage(BOOKMARKS_STORAGE_KEY)
     updateWorld(seedWorld)
     clearSelection()
     setDialogueId(seedWorld.dialogues[0]?.id ?? '')
     fitMapToDimensions(seedWorld.map.columns, seedWorld.map.rows, seedWorld.map.tileSize)
     initialCameraSyncRef.current = true
+    if (!removedWorld || !removedSession || !removedBookmarks) {
+      showStatus('warn', 'Lokaler Speicher konnte nicht vollstaendig geloescht werden')
+      return
+    }
     showStatus('warn', 'Lokaler Draft geloescht und Seed geladen')
   }
 
@@ -1679,7 +1688,7 @@ function App() {
   useEffect(() => {
     if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current)
     autosaveTimerRef.current = window.setTimeout(() => {
-      safeSetLocalStorage(WORLD_LOCAL_STORAGE_KEY, JSON.stringify(world))
+      const wroteWorld = safeSetLocalStorage(WORLD_LOCAL_STORAGE_KEY, JSON.stringify(world))
       const session: SavedSessionV1 = {
         tab,
         zoom,
@@ -1697,8 +1706,20 @@ function App() {
         layerOpacity,
         fromStorage: true,
       }
-      safeSetLocalStorage(SESSION_LOCAL_STORAGE_KEY, JSON.stringify(session))
-      safeSetLocalStorage(BOOKMARKS_STORAGE_KEY, JSON.stringify(cameraBookmarks))
+      const wroteSession = safeSetLocalStorage(SESSION_LOCAL_STORAGE_KEY, JSON.stringify(session))
+      const wroteBookmarks = safeSetLocalStorage(BOOKMARKS_STORAGE_KEY, JSON.stringify(cameraBookmarks))
+      const persistOk = wroteWorld && wroteSession && wroteBookmarks
+      if (!persistOk) {
+        if (!storageWriteFailedRef.current) {
+          storageWriteFailedRef.current = true
+          showStatus('warn', 'Lokales Speichern ist blockiert (Storage nicht verfuegbar)')
+        }
+        return
+      }
+      if (storageWriteFailedRef.current) {
+        storageWriteFailedRef.current = false
+        showStatus('ok', 'Lokales Speichern wieder aktiv')
+      }
     }, 200)
     return () => {
       if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current)
@@ -1720,6 +1741,7 @@ function App() {
     layerLock,
     layerOpacity,
     cameraBookmarks,
+    showStatus,
   ])
 
   useEffect(() => {
