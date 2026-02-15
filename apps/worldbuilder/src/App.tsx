@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import type Konva from 'konva'
 import { Layer, Rect, Stage, Text, Transformer, Group, Circle, Image as KonvaImage } from 'react-konva'
 import ReactFlow, {
@@ -273,6 +273,11 @@ type SavedSessionV1 = {
     left: boolean
     right: boolean
   }
+  sidebarSizes: {
+    left: number
+    right: number
+  }
+  densityMode: 'comfortable' | 'compact'
   focusCanvas: boolean
   layerVisibility: {
     objects: boolean
@@ -327,6 +332,11 @@ function loadSessionDefaults(): SavedSessionV1 {
       left: true,
       right: true,
     },
+    sidebarSizes: {
+      left: 280,
+      right: 340,
+    },
+    densityMode: 'comfortable',
     focusCanvas: false,
     layerVisibility: {
       objects: true,
@@ -358,6 +368,7 @@ function loadSessionDefaults(): SavedSessionV1 {
     const parsedLayerLock = parsed.layerLock ?? {}
     const parsedLayerOpacity = parsed.layerOpacity ?? {}
     const parsedSidebarVisibility = parsed.sidebarVisibility ?? {}
+    const parsedSidebarSizes = parsed.sidebarSizes ?? {}
     return {
       tab: parsed.tab === 'canvas' || parsed.tab === 'dialogue' || parsed.tab === 'validation' || parsed.tab === 'json' ? parsed.tab : fallback.tab,
       zoom: clamp(typeof parsed.zoom === 'number' ? parsed.zoom : fallback.zoom, MIN_ZOOM, MAX_ZOOM),
@@ -383,6 +394,19 @@ function loadSessionDefaults(): SavedSessionV1 {
         left: typeof parsedSidebarVisibility.left === 'boolean' ? parsedSidebarVisibility.left : fallback.sidebarVisibility.left,
         right: typeof parsedSidebarVisibility.right === 'boolean' ? parsedSidebarVisibility.right : fallback.sidebarVisibility.right,
       },
+      sidebarSizes: {
+        left: clamp(
+          typeof parsedSidebarSizes.left === 'number' ? parsedSidebarSizes.left : fallback.sidebarSizes.left,
+          220,
+          480,
+        ),
+        right: clamp(
+          typeof parsedSidebarSizes.right === 'number' ? parsedSidebarSizes.right : fallback.sidebarSizes.right,
+          260,
+          520,
+        ),
+      },
+      densityMode: parsed.densityMode === 'compact' ? 'compact' : fallback.densityMode,
       focusCanvas: typeof parsed.focusCanvas === 'boolean' ? parsed.focusCanvas : fallback.focusCanvas,
       layerVisibility: {
         objects: typeof parsedLayerVisibility.objects === 'boolean' ? parsedLayerVisibility.objects : fallback.layerVisibility.objects,
@@ -442,6 +466,8 @@ function App() {
   const [showCrosshair, setShowCrosshair] = useState(sessionDefaults.showCrosshair)
   const [showDepthGuides, setShowDepthGuides] = useState(sessionDefaults.showDepthGuides)
   const [sidebarVisibility, setSidebarVisibility] = useState(sessionDefaults.sidebarVisibility)
+  const [sidebarSizes, setSidebarSizes] = useState(sessionDefaults.sidebarSizes)
+  const [densityMode, setDensityMode] = useState<'comfortable' | 'compact'>(sessionDefaults.densityMode)
   const [focusCanvas, setFocusCanvas] = useState(sessionDefaults.focusCanvas)
   const [depthPreviewY, setDepthPreviewY] = useState<number | null>(null)
   const [cameraBookmarks, setCameraBookmarks] = useState<Record<number, { x: number; y: number; zoom: number } | null>>(() => {
@@ -466,6 +492,8 @@ function App() {
   const [entityFilter, setEntityFilter] = useState('')
   const [selectedObjectIds, setSelectedObjectIds] = useState<string[]>([])
   const [marqueeRect, setMarqueeRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null)
+  const [paletteActiveIndex, setPaletteActiveIndex] = useState(0)
+  const [resizingSidebar, setResizingSidebar] = useState<'left' | 'right' | null>(null)
   const marqueeAdditiveRef = useRef(false)
   const mapWidth = world.map.columns * world.map.tileSize
   const mapHeight = world.map.rows * world.map.tileSize
@@ -498,6 +526,7 @@ function App() {
   const deleteSelectionRef = useRef<() => void>(() => undefined)
   const duplicateSelectionRef = useRef<() => void>(() => undefined)
   const middlePanStartRef = useRef<{ pointerX: number; pointerY: number; cameraX: number; cameraY: number } | null>(null)
+  const sidebarResizeRef = useRef<{ side: 'left' | 'right'; startX: number; startSize: number } | null>(null)
   const initialCameraSyncRef = useRef(false)
   const zoomRef = useRef(zoom)
   const commandInputRef = useRef<HTMLInputElement | null>(null)
@@ -791,6 +820,12 @@ function App() {
     }))
     showStatus('ok', `Layer preset: solo ${mode}`)
   }, [showStatus])
+
+  const startSidebarResize = useCallback((side: 'left' | 'right', clientX: number) => {
+    const startSize = side === 'left' ? sidebarSizes.left : sidebarSizes.right
+    sidebarResizeRef.current = { side, startX: clientX, startSize }
+    setResizingSidebar(side)
+  }, [sidebarSizes.left, sidebarSizes.right])
 
   const updateObject = (id: string, patch: Partial<AuthoringWorldV1['objects'][number]>) => {
     updateWorld({
@@ -1819,6 +1854,8 @@ function App() {
         showCrosshair,
         showDepthGuides,
         sidebarVisibility,
+        sidebarSizes,
+        densityMode,
         focusCanvas,
         layerVisibility,
         layerLock,
@@ -1859,6 +1896,8 @@ function App() {
     showCrosshair,
     showDepthGuides,
     sidebarVisibility,
+    sidebarSizes,
+    densityMode,
     focusCanvas,
     layerVisibility,
     layerLock,
@@ -1882,6 +1921,7 @@ function App() {
       if ((event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === 'k') {
         setCommandPaletteOpen((prev) => !prev)
         setCommandQuery('')
+        setPaletteActiveIndex(0)
         event.preventDefault()
         return
       }
@@ -1963,6 +2003,10 @@ function App() {
       }
       if (!isTypingTarget && event.altKey && event.code === 'Digit2') {
         setSidebarVisibility((prev) => ({ ...prev, right: !prev.right }))
+        event.preventDefault()
+      }
+      if (!isTypingTarget && event.altKey && event.code === 'Digit3') {
+        setDensityMode((prev) => (prev === 'compact' ? 'comfortable' : 'compact'))
         event.preventDefault()
       }
 
@@ -2075,6 +2119,41 @@ function App() {
   }, [commandPaletteOpen])
 
   useEffect(() => {
+    if (!resizingSidebar) return
+    const prevCursor = document.body.style.cursor
+    const prevUserSelect = document.body.style.userSelect
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+    const onPointerMove = (event: MouseEvent) => {
+      const resize = sidebarResizeRef.current
+      if (!resize) return
+      const delta = event.clientX - resize.startX
+      const min = resize.side === 'left' ? 220 : 260
+      const max = resize.side === 'left' ? 480 : 520
+      const nextSize = resize.side === 'left'
+        ? clamp(resize.startSize + delta, min, max)
+        : clamp(resize.startSize - delta, min, max)
+      setSidebarSizes((prev) => (
+        resize.side === 'left'
+          ? { ...prev, left: nextSize }
+          : { ...prev, right: nextSize }
+      ))
+    }
+    const onPointerUp = () => {
+      sidebarResizeRef.current = null
+      setResizingSidebar(null)
+    }
+    window.addEventListener('mousemove', onPointerMove)
+    window.addEventListener('mouseup', onPointerUp)
+    return () => {
+      document.body.style.cursor = prevCursor
+      document.body.style.userSelect = prevUserSelect
+      window.removeEventListener('mousemove', onPointerMove)
+      window.removeEventListener('mouseup', onPointerUp)
+    }
+  }, [resizingSidebar])
+
+  useEffect(() => {
     const clearTransientInteractionState = () => {
       middlePanStartRef.current = null
       setMiddlePanActive(false)
@@ -2127,6 +2206,7 @@ function App() {
       },
       history: { undo: history.length, redo: future.length },
       ui: { sidebarVisibility, focusCanvas },
+      layout: { densityMode, sidebarSizes },
       layers: { visibility: layerVisibility, lock: layerLock, opacity: layerOpacity },
       bookmarks: cameraBookmarks,
       topLayers: drawOrderedObjects.slice(-5).map((item) => ({ id: item.id, key: item.key, depth: item.depth })),
@@ -2142,7 +2222,7 @@ function App() {
       delete window.render_game_to_text
       delete window.advanceTime
     }
-  }, [tab, selection, selectedObjectIds, zoom, camera, canvasTool, panMode, spaceHeld, middlePanActive, backgroundMode, backgroundBlendOpacity, commandPaletteOpen, hoverWorld, showCanvasHints, showAdvancedCanvas, showCrosshair, showDepthGuides, depthPreviewY, normalizedMarquee, mapWidth, mapHeight, world.map.tileSize, world.objects.length, world.colliders.length, world.triggers.length, world.npcs.length, world.poiIndex.length, frameCounter, history.length, future.length, sidebarVisibility, focusCanvas, layerLock, layerOpacity, layerVisibility, cameraBookmarks, drawOrderedObjects])
+  }, [tab, selection, selectedObjectIds, zoom, camera, canvasTool, panMode, spaceHeld, middlePanActive, backgroundMode, backgroundBlendOpacity, commandPaletteOpen, hoverWorld, showCanvasHints, showAdvancedCanvas, showCrosshair, showDepthGuides, depthPreviewY, normalizedMarquee, mapWidth, mapHeight, world.map.tileSize, world.objects.length, world.colliders.length, world.triggers.length, world.npcs.length, world.poiIndex.length, frameCounter, history.length, future.length, sidebarVisibility, sidebarSizes, densityMode, focusCanvas, layerLock, layerOpacity, layerVisibility, cameraBookmarks, drawOrderedObjects])
 
   const minimapMaxWidth = Math.max(120, Math.min(220, stageWidth * 0.28))
   const minimapMaxHeight = Math.max(90, Math.min(150, stageHeight * 0.28))
@@ -2159,6 +2239,10 @@ function App() {
   }
   const showLeftSidebar = !focusCanvas && sidebarVisibility.left
   const showRightSidebar = !focusCanvas && sidebarVisibility.right
+  const layoutStyle = {
+    '--wb-left-width': `${sidebarSizes.left}px`,
+    '--wb-right-width': `${sidebarSizes.right}px`,
+  } as CSSProperties
   const layoutClassName = [
     'wb-layout',
     showLeftSidebar ? '' : 'hide-left',
@@ -2181,6 +2265,7 @@ function App() {
     { id: 'view-blend', section: 'view', label: 'View Mode: Blend', shortcut: 'G', keywords: 'render background blend' },
     { id: 'toggle-left-sidebar', section: 'layout', label: showLeftSidebar ? 'Hide Left Sidebar' : 'Show Left Sidebar', shortcut: 'Alt+1', keywords: 'layout sidebar left panel' },
     { id: 'toggle-right-sidebar', section: 'layout', label: showRightSidebar ? 'Hide Right Sidebar' : 'Show Right Sidebar', shortcut: 'Alt+2', keywords: 'layout sidebar right inspector panel' },
+    { id: 'toggle-density-mode', section: 'layout', label: densityMode === 'compact' ? 'Density: Comfortable' : 'Density: Compact', shortcut: 'Alt+3', keywords: 'layout density compact comfortable ui' },
     { id: 'toggle-canvas-focus', section: 'layout', label: focusCanvas ? 'Exit Focus Canvas' : 'Focus Canvas', shortcut: '\\', keywords: 'layout focus canvas only' },
     { id: 'add-object', section: 'entity', label: 'Add Object', keywords: 'create object entity' },
     { id: 'add-collider', section: 'entity', label: 'Add Collider', keywords: 'create collider hitbox' },
@@ -2195,7 +2280,7 @@ function App() {
     { id: 'go-dialogue-tab', section: 'nav', label: 'Switch Tab: Dialogue', keywords: 'tab navigation dialogue' },
     { id: 'go-validation-tab', section: 'nav', label: 'Switch Tab: Validation', keywords: 'tab navigation validation' },
     { id: 'go-json-tab', section: 'nav', label: 'Switch Tab: JSON', keywords: 'tab navigation json' },
-  ]), [focusCanvas, showAdvancedCanvas, showCanvasHints, showLeftSidebar, showRightSidebar])
+  ]), [densityMode, focusCanvas, showAdvancedCanvas, showCanvasHints, showLeftSidebar, showRightSidebar])
 
   const filteredCommandActions = useMemo(() => {
     const query = commandQuery.trim().toLowerCase()
@@ -2222,6 +2307,8 @@ function App() {
     const rest = commandActions.filter((command) => !recentIds.has(command.id))
     return [...recent, ...rest]
   }, [commandActions, commandQuery, filteredCommandActions, recentCommandIds])
+  const visiblePaletteCommands = useMemo(() => paletteCommandList.slice(0, 24), [paletteCommandList])
+  const activePaletteIndex = clamp(paletteActiveIndex, 0, Math.max(0, visiblePaletteCommands.length - 1))
 
   const executeCommandById = (commandId: string) => {
     switch (commandId) {
@@ -2263,6 +2350,9 @@ function App() {
         break
       case 'toggle-right-sidebar':
         setSidebarVisibility((prev) => ({ ...prev, right: !prev.right }))
+        break
+      case 'toggle-density-mode':
+        setDensityMode((prev) => (prev === 'compact' ? 'comfortable' : 'compact'))
         break
       case 'toggle-canvas-focus':
         setFocusCanvas((prev) => !prev)
@@ -2315,7 +2405,7 @@ function App() {
   }
 
   return (
-    <div className="wb-root">
+    <div className={`wb-root wb-density-${densityMode}`}>
       <header className="wb-topbar">
         <div className="wb-brand">
           <h1>Worldbuilder Studio V2</h1>
@@ -2326,7 +2416,10 @@ function App() {
           <button data-testid="save-json-btn" onClick={saveToFile}>Save JSON</button>
           <button data-testid="export-json-btn" onClick={exportJson}>Export</button>
           <button
-            onClick={() => setCommandPaletteOpen(true)}
+            onClick={() => {
+              setCommandPaletteOpen(true)
+              setPaletteActiveIndex(0)
+            }}
             className={commandPaletteOpen ? 'active' : ''}
             title="Cmd/Ctrl+K"
           >
@@ -2357,6 +2450,13 @@ function App() {
           >
             {focusCanvas ? 'Exit Focus' : 'Focus Canvas'}
           </button>
+          <button
+            onClick={() => setDensityMode((prev) => (prev === 'compact' ? 'comfortable' : 'compact'))}
+            className={densityMode === 'compact' ? 'active' : ''}
+            title="Alt+3"
+          >
+            {densityMode === 'compact' ? 'Comfortable' : 'Compact'}
+          </button>
           <button onClick={undo} disabled={history.length === 0}>Undo</button>
           <button onClick={redo} disabled={future.length === 0}>Redo</button>
           <button onClick={duplicateSelection} disabled={selectedObjectIds.length === 0 && !selectedObject && !selectedCollider && !selectedTrigger && !selectedNpc}>Duplicate</button>
@@ -2384,7 +2484,7 @@ function App() {
         ))}
       </nav>
 
-      <section className={layoutClassName}>
+      <section className={layoutClassName} style={layoutStyle}>
         {showLeftSidebar ? (
         <aside className="wb-sidebar left">
           <h3 className="wb-panel-title">Entities</h3>
@@ -2425,6 +2525,17 @@ function App() {
               <button key={item.id} className={selection.kind === 'poi' && selection.id === item.id ? 'sel' : ''} onClick={() => selectEntity({ kind: 'poi', id: item.id })}>{item.name}</button>
             ))}
           </div>
+          <button
+            className={`wb-resize-handle wb-resize-handle-left ${resizingSidebar === 'left' ? 'active' : ''}`}
+            aria-label="Resize left sidebar"
+            title="Drag to resize left panel (double-click reset)"
+            onMouseDown={(event) => {
+              if (event.button !== 0) return
+              event.preventDefault()
+              startSidebarResize('left', event.clientX)
+            }}
+            onDoubleClick={() => setSidebarSizes((prev) => ({ ...prev, left: 280 }))}
+          />
         </aside>
         ) : null}
 
@@ -3235,6 +3346,8 @@ function App() {
                 <span className="wb-chip">View: {backgroundMode}</span>
                 <span className="wb-chip">Zoom: {Math.round(zoom * 100)}%</span>
                 <span className="wb-chip">Camera: {Math.round(camera.x)},{Math.round(camera.y)}</span>
+                <span className="wb-chip">Density: {densityMode}</span>
+                <span className="wb-chip">Panels: L{sidebarSizes.left} R{sidebarSizes.right}</span>
                 <span className="wb-chip">Layers: O{layerVisibility.objects ? 1 : 0} C{layerVisibility.colliders ? 1 : 0} T{layerVisibility.triggers ? 1 : 0} N{layerVisibility.npcs ? 1 : 0}</span>
               </div>
             </div>
@@ -3334,7 +3447,7 @@ function App() {
         {showRightSidebar ? (
         <aside className="wb-sidebar right">
           <h3>Inspector</h3>
-          <p className="wb-legend"><strong>Shortcuts:</strong> Cmd/Ctrl+K Command Palette, Q/W/E oder V/M/R Tool wechseln, G View wechseln, H Hints, X Advanced Panel, Alt+1/Alt+2 Sidebars, \\ Focus Canvas, Space+Drag oder MiddleMouse+Drag pan, Wheel zoom, Pfeile pan, Alt+Pfeile nudge selection, [ ] depth nudge (Shift = x10), F frame, Shift+F fit, Cmd/Ctrl+0 100% zoom, Cmd/Ctrl+Plus/Minus zoom, Cmd/Ctrl+/ fit map, Cmd/Ctrl+A select all objects, Cmd/Ctrl+O open, Cmd/Ctrl+S save, Esc clear selection, Del delete, Cmd/Ctrl+D duplicate, Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z redo, 1-4 load bookmark, Shift+1-4 save bookmark, Minimap klicken/ziehen = jump camera.</p>
+          <p className="wb-legend"><strong>Shortcuts:</strong> Cmd/Ctrl+K Command Palette, Q/W/E oder V/M/R Tool wechseln, G View wechseln, H Hints, X Advanced Panel, Alt+1/Alt+2 Sidebars, Alt+3 Density, \\ Focus Canvas, Space+Drag oder MiddleMouse+Drag pan, Wheel zoom, Pfeile pan, Alt+Pfeile nudge selection, [ ] depth nudge (Shift = x10), F frame, Shift+F fit, Cmd/Ctrl+0 100% zoom, Cmd/Ctrl+Plus/Minus zoom, Cmd/Ctrl+/ fit map, Cmd/Ctrl+A select all objects, Cmd/Ctrl+O open, Cmd/Ctrl+S save, Esc clear selection, Del delete, Cmd/Ctrl+D duplicate, Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z redo, 1-4 load bookmark, Shift+1-4 save bookmark, Minimap klicken/ziehen = jump camera.</p>
           <div className="wb-command-legend">
             <h4>Command Legend</h4>
             <p><strong>Camera:</strong> Space/MiddleMouse + Drag pan, Wheel zoom, Pfeile pan, F frame selection, Shift+F oder Cmd/Ctrl+/ fit map, Cmd/Ctrl+0 reset zoom, Cmd/Ctrl+Plus/Minus zoom, Minimap click/drag jump.</p>
@@ -3344,7 +3457,7 @@ function App() {
             <p><strong>Palette:</strong> Cmd/Ctrl+K oeffnet die Command Palette fuer schnellen Zugriff auf Save/Open, Layer-Presets, View-Modes und Tab-Navigation.</p>
             <p><strong>Selection:</strong> Cmd/Ctrl+A select all objects, Esc clear selection, Cmd/Ctrl+O open JSON, Cmd/Ctrl+S save JSON.</p>
             <p><strong>Depth:</strong> Depth Guides + Player Depth Preview zeigen Front/Back-Layering gegen Player-Y.</p>
-            <p><strong>Layout:</strong> Alt+1 links ein/aus, Alt+2 rechts ein/aus, Backslash fokusiert nur Canvas. Show All / Solo plus Opacity-Slider helfen beim exakten Collider- und Trigger-Editing auf Rendered View.</p>
+            <p><strong>Layout:</strong> Alt+1 links ein/aus, Alt+2 rechts ein/aus, Alt+3 wechselt Compact/Comfortable, Backslash fokusiert nur Canvas. Sidebar-Kanten ziehen oder doppelklicken = Panelbreite anpassen/resetten. Show All / Solo plus Opacity-Slider helfen beim exakten Collider- und Trigger-Editing auf Rendered View.</p>
           </div>
           {selectedObjectIds.length > 1 ? (
             <>
@@ -3833,6 +3946,17 @@ function App() {
           ) : null}
 
           {selection.kind === 'none' ? <p>Waehle links oder auf der Canvas ein Element aus.</p> : null}
+          <button
+            className={`wb-resize-handle wb-resize-handle-right ${resizingSidebar === 'right' ? 'active' : ''}`}
+            aria-label="Resize right sidebar"
+            title="Drag to resize right panel (double-click reset)"
+            onMouseDown={(event) => {
+              if (event.button !== 0) return
+              event.preventDefault()
+              startSidebarResize('right', event.clientX)
+            }}
+            onDoubleClick={() => setSidebarSizes((prev) => ({ ...prev, right: 340 }))}
+          />
         </aside>
         ) : null}
       </section>
@@ -3859,11 +3983,25 @@ function App() {
                 className="wb-input"
                 placeholder="Befehl suchen (z.B. 'Fit Map', 'Solo Colliders', 'Open JSON')"
                 value={commandQuery}
-                onChange={(event) => setCommandQuery(event.target.value)}
+                onChange={(event) => {
+                  setCommandQuery(event.target.value)
+                  setPaletteActiveIndex(0)
+                }}
                 onKeyDown={(event) => {
-                  if (event.key === 'Enter' && paletteCommandList[0]) {
-                    executeCommandById(paletteCommandList[0].id)
+                  if (event.key === 'ArrowDown') {
+                    setPaletteActiveIndex((prev) => clamp(prev + 1, 0, Math.max(0, visiblePaletteCommands.length - 1)))
                     event.preventDefault()
+                    return
+                  }
+                  if (event.key === 'ArrowUp') {
+                    setPaletteActiveIndex((prev) => clamp(prev - 1, 0, Math.max(0, visiblePaletteCommands.length - 1)))
+                    event.preventDefault()
+                    return
+                  }
+                  if (event.key === 'Enter' && visiblePaletteCommands[activePaletteIndex]) {
+                    executeCommandById(visiblePaletteCommands[activePaletteIndex].id)
+                    event.preventDefault()
+                    return
                   }
                   if (event.key === 'Escape') {
                     setCommandPaletteOpen(false)
@@ -3875,11 +4013,13 @@ function App() {
               <span className="wb-command-kbd">Cmd/Ctrl+K</span>
             </div>
             <div className="wb-command-palette-list">
-              {paletteCommandList.slice(0, 24).map((command) => (
+              {visiblePaletteCommands.map((command, index) => (
                 <button
                   key={command.id}
-                  className="wb-command-item"
+                  className={`wb-command-item ${index === activePaletteIndex ? 'active' : ''}`}
                   onClick={() => executeCommandById(command.id)}
+                  onMouseEnter={() => setPaletteActiveIndex(index)}
+                  aria-selected={index === activePaletteIndex}
                 >
                   <span className="wb-command-main">
                     <span className="wb-command-label">{command.label}</span>
@@ -3888,7 +4028,7 @@ function App() {
                   {command.shortcut ? <span className="wb-command-shortcut">{command.shortcut}</span> : null}
                 </button>
               ))}
-              {paletteCommandList.length === 0 ? (
+              {visiblePaletteCommands.length === 0 ? (
                 <div className="wb-command-empty">Kein Befehl passt zu deiner Suche.</div>
               ) : null}
             </div>

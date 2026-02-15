@@ -371,3 +371,41 @@ Original prompt: verbessere den weiter! der ist immer noch buggy und viele sache
   - VS Code command palette pattern: https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette
   - Tiled panel/layer workflow patterns: https://doc.mapeditor.org/en/stable/manual/layers/
   - Tiled object editing workflow: https://doc.mapeditor.org/en/stable/manual/objects/
+- Loop frontend-design pass (2026-02-15, pass 6):
+  - Added persistent resizable sidebars with drag handles and double-click reset:
+    - left panel width range: 220..480
+    - right panel width range: 260..520
+  - Persisted layout ergonomics in session state:
+    - `sidebarSizes`
+    - `densityMode` (`comfortable`/`compact`)
+  - Added compact/comfortable density toggle in topbar (`Alt+3`) and in Command Palette.
+  - Extended canvas status strip with density and panel width telemetry for quick diagnosis.
+- Command Palette efficiency upgrades:
+  - Added active-row highlighting with mouse hover sync.
+  - Added keyboard navigation (`ArrowUp`/`ArrowDown`) and Enter execution for selected row.
+  - Kept query changes snappy by resetting active selection to first result on input updates.
+- UI/UX practicality updates:
+  - Layout now uses dynamic CSS variables for sidebar widths, preserving canvas size while editing.
+  - Added resize-handle affordances and compact-mode spacing/typography tuning for high-density workflows.
+- Verification:
+  - `npm run lint` ✅
+  - `npm test` ✅
+  - `npm run build -w @leonaderi/worldbuilder` ✅
+  - `npm run build` ✅
+  - Playwright screenshots:
+    - `output/worldbuilder-loop/loop-ux-pass-compact/01-playwright-default.png`
+    - `output/worldbuilder-loop/loop-ux-pass-compact/02-playwright-canvas.png`
+    - `output/portfolio-loop/loop-ux-pass-compact/01-playwright-portfolio-default.png`
+    - `output/portfolio-loop/loop-ux-pass-compact/02-playwright-portfolio-rendered.png`
+  - Manual Chrome checks/screenshots:
+    - `output/worldbuilder-loop/manual-ux-pass-compact/01-worldbuilder-default.png`
+    - `output/worldbuilder-loop/manual-ux-pass-compact/02-worldbuilder-command-palette.png`
+    - `output/worldbuilder-loop/manual-ux-pass-compact/03-worldbuilder-compact.png`
+    - `output/worldbuilder-loop/manual-ux-pass-compact/04-worldbuilder-left-resized.png`
+    - `output/worldbuilder-loop/manual-ux-pass-compact/05-worldbuilder-reloaded-clean.png`
+    - `output/portfolio-loop/manual-ux-pass-compact/01-portfolio-default.png`
+  - Console sanity after full reload (worldbuilder + portfolio): no app errors, only Vite/React info logs.
+- UX references consulted this pass:
+  - Figma keyboard shortcuts (selection + workflow speed patterns): https://help.figma.com/hc/en-us/articles/360040328653-Use-keyboard-shortcuts-in-Figma
+  - VS Code command palette behavior model: https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette
+  - Tiled layout/layer editing expectations: https://doc.mapeditor.org/en/stable/manual/layers/

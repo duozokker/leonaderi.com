@@ -177,18 +177,18 @@ button:disabled {
 
 .wb-layout {
   display: grid;
-  grid-template-columns: minmax(240px, 280px) minmax(640px, 1fr) minmax(300px, 360px);
+  grid-template-columns: minmax(220px, var(--wb-left-width, 280px)) minmax(640px, 1fr) minmax(260px, var(--wb-right-width, 340px));
   gap: 0.78rem;
   min-height: 0;
   flex: 1;
 }
 
 .wb-layout.hide-left {
-  grid-template-columns: minmax(640px, 1fr) minmax(300px, 360px);
+  grid-template-columns: minmax(640px, 1fr) minmax(260px, var(--wb-right-width, 340px));
 }
 
 .wb-layout.hide-right {
-  grid-template-columns: minmax(240px, 280px) minmax(640px, 1fr);
+  grid-template-columns: minmax(220px, var(--wb-left-width, 280px)) minmax(640px, 1fr);
 }
 
 .wb-layout.hide-left.hide-right,
@@ -204,6 +204,10 @@ button:disabled {
   padding: 0.75rem;
   overflow: auto;
   min-height: 0;
+}
+
+.wb-sidebar {
+  position: relative;
 }
 
 .wb-main {
@@ -592,6 +596,12 @@ textarea {
   border-color: rgba(167, 220, 255, 0.9);
 }
 
+.wb-command-item.active {
+  border-color: rgba(255, 211, 110, 0.92);
+  background: linear-gradient(180deg, rgba(73, 121, 199, 0.96), rgba(42, 82, 147, 0.94));
+  box-shadow: 0 0 0 1px rgba(255, 211, 110, 0.25);
+}
+
 .wb-command-main {
   display: flex;
   gap: 0.52rem;
@@ -668,6 +678,35 @@ textarea {
   line-height: 1.38;
 }
 
+.wb-resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 11px;
+  border: 0;
+  padding: 0;
+  border-radius: 0;
+  background: linear-gradient(180deg, rgba(68, 130, 212, 0.36), rgba(31, 69, 128, 0.2));
+  cursor: col-resize;
+  z-index: 8;
+  opacity: 0.64;
+  transition: opacity 120ms ease, box-shadow 120ms ease;
+}
+
+.wb-resize-handle:hover,
+.wb-resize-handle.active {
+  opacity: 1;
+  box-shadow: inset 0 0 0 1px rgba(166, 220, 255, 0.45);
+}
+
+.wb-resize-handle-left {
+  right: -7px;
+}
+
+.wb-resize-handle-right {
+  left: -7px;
+}
+
 .err {
   color: var(--error);
 }
@@ -730,4 +769,51 @@ textarea {
   .wb-tabs button {
     min-width: 82px;
   }
+
+  .wb-resize-handle {
+    display: none;
+  }
+}
+
+.wb-root.wb-density-compact {
+  gap: 0.52rem;
+  padding: clamp(0.42rem, 0.75vw, 0.66rem);
+}
+
+.wb-root.wb-density-compact .wb-topbar {
+  gap: 0.62rem;
+  padding: 0.62rem 0.66rem;
+}
+
+.wb-root.wb-density-compact .wb-actions {
+  gap: 0.3rem;
+}
+
+.wb-root.wb-density-compact button {
+  font-size: 0.72rem;
+  padding: 0.33rem 0.52rem;
+}
+
+.wb-root.wb-density-compact .wb-sidebar,
+.wb-root.wb-density-compact .wb-main {
+  padding: 0.56rem;
+}
+
+.wb-root.wb-density-compact .wb-canvas-toolbar {
+  gap: 0.35rem;
+  padding: 0.36rem;
+}
+
+.wb-root.wb-density-compact .wb-layer-toggles {
+  gap: 0.42rem;
+  padding: 0.28rem 0.36rem;
+}
+
+.wb-root.wb-density-compact .wb-list button {
+  padding: 0.28rem 0.4rem;
+}
+
+.wb-root.wb-density-compact .wb-canvas-status-strip {
+  gap: 0.3rem;
+  padding: 0.24rem 0.28rem;
 }
