@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
 import type { PoiAction, PoiEntry } from './content/types'
 import { getUIText } from './content/uiTextRegistry'
 import { gameEventBus } from './game/core/eventBus'
@@ -10,9 +10,13 @@ import { MobileControls } from './ui/components/MobileControls'
 import { TopHud } from './ui/components/TopHud'
 import { useTouchDevice } from './ui/hooks/useTouchDevice'
 import { useAdminStore } from './ui/admin/state/adminStore'
-import { AdminShell } from './ui/admin/components/AdminShell'
 import { isAdminFeatureEnabled, verifyAdminPassword } from './ui/admin/services/authGuard'
 import './App.css'
+
+const AdminShell = lazy(async () => {
+  const module = await import('./ui/admin/components/AdminShell')
+  return { default: module.AdminShell }
+})
 
 interface ConfirmState {
   open: boolean
@@ -246,22 +250,24 @@ function App() {
           defaultSubtitle={getUIText('hud.subtitle', uiText)}
           helpLabel={getUIText('hud.helpButton', uiText)}
         />
-        <AdminShell
-          state={{ patch, runtime, merged, dirty }}
-          actions={{
-            setOpen,
-            setMode,
-            setSelection,
-            setPoiPatch,
-            setMapObjectPatch,
-            setNpcPatch,
-            setGlobalOffset,
-            setUiTextOverrides,
-            replacePatch,
-            resetPatch,
-          }}
-          onFitMap={() => gameEventBus.emit('admin:camera:fit-map', { fit: true })}
-        />
+        <Suspense fallback={null}>
+          <AdminShell
+            state={{ patch, runtime, merged, dirty }}
+            actions={{
+              setOpen,
+              setMode,
+              setSelection,
+              setPoiPatch,
+              setMapObjectPatch,
+              setNpcPatch,
+              setGlobalOffset,
+              setUiTextOverrides,
+              replacePatch,
+              resetPatch,
+            }}
+            onFitMap={() => gameEventBus.emit('admin:camera:fit-map', { fit: true })}
+          />
+        </Suspense>
         <MobileControls visible={isTouchDevice} />
       </section>
 

@@ -177,3 +177,11 @@ Original prompt: verbessere den weiter! der ist immer noch buggy und viele sache
   - Manual checks via browser automation:
     - Intro open/close via Hilfe and Escape confirmed.
     - Worldbuilder shortcut `G` cycles view mode (snapshot confirms Rendered state).
+- Performance pass (portfolio runtime):
+  - `AdminShell` is now lazy-loaded via `React.lazy + Suspense`, reducing initial main bundle and deferring admin UI code.
+  - Build output now includes separate chunk `dist/assets/AdminShell-*.js`.
+- Validation:
+  - lint/test/build all green after lazy-load refactor.
+  - Playwright reruns:
+    - portfolio: `output/portfolio-loop/loop-4`
+    - worldbuilder: `output/worldbuilder-loop/loop-17`
