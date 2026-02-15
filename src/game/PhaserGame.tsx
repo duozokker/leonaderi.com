@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import Phaser from 'phaser'
 import { createOverworldScene } from './scenes/OverworldScene'
+import { resolveRendererPreference } from './rendererMode'
 
 export function PhaserGame() {
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -11,8 +12,15 @@ export function PhaserGame() {
       return
     }
 
+    const renderer = resolveRendererPreference()
+    const rendererType = renderer === 'canvas'
+      ? Phaser.CANVAS
+      : renderer === 'webgl'
+        ? Phaser.WEBGL
+        : Phaser.AUTO
+
     const config: Phaser.Types.Core.GameConfig = {
-      type: Phaser.AUTO,
+      type: rendererType,
       parent: containerRef.current,
       backgroundColor: '#000000',
       pixelArt: true,
@@ -29,6 +37,11 @@ export function PhaserGame() {
       scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
+      },
+      render: {
+        antialias: false,
+        pixelArt: true,
+        roundPixels: true,
       },
       scene: [createOverworldScene()],
     }

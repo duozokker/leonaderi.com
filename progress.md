@@ -192,3 +192,19 @@ Original prompt: verbessere den weiter! der ist immer noch buggy und viele sache
 - Verification:
   - lint/test/build (worldbuilder) ✅
   - Playwright run: `output/worldbuilder-loop/loop-18`.
+
+## 2026-02-15 (loop: responsive stage + renderer stability)
+- Worldbuilder canvas is now responsive (`wb-stage-wrap` + `ResizeObserver`) instead of fixed 1000x640, with startup camera/zoom sync tied to viewport size to avoid the tiny/offset map view.
+- Added layer/depth workflow improvements:
+  - keyboard depth nudge with `[`/`]` (`Shift` = ±10)
+  - multi-select and single-object controls for `Send to Back` / `Bring to Front`
+  - command legend updated accordingly.
+- Improved accessibility and inspector quality by adding missing `id/name` attributes to layer/canvas checkboxes.
+- Added runtime renderer preference resolver (`src/game/rendererMode.ts`) and switched Phaser boot to deterministic canvas fallback in webdriver/headless sessions.
+- Added unit tests for renderer selection (`tests/rendererMode.test.ts`).
+- Verified via:
+  - `npm run lint`
+  - `npm test`
+  - `npm run build`
+  - `npm run build -w @leonaderi/worldbuilder`
+  - manual browser checks + screenshots (`output/worldbuilder-loop/manual-loop-responsive.png`, `output/worldbuilder-loop/manual-loop-rendered-mode.png`, `output/portfolio-loop/manual-world-4173.png`).
