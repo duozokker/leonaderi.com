@@ -251,3 +251,21 @@ Original prompt: verbessere den weiter! der ist immer noch buggy und viele sache
   - Tiled keyboard shortcuts + layer workflows.
   - Unity Scene view navigation shortcuts.
   - Godot 2D editor navigation references.
+- Loop keyboard+storage hardening (2026-02-15):
+  - Added safe localStorage wrappers in worldbuilder autosave/reset to avoid runtime crashes in storage-restricted environments.
+  - Improved cross-layout shortcut handling (using key/code combinations):
+    - Cmd/Ctrl+0 => zoom 100%
+    - Cmd/Ctrl+Plus/Minus => zoom in/out
+    - Cmd/Ctrl+/ (and numpad divide) => fit map
+  - Layer solo presets now preserve minimap visibility state instead of force-enabling minimap.
+  - Portfolio modal backdrop contrast adjusted from 0.72 to 0.58 for better readability of underlying scene.
+- Verification loop:
+  - lint/test/build passed after changes.
+  - Playwright artifacts:
+    - worldbuilder: `output/worldbuilder-loop/loop-shortcuts-persist`
+    - portfolio: `output/portfolio-loop/loop-overlay-contrast`
+  - Visual check confirms no black viewport and improved intro overlay visibility.
+- Additional web references consulted for keyboard/layout compatibility and storage behavior:
+  - https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key
+  - https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code
+  - https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage
