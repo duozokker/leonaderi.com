@@ -37,6 +37,13 @@ const HITBOX_MIN_SIZE = 6
 const DEBUG_HITBOX_STORAGE_KEY = 'map-hitbox-overrides'
 const DEBUG_OFFSET_STORAGE_KEY = 'map-object-offset'
 
+declare global {
+  interface Window {
+    render_game_to_text?: () => string
+    advanceTime?: (ms: number) => Promise<void>
+  }
+}
+
 export class OverworldScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite
   private playerBody!: Phaser.Physics.Arcade.Body
@@ -110,6 +117,8 @@ export class OverworldScene extends Phaser.Scene {
     R: Phaser.Input.Keyboard.Key
     P: Phaser.Input.Keyboard.Key
   }
+  private eventBusDisposers: Array<() => void> = []
+  private debugFrameCounter = 0
 
   constructor() {
     super('OverworldScene')
@@ -189,6 +198,9 @@ export class OverworldScene extends Phaser.Scene {
     this.setupOffsetDebugUi()
     this.setupUiText()
     this.setupEventBridge()
+    this.setupDebugHooks()
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.teardownScene, this)
+    this.events.once(Phaser.Scenes.Events.DESTROY, this.teardownScene, this)
     this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _go: unknown, _dx: number, dy: number) => {
       this.adminWheelDeltaY = dy
     })
@@ -198,6 +210,7 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   update(): void {
+    this.debugFrameCounter += 1
     this.handleOffsetDebugInput()
 
     if (this.adminRuntime.open && this.adminRuntime.mode === 'full-map') {
@@ -366,13 +379,14 @@ export class OverworldScene extends Phaser.Scene {
       if (obj.poiId) {
         const entry = this.mergedPois.find((e) => e.id === obj.poiId)
         if (entry) {
+          const nameTagDepth = Math.max(210, spriteDepth + 1)
           this.add.text(sx, sy - obj.height / 2 + 2, entry.name, {
             fontFamily: 'Press Start 2P, Courier New, monospace',
             fontSize: '5px',
             color: '#4a4438',
             backgroundColor: '#f8f2e4',
             padding: { x: 4, y: 2 },
-          }).setOrigin(0.5, 1).setDepth(340).setAlpha(0.9)
+          }).setOrigin(0.5, 1).setDepth(nameTagDepth).setAlpha(0.9)
         }
       }
 
@@ -677,14 +691,14 @@ export class OverworldScene extends Phaser.Scene {
   // ─── EVENT BRIDGE ──────────────────────────────────────────────
 
   private setupEventBridge(): void {
-    gameEventBus.on('ui:block', ({ blocked }) => {
+    this.eventBusDisposers.push(gameEventBus.on('ui:block', ({ blocked }) => {
       this.uiBlocked = blocked
       if (blocked) {
         this.playerBody.setVelocity(0, 0)
       }
-    })
+    }))
 
-    gameEventBus.on('admin:state-changed', (payload) => {
+    this.eventBusDisposers.push(gameEventBus.on('admin:state-changed', (payload) => {
       this.adminRuntime = {
         ...this.adminRuntime,
         ...payload,
@@ -709,18 +723,18 @@ export class OverworldScene extends Phaser.Scene {
         this.cameras.main.startFollow(this.player, true, 0.14, 0.14)
         this.cameras.main.setZoom(1.8)
       }
-    })
+    }))
 
-    gameEventBus.on('admin:selection:changed', ({ selection }) => {
+    this.eventBusDisposers.push(gameEventBus.on('admin:selection:changed', ({ selection }) => {
       this.adminRuntime = {
         ...this.adminRuntime,
         selection,
       }
       this.refreshOffsetDebugLabel()
       this.drawDebugHitboxes()
-    })
+    }))
 
-    gameEventBus.on('admin:patch-updated', ({ patch }) => {
+    this.eventBusDisposers.push(gameEventBus.on('admin:patch-updated', ({ patch }) => {
       const nextMerged = buildMergedAdminData(portfolioGlossary, patch)
       const requiresRebuild = this.requiresSceneRebuild(nextMerged)
 
@@ -737,11 +751,59 @@ export class OverworldScene extends Phaser.Scene {
       this.syncInteractablesFromMergedPois()
       this.refreshOffsetDebugLabel()
       this.drawDebugHitboxes()
+    }))
+
+    this.eventBusDisposers.push(gameEventBus.on('admin:camera:fit-map', () => {
+      this.fitCameraToMap()
+    }))
+  }
+
+  private teardownScene(): void {
+    for (const dispose of this.eventBusDisposers) {
+      dispose()
+    }
+    this.eventBusDisposers = []
+    if (typeof window !== 'undefined') {
+      delete window.render_game_to_text
+      delete window.advanceTime
+    }
+  }
+
+  private setupDebugHooks(): void {
+    if (typeof window === 'undefined') return
+
+    window.render_game_to_text = () => JSON.stringify({
+      scene: 'OverworldScene',
+      frameCounter: this.debugFrameCounter,
+      uiBlocked: this.uiBlocked,
+      adminOpen: this.adminRuntime.open,
+      adminMode: this.adminRuntime.mode,
+      player: {
+        x: Number(this.player.x.toFixed(2)),
+        y: Number(this.player.y.toFixed(2)),
+        facing: this.playerFacing,
+        velocityX: Number(this.playerBody.velocity.x.toFixed(2)),
+        velocityY: Number(this.playerBody.velocity.y.toFixed(2)),
+      },
+      camera: {
+        x: Number(this.cameras.main.scrollX.toFixed(2)),
+        y: Number(this.cameras.main.scrollY.toFixed(2)),
+        zoom: Number(this.cameras.main.zoom.toFixed(2)),
+      },
+      nearestInteractable: this.nearestInteractable?.entry.id ?? null,
+      activeInteractables: this.interactables.length,
+      map: {
+        width: MAP_WIDTH,
+        height: MAP_HEIGHT,
+        tileSize: MAP_TILE_SIZE,
+      },
+      coordinateSystem: 'origin: top-left, +x right, +y down',
     })
 
-    gameEventBus.on('admin:camera:fit-map', () => {
-      this.fitCameraToMap()
-    })
+    window.advanceTime = async (ms: number) => {
+      this.debugFrameCounter += Math.max(1, Math.round(ms / (1000 / 60)))
+      await Promise.resolve()
+    }
   }
 
   // ─── INTERACTABLES ─────────────────────────────────────────────

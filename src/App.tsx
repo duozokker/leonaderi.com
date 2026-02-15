@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
 import type { PoiAction, PoiEntry } from './content/types'
 import { getUIText } from './content/uiTextRegistry'
 import { gameEventBus } from './game/core/eventBus'
@@ -9,10 +9,20 @@ import { IntroModal } from './ui/components/IntroModal'
 import { MobileControls } from './ui/components/MobileControls'
 import { TopHud } from './ui/components/TopHud'
 import { useTouchDevice } from './ui/hooks/useTouchDevice'
+import {
+  INTRO_DISMISSED_STORAGE_KEY,
+  readIntroDismissedFlag,
+  shouldOpenIntroByDefault,
+} from './ui/utils/introPreferences'
+import { toSafeExternalHref } from './ui/utils/linkSafety'
 import { useAdminStore } from './ui/admin/state/adminStore'
-import { AdminShell } from './ui/admin/components/AdminShell'
 import { isAdminFeatureEnabled, verifyAdminPassword } from './ui/admin/services/authGuard'
 import './App.css'
+
+const AdminShell = lazy(async () => {
+  const module = await import('./ui/admin/components/AdminShell')
+  return { default: module.AdminShell }
+})
 
 interface ConfirmState {
   open: boolean
@@ -71,7 +81,11 @@ function App() {
     replacePatch,
     resetPatch,
   } = admin
-  const [introOpen, setIntroOpen] = useState(true)
+  const [introOpen, setIntroOpen] = useState(() => {
+    if (typeof window === 'undefined') return true
+    const dismissed = readIntroDismissedFlag(window.localStorage.getItem(INTRO_DISMISSED_STORAGE_KEY))
+    return shouldOpenIntroByDefault(window.location.search, dismissed)
+  })
   const [hoverLabel, setHoverLabel] = useState<string | null>(null)
   const [activeEntry, setActiveEntry] = useState<PoiEntry | null>(null)
   const [entryNote, setEntryNote] = useState<string | null>(null)
@@ -167,18 +181,30 @@ function App() {
     gameEventBus.emit('admin:patch-updated', { patch })
   }, [patch])
 
-  const closeEntryModal = (): void => {
+  const closeEntryModal = useCallback((): void => {
     setActiveEntry(null)
     setEntryNote(null)
-  }
+  }, [])
+
+  const closeIntro = useCallback(() => {
+    setIntroOpen(false)
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(INTRO_DISMISSED_STORAGE_KEY, '1')
+    }
+  }, [])
 
   const handleEntryAction = (entry: PoiEntry, action: PoiAction): void => {
     if (action.type === 'open_link' && action.href) {
+      const safeHref = toSafeExternalHref(action.href)
+      if (!safeHref) {
+        setEntryNote('Link ist ungueltig oder unsicher konfiguriert.')
+        return
+      }
       setConfirmState({
         open: true,
         title: `Externer Link: ${entry.name}`,
         message: action.confirmMessage ?? `Moechtest du ${entry.name} oeffnen?`,
-        href: action.href,
+        href: safeHref,
       })
       return
     }
@@ -186,20 +212,62 @@ function App() {
     setEntryNote(getActionModalMessage(entry, action))
   }
 
-  const closeConfirm = (): void => {
+  const closeConfirm = useCallback((): void => {
     setConfirmState(defaultConfirmState)
-  }
+  }, [])
 
-  const proceedConfirm = (): void => {
-    const href = confirmState.href
+  const proceedConfirm = useCallback((): void => {
+    const href = toSafeExternalHref(confirmState.href)
     if (href) {
       window.open(href, '_blank', 'noopener,noreferrer')
+    } else {
+      setEntryNote('Link ist ungueltig oder unsicher konfiguriert.')
     }
 
     setConfirmState(defaultConfirmState)
     setActiveEntry(null)
     setEntryNote(null)
-  }
+  }, [confirmState.href])
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null
+      const isTypingTarget = Boolean(
+        target && (
+          target.tagName === 'INPUT'
+          || target.tagName === 'TEXTAREA'
+          || target.tagName === 'SELECT'
+          || target.isContentEditable
+        ),
+      )
+      if (!isTypingTarget && event.key.toLowerCase() === 'h') {
+        event.preventDefault()
+        setIntroOpen(true)
+        return
+      }
+      if (event.key !== 'Escape') return
+
+      if (confirmState.open) {
+        event.preventDefault()
+        closeConfirm()
+        return
+      }
+
+      if (activeEntry) {
+        event.preventDefault()
+        closeEntryModal()
+        return
+      }
+
+      if (introOpen) {
+        event.preventDefault()
+        closeIntro()
+      }
+    }
+
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [activeEntry, closeConfirm, closeEntryModal, closeIntro, confirmState.open, introOpen])
 
   const uiText = patch.global.uiTextOverrides ?? {}
   const statusLabels = {
@@ -220,22 +288,24 @@ function App() {
           defaultSubtitle={getUIText('hud.subtitle', uiText)}
           helpLabel={getUIText('hud.helpButton', uiText)}
         />
-        <AdminShell
-          state={{ patch, runtime, merged, dirty }}
-          actions={{
-            setOpen,
-            setMode,
-            setSelection,
-            setPoiPatch,
-            setMapObjectPatch,
-            setNpcPatch,
-            setGlobalOffset,
-            setUiTextOverrides,
-            replacePatch,
-            resetPatch,
-          }}
-          onFitMap={() => gameEventBus.emit('admin:camera:fit-map', { fit: true })}
-        />
+        <Suspense fallback={null}>
+          <AdminShell
+            state={{ patch, runtime, merged, dirty }}
+            actions={{
+              setOpen,
+              setMode,
+              setSelection,
+              setPoiPatch,
+              setMapObjectPatch,
+              setNpcPatch,
+              setGlobalOffset,
+              setUiTextOverrides,
+              replacePatch,
+              resetPatch,
+            }}
+            onFitMap={() => gameEventBus.emit('admin:camera:fit-map', { fit: true })}
+          />
+        </Suspense>
         <MobileControls visible={isTouchDevice} />
       </section>
 
@@ -260,7 +330,7 @@ function App() {
 
       {introOpen ? (
         <IntroModal
-          onClose={() => setIntroOpen(false)}
+          onClose={closeIntro}
           texts={{
             title: getUIText('intro.title', uiText),
             body: getUIText('intro.body', uiText),

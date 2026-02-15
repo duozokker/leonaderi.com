@@ -23,6 +23,17 @@ npm install
 npm run dev
 ```
 
+Worldbuilder V2 (separate local app):
+```bash
+npm run worldbuilder:dev
+```
+
+Compile world JSON to runtime files:
+```bash
+npm run world:validate
+npm run world:compile
+```
+
 Build + preview:
 ```bash
 npm run build
@@ -38,9 +49,16 @@ Then adjust content or add new houses in:
 
 ## Project Structure
 ```txt
+apps/
+└─ worldbuilder/       # Separate local world editor (React + Konva + React Flow)
+packages/
+├─ world-schema/       # Authoring/runtime zod schemas
+└─ world-compiler/     # JSON -> runtime TS compiler bridge
+world-data/
+└─ project.world.v1.json
 src/
 ├─ content/
-│  ├─ glossary.ts      # All locations + dialogs + actions
+│  ├─ glossary.ts      # GENERATED from world-data compiler
 │  ├─ profile.ts       # Central social/company URLs
 │  └─ types.ts         # Typed data model
 ├─ game/
@@ -53,6 +71,9 @@ src/
 │  └─ hooks/
 └─ App.tsx
 ```
+
+Detailed worldbuilder docs:
+- `docs/worldbuilder-v2.md`
 
 ## Deployment
 GitHub Pages deploy workflow:
