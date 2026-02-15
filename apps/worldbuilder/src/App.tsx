@@ -1965,9 +1965,9 @@ function App() {
   return (
     <div className="wb-root">
       <header className="wb-topbar">
-        <div>
+        <div className="wb-brand">
           <h1>Worldbuilder Studio V2</h1>
-          <p>Lokales Authoring-Tool. Runtime-Dateien werden ueber `npm run world:compile` generiert.</p>
+          <p className="wb-subline">Lokales Authoring-Tool. Runtime-Dateien werden ueber `npm run world:compile` generiert.</p>
         </div>
         <div className="wb-actions">
           <button data-testid="open-json-btn" onClick={importFromFile}>Open JSON</button>
@@ -2006,7 +2006,7 @@ function App() {
 
       <section className="wb-layout">
         <aside className="wb-sidebar left">
-          <h3>Entities</h3>
+          <h3 className="wb-panel-title">Entities</h3>
           <input
             id="entity-filter"
             name="entity-filter"
@@ -2017,7 +2017,7 @@ function App() {
             onChange={(event) => setEntityFilter(event.target.value)}
           />
           <div className="wb-list">
-            <h4>Objects</h4>
+            <h4 className="wb-list-heading">Objects</h4>
             {filteredObjects.map((item) => (
               <button
                 key={item.id}
@@ -2027,19 +2027,19 @@ function App() {
                 {item.key} <span className="wb-inline-meta">d:{item.depth} {item.visible ? '' : '(hidden)'}</span>
               </button>
             ))}
-            <h4>Colliders</h4>
+            <h4 className="wb-list-heading">Colliders</h4>
             {filteredColliders.map((item) => (
               <button key={item.id} className={selection.kind === 'collider' && selection.id === item.id ? 'sel' : ''} onClick={() => selectEntity({ kind: 'collider', id: item.id })}>{item.id}</button>
             ))}
-            <h4>Triggers</h4>
+            <h4 className="wb-list-heading">Triggers</h4>
             {filteredTriggers.map((item) => (
               <button key={item.id} className={selection.kind === 'trigger' && selection.id === item.id ? 'sel' : ''} onClick={() => selectEntity({ kind: 'trigger', id: item.id })}>{item.label}</button>
             ))}
-            <h4>NPCs</h4>
+            <h4 className="wb-list-heading">NPCs</h4>
             {filteredNpcs.map((item) => (
               <button key={item.id} className={selection.kind === 'npc' && selection.id === item.id ? 'sel' : ''} onClick={() => selectEntity({ kind: 'npc', id: item.id })}>{item.id}</button>
             ))}
-            <h4>POIs</h4>
+            <h4 className="wb-list-heading">POIs</h4>
             {filteredPois.map((item) => (
               <button key={item.id} className={selection.kind === 'poi' && selection.id === item.id ? 'sel' : ''} onClick={() => selectEntity({ kind: 'poi', id: item.id })}>{item.name}</button>
             ))}
