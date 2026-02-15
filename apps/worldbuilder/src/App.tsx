@@ -175,6 +175,7 @@ type SavedSessionV1 = {
   camera: { x: number; y: number }
   panMode: boolean
   canvasTool: CanvasTool
+  fromStorage: boolean
 }
 
 function loadDraftWorld(): AuthoringWorldV1 {
@@ -196,6 +197,7 @@ function loadSessionDefaults(): SavedSessionV1 {
     camera: { x: 20, y: 20 },
     panMode: false,
     canvasTool: 'select',
+    fromStorage: false,
   }
   if (typeof window === 'undefined') return fallback
   try {
@@ -211,6 +213,7 @@ function loadSessionDefaults(): SavedSessionV1 {
       },
       panMode: Boolean(parsed.panMode),
       canvasTool: parsed.canvasTool === 'move' || parsed.canvasTool === 'resize' ? parsed.canvasTool : 'select',
+      fromStorage: true,
     }
   } catch {
     return fallback
@@ -277,12 +280,11 @@ function App() {
   const [selectedObjectIds, setSelectedObjectIds] = useState<string[]>([])
   const [marqueeRect, setMarqueeRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null)
   const marqueeAdditiveRef = useRef(false)
-
-  useEffect(() => {
-    const img = new window.Image()
-    img.src = '/map-composite.png'
-    img.onload = () => setRenderedMapImage(img)
-  }, [])
+  const mapWidth = world.map.columns * world.map.tileSize
+  const mapHeight = world.map.rows * world.map.tileSize
+  const [stageSize, setStageSize] = useState<{ width: number; height: number }>({ width: 1000, height: 640 })
+  const stageWidth = stageSize.width
+  const stageHeight = stageSize.height
 
   const selectedDialogue = useMemo(
     () => world.dialogues.find((item) => item.id === dialogueId) ?? world.dialogues[0] ?? null,
@@ -302,16 +304,91 @@ function App() {
   const selectedRef = useRef<Konva.Node | null>(null)
   const transformerRef = useRef<Konva.Transformer | null>(null)
   const stageRef = useRef<Konva.Stage | null>(null)
+  const canvasViewportRef = useRef<HTMLDivElement | null>(null)
   const autosaveTimerRef = useRef<number | null>(null)
   const statusTimerRef = useRef<number | null>(null)
   const deleteSelectionRef = useRef<() => void>(() => undefined)
   const duplicateSelectionRef = useRef<() => void>(() => undefined)
   const middlePanStartRef = useRef<{ pointerX: number; pointerY: number; cameraX: number; cameraY: number } | null>(null)
+  const initialCameraSyncRef = useRef(false)
+  const zoomRef = useRef(zoom)
 
-  const mapWidth = world.map.columns * world.map.tileSize
-  const mapHeight = world.map.rows * world.map.tileSize
-  const stageWidth = 1000
-  const stageHeight = 640
+  useEffect(() => {
+    zoomRef.current = zoom
+  }, [zoom])
+
+  useEffect(() => {
+    const img = new window.Image()
+    img.src = '/map-composite.png'
+    img.onload = () => setRenderedMapImage(img)
+    img.onerror = () => {
+      setStatus({ tone: 'warn', text: 'Rendered map preview nicht gefunden (/map-composite.png).' })
+    }
+  }, [])
+
+  useEffect(() => {
+    const element = canvasViewportRef.current
+    if (!element) return
+
+    const syncSize = () => {
+      const rect = element.getBoundingClientRect()
+      const nextWidth = Math.max(320, Math.floor(rect.width))
+      const nextHeight = Math.max(260, Math.floor(rect.height))
+      setStageSize((prev) => (
+        prev.width === nextWidth && prev.height === nextHeight
+          ? prev
+          : { width: nextWidth, height: nextHeight }
+      ))
+
+      const activeZoom = zoomRef.current
+      const clampXMin = nextWidth - mapWidth * activeZoom - CAMERA_MIN_PADDING
+      const clampYMin = nextHeight - mapHeight * activeZoom - CAMERA_MIN_PADDING
+      const clampXMax = CAMERA_MIN_PADDING
+      const clampYMax = CAMERA_MIN_PADDING
+      const clampPoint = (x: number, y: number) => ({
+        x: Number(clamp(x, clampXMin, clampXMax).toFixed(2)),
+        y: Number(clamp(y, clampYMin, clampYMax).toFixed(2)),
+      })
+
+      if (!initialCameraSyncRef.current) {
+        if (!sessionDefaults.fromStorage) {
+          const fitZoom = Math.max(
+            0.35,
+            Math.min(
+              2.5,
+              Math.min(
+                (nextWidth - CAMERA_MIN_PADDING * 2) / mapWidth,
+                (nextHeight - CAMERA_MIN_PADDING * 2) / mapHeight,
+              ),
+            ),
+          )
+          setZoom(fitZoom)
+          setCamera({
+            x: Number(((nextWidth - mapWidth * fitZoom) / 2).toFixed(2)),
+            y: Number(((nextHeight - mapHeight * fitZoom) / 2).toFixed(2)),
+          })
+        } else {
+          setCamera((prev) => clampPoint(prev.x, prev.y))
+        }
+        initialCameraSyncRef.current = true
+        return
+      }
+
+      setCamera((prev) => clampPoint(prev.x, prev.y))
+    }
+
+    syncSize()
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(syncSize)
+      observer.observe(element)
+      return () => observer.disconnect()
+    }
+
+    window.addEventListener('resize', syncSize)
+    return () => window.removeEventListener('resize', syncSize)
+  }, [mapHeight, mapWidth, sessionDefaults.fromStorage])
+
   const drawOrderedObjects = useMemo(
     () => [...world.objects].sort((a, b) => {
       const groupRank = (group: string) => {
@@ -532,6 +609,53 @@ function App() {
     })
     showStatus('ok', `Aligned (${mode})`)
   }, [clampWorldPoint, selectedObjectIds, selectedObjects, showStatus, updateWorld, world])
+
+  const bumpSelectedDepth = useCallback((delta: number) => {
+    if (selectedObjectIds.length === 0) return
+    updateWorld({
+      ...world,
+      objects: world.objects.map((item) => (
+        selectedObjectIds.includes(item.id)
+          ? { ...item, depth: Math.round(item.depth + delta) }
+          : item
+      )),
+      meta: { ...world.meta, updatedAt: new Date().toISOString() },
+    })
+    showStatus('ok', `Depth ${delta > 0 ? '+' : ''}${delta}`)
+  }, [selectedObjectIds, showStatus, updateWorld, world])
+
+  const reorderSelectedDepth = useCallback((mode: 'front' | 'back') => {
+    if (selectedObjectIds.length === 0) return
+    const selected = world.objects
+      .filter((item) => selectedObjectIds.includes(item.id))
+      .sort((a, b) => a.depth - b.depth || a.id.localeCompare(b.id))
+    if (selected.length === 0) return
+
+    const minDepth = Math.min(...world.objects.map((item) => item.depth))
+    const maxDepth = Math.max(...world.objects.map((item) => item.depth))
+    const nextDepthById = new Map<string, number>()
+
+    if (mode === 'front') {
+      selected.forEach((item, index) => {
+        nextDepthById.set(item.id, Math.round(maxDepth + index + 1))
+      })
+    } else {
+      selected.forEach((item, index) => {
+        nextDepthById.set(item.id, Math.round(minDepth - selected.length + index))
+      })
+    }
+
+    updateWorld({
+      ...world,
+      objects: world.objects.map((item) => (
+        nextDepthById.has(item.id)
+          ? { ...item, depth: nextDepthById.get(item.id) ?? item.depth }
+          : item
+      )),
+      meta: { ...world.meta, updatedAt: new Date().toISOString() },
+    })
+    showStatus('ok', mode === 'front' ? 'Selection to front' : 'Selection to back')
+  }, [selectedObjectIds, showStatus, updateWorld, world])
 
   const updateColliderRect = (id: string, patch: Partial<{ x: number; y: number; width: number; height: number }>) => {
     updateWorld({
@@ -1247,7 +1371,13 @@ function App() {
       x: Number(clamp(nextX, minX, maxX).toFixed(2)),
       y: Number(clamp(nextY, minY, maxY).toFixed(2)),
     }
-  }, [mapHeight, mapWidth])
+  }, [mapHeight, mapWidth, stageHeight, stageWidth])
+
+  const applyZoom = useCallback((nextZoom: number) => {
+    const clamped = clampZoom(nextZoom)
+    setZoom(clamped)
+    setCamera((prev) => clampCameraToBounds(prev.x, prev.y, clamped))
+  }, [clampCameraToBounds])
 
   const fitMapView = useCallback(() => {
     const fitZoom = clampZoom(Math.min(
@@ -1260,7 +1390,7 @@ function App() {
       (stageHeight - mapHeight * fitZoom) / 2,
       fitZoom,
     ))
-  }, [clampCameraToBounds, mapHeight, mapWidth])
+  }, [clampCameraToBounds, mapHeight, mapWidth, stageHeight, stageWidth])
 
   const saveCameraBookmark = useCallback((slot: 1 | 2 | 3 | 4) => {
     setCameraBookmarks((prev) => ({
@@ -1340,7 +1470,7 @@ function App() {
       return
     }
     fitMapView()
-  }, [clampCameraToBounds, fitMapView, selectedCollider, selectedNpc, selectedObject, selectedTrigger])
+  }, [clampCameraToBounds, fitMapView, selectedCollider, selectedNpc, selectedObject, selectedTrigger, stageHeight, stageWidth])
 
   const undo = useCallback(() => {
     setHistory((prev) => {
@@ -1393,7 +1523,7 @@ function App() {
     if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current)
     autosaveTimerRef.current = window.setTimeout(() => {
       window.localStorage.setItem(WORLD_LOCAL_STORAGE_KEY, JSON.stringify(world))
-      const session: SavedSessionV1 = { tab, zoom, camera, panMode, canvasTool }
+      const session: SavedSessionV1 = { tab, zoom, camera, panMode, canvasTool, fromStorage: true }
       window.localStorage.setItem(SESSION_LOCAL_STORAGE_KEY, JSON.stringify(session))
       window.localStorage.setItem(BOOKMARKS_STORAGE_KEY, JSON.stringify(cameraBookmarks))
     }, 200)
@@ -1453,6 +1583,14 @@ function App() {
       }
       if (!isTypingTarget && event.key.toLowerCase() === 'r') {
         setCanvasTool('resize')
+        event.preventDefault()
+      }
+      if (!isTypingTarget && event.key === '[') {
+        bumpSelectedDepth(event.shiftKey ? -10 : -1)
+        event.preventDefault()
+      }
+      if (!isTypingTarget && event.key === ']') {
+        bumpSelectedDepth(event.shiftKey ? 10 : 1)
         event.preventDefault()
       }
 
@@ -1520,7 +1658,7 @@ function App() {
       window.removeEventListener('keydown', keydown)
       window.removeEventListener('keyup', keyup)
     }
-  }, [camera, clearSelection, clampCameraToBounds, cycleBackgroundMode, fitMapView, frameSelection, importFromFile, loadCameraBookmark, nudgeSelectedObjects, redo, saveCameraBookmark, saveToFile, selectAllObjects, selection, selectedObjectIds.length, undo, zoom])
+  }, [bumpSelectedDepth, camera, clearSelection, clampCameraToBounds, cycleBackgroundMode, fitMapView, frameSelection, importFromFile, loadCameraBookmark, nudgeSelectedObjects, redo, saveCameraBookmark, saveToFile, selectAllObjects, selection, selectedObjectIds.length, undo, zoom])
 
   useEffect(() => {
     window.render_game_to_text = () => JSON.stringify({
@@ -1673,7 +1811,7 @@ function App() {
                     max="2.5"
                     step="0.05"
                     value={zoom}
-                    onChange={(event) => setZoom(clampZoom(Number(event.target.value)))}
+                    onChange={(event) => applyZoom(Number(event.target.value))}
                   />
                 </label>
                 <button onClick={() => setSnapToGrid((prev) => !prev)}>
@@ -1696,8 +1834,7 @@ function App() {
                 <button onClick={clearSelection}>Clear Selection</button>
                 <button
                   onClick={() => {
-                    setZoom(1)
-                    setCamera({ x: 20, y: 20 })
+                    fitMapView()
                     clearSelection()
                   }}
                 >
@@ -1742,12 +1879,12 @@ function App() {
                     />
                   </label>
                 ) : null}
-                <label className="wb-inline-check">
-                  <input type="checkbox" checked={showCrosshair} onChange={(event) => setShowCrosshair(event.target.checked)} />
+                <label className="wb-inline-check" htmlFor="toggle-crosshair">
+                  <input id="toggle-crosshair" name="toggle-crosshair" type="checkbox" checked={showCrosshair} onChange={(event) => setShowCrosshair(event.target.checked)} />
                   Crosshair
                 </label>
-                <label className="wb-inline-check">
-                  <input type="checkbox" checked={showDepthGuides} onChange={(event) => setShowDepthGuides(event.target.checked)} />
+                <label className="wb-inline-check" htmlFor="toggle-depth-guides">
+                  <input id="toggle-depth-guides" name="toggle-depth-guides" type="checkbox" checked={showDepthGuides} onChange={(event) => setShowDepthGuides(event.target.checked)} />
                   Depth Guides
                 </label>
                 <label className="wb-inline-check">
@@ -1779,47 +1916,48 @@ function App() {
                 </span>
               </div>
               <div className="wb-layer-toggles">
-                <label className="wb-inline-check">
-                  <input type="checkbox" checked={layerVisibility.objects} onChange={(event) => setLayerVisibility((prev) => ({ ...prev, objects: event.target.checked }))} />
+                <label className="wb-inline-check" htmlFor="visibility-objects">
+                  <input id="visibility-objects" name="visibility-objects" type="checkbox" checked={layerVisibility.objects} onChange={(event) => setLayerVisibility((prev) => ({ ...prev, objects: event.target.checked }))} />
                   Objects
                 </label>
-                <label className="wb-inline-check">
-                  <input type="checkbox" checked={layerVisibility.colliders} onChange={(event) => setLayerVisibility((prev) => ({ ...prev, colliders: event.target.checked }))} />
+                <label className="wb-inline-check" htmlFor="visibility-colliders">
+                  <input id="visibility-colliders" name="visibility-colliders" type="checkbox" checked={layerVisibility.colliders} onChange={(event) => setLayerVisibility((prev) => ({ ...prev, colliders: event.target.checked }))} />
                   Colliders
                 </label>
-                <label className="wb-inline-check">
-                  <input type="checkbox" checked={layerVisibility.triggers} onChange={(event) => setLayerVisibility((prev) => ({ ...prev, triggers: event.target.checked }))} />
+                <label className="wb-inline-check" htmlFor="visibility-triggers">
+                  <input id="visibility-triggers" name="visibility-triggers" type="checkbox" checked={layerVisibility.triggers} onChange={(event) => setLayerVisibility((prev) => ({ ...prev, triggers: event.target.checked }))} />
                   Triggers
                 </label>
-                <label className="wb-inline-check">
-                  <input type="checkbox" checked={layerVisibility.npcs} onChange={(event) => setLayerVisibility((prev) => ({ ...prev, npcs: event.target.checked }))} />
+                <label className="wb-inline-check" htmlFor="visibility-npcs">
+                  <input id="visibility-npcs" name="visibility-npcs" type="checkbox" checked={layerVisibility.npcs} onChange={(event) => setLayerVisibility((prev) => ({ ...prev, npcs: event.target.checked }))} />
                   NPCs
                 </label>
-                <label className="wb-inline-check">
-                  <input type="checkbox" checked={layerVisibility.minimap} onChange={(event) => setLayerVisibility((prev) => ({ ...prev, minimap: event.target.checked }))} />
+                <label className="wb-inline-check" htmlFor="visibility-minimap">
+                  <input id="visibility-minimap" name="visibility-minimap" type="checkbox" checked={layerVisibility.minimap} onChange={(event) => setLayerVisibility((prev) => ({ ...prev, minimap: event.target.checked }))} />
                   Minimap
                 </label>
               </div>
               <div className="wb-layer-toggles">
-                <label className="wb-inline-check">
-                  <input type="checkbox" checked={layerLock.objects} onChange={(event) => setLayerLock((prev) => ({ ...prev, objects: event.target.checked }))} />
+                <label className="wb-inline-check" htmlFor="lock-objects">
+                  <input id="lock-objects" name="lock-objects" type="checkbox" checked={layerLock.objects} onChange={(event) => setLayerLock((prev) => ({ ...prev, objects: event.target.checked }))} />
                   Lock Objects
                 </label>
-                <label className="wb-inline-check">
-                  <input type="checkbox" checked={layerLock.colliders} onChange={(event) => setLayerLock((prev) => ({ ...prev, colliders: event.target.checked }))} />
+                <label className="wb-inline-check" htmlFor="lock-colliders">
+                  <input id="lock-colliders" name="lock-colliders" type="checkbox" checked={layerLock.colliders} onChange={(event) => setLayerLock((prev) => ({ ...prev, colliders: event.target.checked }))} />
                   Lock Colliders
                 </label>
-                <label className="wb-inline-check">
-                  <input type="checkbox" checked={layerLock.triggers} onChange={(event) => setLayerLock((prev) => ({ ...prev, triggers: event.target.checked }))} />
+                <label className="wb-inline-check" htmlFor="lock-triggers">
+                  <input id="lock-triggers" name="lock-triggers" type="checkbox" checked={layerLock.triggers} onChange={(event) => setLayerLock((prev) => ({ ...prev, triggers: event.target.checked }))} />
                   Lock Triggers
                 </label>
-                <label className="wb-inline-check">
-                  <input type="checkbox" checked={layerLock.npcs} onChange={(event) => setLayerLock((prev) => ({ ...prev, npcs: event.target.checked }))} />
+                <label className="wb-inline-check" htmlFor="lock-npcs">
+                  <input id="lock-npcs" name="lock-npcs" type="checkbox" checked={layerLock.npcs} onChange={(event) => setLayerLock((prev) => ({ ...prev, npcs: event.target.checked }))} />
                   Lock NPCs
                 </label>
               </div>
 
-              <Stage
+              <div ref={canvasViewportRef} className="wb-stage-wrap">
+                <Stage
                 ref={stageRef}
                 width={stageWidth}
                 height={stageHeight}
@@ -2350,7 +2488,8 @@ function App() {
                   ) : null}
                   <Transformer ref={transformerRef} rotateEnabled={false} enabledAnchors={['top-left', 'top-center', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right']} />
                 </Layer>
-              </Stage>
+                </Stage>
+              </div>
             </div>
           ) : null}
 
@@ -2447,12 +2586,12 @@ function App() {
 
         <aside className="wb-sidebar right">
           <h3>Inspector</h3>
-          <p className="wb-legend"><strong>Shortcuts:</strong> V/M/R Tool wechseln, G View wechseln, Space+Drag oder MiddleMouse+Drag pan, Wheel zoom, Pfeile pan, Alt+Pfeile nudge selection, F frame, Shift+F fit, Cmd/Ctrl+A select all objects, Cmd/Ctrl+O open, Cmd/Ctrl+S save, Esc clear selection, Del delete, Cmd/Ctrl+D duplicate, Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z redo, 1-4 load bookmark, Shift+1-4 save bookmark, Minimap klicken/ziehen = jump camera.</p>
+          <p className="wb-legend"><strong>Shortcuts:</strong> V/M/R Tool wechseln, G View wechseln, Space+Drag oder MiddleMouse+Drag pan, Wheel zoom, Pfeile pan, Alt+Pfeile nudge selection, [ ] depth nudge (Shift = x10), F frame, Shift+F fit, Cmd/Ctrl+A select all objects, Cmd/Ctrl+O open, Cmd/Ctrl+S save, Esc clear selection, Del delete, Cmd/Ctrl+D duplicate, Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z redo, 1-4 load bookmark, Shift+1-4 save bookmark, Minimap klicken/ziehen = jump camera.</p>
           <div className="wb-command-legend">
             <h4>Command Legend</h4>
             <p><strong>Camera:</strong> Space/MiddleMouse + Drag pan, Wheel zoom, Pfeile pan, F frame selection, Shift+F fit map, Minimap click/drag jump.</p>
             <p><strong>Tools:</strong> V select, M move, R resize, G cycles Abstract/Rendered/Blend, Drag empty area marquee, Shift+Click additive selection.</p>
-            <p><strong>Edit:</strong> Del/Backspace delete, Cmd/Ctrl+D duplicate, Alt+Pfeile nudge selected objects (Shift = coarse).</p>
+            <p><strong>Edit:</strong> Del/Backspace delete, Cmd/Ctrl+D duplicate, Alt+Pfeile nudge selected objects (Shift = coarse), [ ] depth nudge (Shift = 10x).</p>
             <p><strong>History:</strong> Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z oder Cmd/Ctrl+Y redo.</p>
             <p><strong>Selection:</strong> Cmd/Ctrl+A select all objects, Esc clear selection, Cmd/Ctrl+O open JSON, Cmd/Ctrl+S save JSON.</p>
             <p><strong>Depth:</strong> Depth Guides + Player Depth Preview zeigen Front/Back-Layering gegen Player-Y.</p>
@@ -2475,6 +2614,12 @@ function App() {
                 <button onClick={() => nudgeSelectedObjects(1, 0)}>Nudge +X</button>
                 <button onClick={() => nudgeSelectedObjects(0, -1)}>Nudge -Y</button>
                 <button onClick={() => nudgeSelectedObjects(0, 1)}>Nudge +Y</button>
+              </div>
+              <div className="wb-inline-buttons">
+                <button onClick={() => bumpSelectedDepth(-1)}>-Depth</button>
+                <button onClick={() => bumpSelectedDepth(1)}>+Depth</button>
+                <button onClick={() => reorderSelectedDepth('back')}>Send to Back</button>
+                <button onClick={() => reorderSelectedDepth('front')}>Bring to Front</button>
               </div>
               <p className="wb-hint">Marquee: leerer Bereich ziehen. Shift+Click add/remove.</p>
             </>
@@ -2499,6 +2644,10 @@ function App() {
                 <button onClick={() => updateObject(selectedObject.id, { depth: Math.round(selectedObject.y) })}>Depth = Y</button>
                 <button onClick={() => nudgeObjectDepth(selectedObject.id, 1)}>+1</button>
                 <button onClick={() => nudgeObjectDepth(selectedObject.id, 10)}>+10</button>
+              </div>
+              <div className="wb-inline-buttons">
+                <button onClick={() => reorderSelectedDepth('back')}>Send to Back</button>
+                <button onClick={() => reorderSelectedDepth('front')}>Bring to Front</button>
               </div>
               <div className="wb-inline-buttons">
                 <button onClick={() => applyObjectLayerPreset(selectedObject.id, 'backdrop')}>Preset: Backdrop</button>

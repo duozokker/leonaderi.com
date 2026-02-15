@@ -238,8 +238,19 @@ textarea {
 }
 
 .wb-stage {
+  background: #0b1220;
+}
+
+.wb-stage-wrap {
+  width: 100%;
+  height: clamp(360px, 62vh, 820px);
+  min-height: 320px;
   border: 1px solid #334155;
   background: #0b1220;
+}
+
+.wb-stage {
+  border: 0;
 }
 
 .wb-dialogue-tab,
