@@ -2,7 +2,7 @@
 
 Playable, Pokemon-like pixel portfolio website with modular content architecture.
 
-Live page: <https://duozokker.github.io/leonaderi.com/>
+Live page: <https://leonaderi.com/>
 
 ## What Is Implemented
 - 2D explorable overworld with retro pixel styling
@@ -15,23 +15,12 @@ Live page: <https://duozokker.github.io/leonaderi.com/>
 - Dialog windows with pixel preview and contextual actions
 - Confirm-before-redirect flow for external links
 - Company HQ, LinkedIn, GitHub, projects, social buildings, coming-soon + ruins states
-- GitHub Pages deployment workflow
+- Vercel deployment workflow
 
 ## Quick Start
 ```bash
 npm install
 npm run dev
-```
-
-Worldbuilder V2 (separate local app):
-```bash
-npm run worldbuilder:dev
-```
-
-Compile world JSON to runtime files:
-```bash
-npm run world:validate
-npm run world:compile
 ```
 
 Build + preview:
@@ -49,38 +38,22 @@ Then adjust content or add new houses in:
 
 ## Project Structure
 ```txt
-apps/
-└─ worldbuilder/       # Separate local world editor (React + Konva + React Flow)
-packages/
-├─ world-schema/       # Authoring/runtime zod schemas
-└─ world-compiler/     # JSON -> runtime TS compiler bridge
-world-data/
-└─ project.world.v1.json
 src/
-├─ content/
-│  ├─ glossary.ts      # GENERATED from world-data compiler
-│  ├─ profile.ts       # Central social/company URLs
-│  └─ types.ts         # Typed data model
-├─ game/
-│  ├─ core/eventBus.ts
-│  ├─ scenes/OverworldScene.ts
-│  ├─ systems/mobileInputState.ts
-│  └─ entities/interactable.ts
-├─ ui/
-│  ├─ components/
-│  └─ hooks/
-└─ App.tsx
+├─ content/            # Canonical portfolio entries and metadata
+├─ game/               # Runtime world, entities, systems
+├─ main.ts             # Game bootstrap
+└─ style.css           # UI overlay styles
 ```
 
-Detailed worldbuilder docs:
-- `docs/worldbuilder-v2.md`
-
 ## Deployment
-GitHub Pages deploy workflow:
-- `.github/workflows/deploy-pages.yml`
+Vercel config:
+- `vercel.json`
 
-Custom domain setup guide:
-- `docs/07-github-pages-deploy.md`
+Build command:
+- `npm run build`
+
+Output directory:
+- `dist`
 
 ## Asset + IP Note
 Use CC0 or properly licensed assets. Avoid shipping direct Pokemon/Nintendo sprite IP without explicit permission.

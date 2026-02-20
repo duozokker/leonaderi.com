@@ -2,7 +2,6 @@ import kaboom from "kaboom";
 import type { GameObj, KaboomCtx, Key } from "kaboom";
 import { MAP_OBJECTS, PLAYER_SPAWN, NPC_POSITIONS, TERRAIN_GRID, T_WATER, MAP_TILE_SIZE } from "./game/world/mapData";
 import { portfolioGlossary } from "./content/glossary";
-import { setupEditorUI } from "./editor";
 
 declare global {
     interface Window {
@@ -815,7 +814,6 @@ k.scene("main", async () => {
         k.onKeyPress(key as Key, triggerInteraction);
     }
 
-    setupEditorUI(k);
 });
 
 loadAssets().then(() => {

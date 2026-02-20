@@ -1,5 +1,4 @@
-// AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY.
-// Source: /Users/schayan/Dev/leonaderi.com/world-data/project.world.v1.json
+// Runtime map data for the portfolio world.
 
 export const MAP_TILE_SIZE = 16
 export const MAP_COLUMNS = 66

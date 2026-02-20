@@ -1,5 +1,4 @@
-// AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY.
-// Source: /Users/schayan/Dev/leonaderi.com/world-data/project.world.v1.json
+// Portfolio content registry.
 
 import type { PoiEntry } from './types'
 
