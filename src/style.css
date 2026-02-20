@@ -263,7 +263,7 @@ canvas {
   top: 0;
   left: 0;
   width: 100%;
-  padding: 24px;
+  padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) 24px max(24px, env(safe-area-inset-left));
   display: flex;
   justify-content: space-between;
   pointer-events: none;
@@ -314,6 +314,18 @@ canvas {
   pointer-events: auto;
 }
 
+.hud-zoom {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hud-zoom .hud-link {
+  width: 32px;
+  height: 32px;
+  font-size: 1rem !important;
+}
+
 .hud-link {
   display: flex;
   justify-content: center;
@@ -333,6 +345,7 @@ canvas {
   background-position: center;
   background-repeat: no-repeat;
   image-rendering: pixelated;
+  cursor: pointer;
 }
 
 .hud-link:hover {
@@ -421,9 +434,63 @@ canvas {
   box-shadow: 0px 0px 0px var(--border-dark);
 }
 
-@media (hover: none) and (pointer: coarse) {
+@media (max-width: 768px), (hover: none) and (pointer: coarse) {
   #mobile-controls {
     display: flex;
+  }
+  
+  #hud-ui {
+    padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 16px max(16px, env(safe-area-inset-left));
+  }
+  
+  .hud-profile {
+    padding: 8px 12px 8px 8px;
+    gap: 12px;
+  }
+  
+  .hud-avatar {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .hud-info h4 {
+    font-size: 0.65rem;
+  }
+  
+  .hud-link {
+    width: 36px;
+    height: 36px;
+    font-size: 0.5rem !important;
+  }
+
+  .hud-zoom .hud-link {
+    width: 32px;
+    height: 28px;
+    font-size: 0.8rem !important;
+  }
+  
+  /* Prevent dialog from overlapping the 'A' button */
+  #dialog-ui {
+    bottom: 170px; /* Above D-pad and Action button */
+    padding: 16px;
+    width: 90vw;
+  }
+  
+  .dialog-box {
+    gap: 12px;
+  }
+  
+  .dialog-avatar {
+    width: 48px;
+    height: 48px;
+  }
+  
+  #dialog-title {
+    font-size: 0.8rem;
+  }
+  
+  #dialog-body {
+    font-size: 0.6rem;
   }
 }
 

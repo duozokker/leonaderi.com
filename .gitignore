@@ -29,3 +29,4 @@ output/
 .env
 .env.*
 !.env.example
+leonaderi-world-export/

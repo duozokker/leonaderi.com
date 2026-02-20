@@ -2936,19 +2936,41 @@ export const MAP_OBJECTS: MapObject[] = [
     "y": 351,
     "width": 73,
     "height": 56,
-    "depth": 110
+    "depth": 367
+  },
+  {
+    "key": "objLinkedin",
+    "filename": "linkedin_house.png",
+    "x": 732.4000624219968,
+    "y": 186.40006242199684,
+    "width": 72,
+    "height": 88,
+    "depth": 212,
+    "poiId": "linkedin-house",
+    "collision": true,
+    "hitbox": {
+      "x": 0,
+      "y": 6,
+      "width": 60,
+      "height": 55
+    }
   },
   {
     "key": "objCompanyHall",
     "filename": "company_hall.png",
     "x": 550.5,
-    "y": 248.5,
+    "y": 247.5,
     "width": 95,
     "height": 79,
-    "depth": 127,
+    "depth": 271,
     "poiId": "company-hq",
     "collision": true,
-    "hitbox": { "x": 0, "y": 14, "width": 85, "height": 55 }
+    "hitbox": {
+      "x": 0,
+      "y": 14,
+      "width": 85,
+      "height": 55
+    }
   },
   {
     "key": "objCvArchive",
@@ -2957,79 +2979,15 @@ export const MAP_OBJECTS: MapObject[] = [
     "y": 302,
     "width": 96,
     "height": 97,
-    "depth": 127,
+    "depth": 331,
     "poiId": "projects-lab",
     "collision": true,
-    "hitbox": { "x": 0, "y": 0, "width": 70, "height": 60 }
-  },
-  {
-    "key": "objFlowerPatch",
-    "filename": "flower_patch.png",
-    "x": 695.5,
-    "y": 309.5,
-    "width": 60,
-    "height": 59,
-    "depth": 115
-  },
-  {
-    "key": "objFountain",
-    "filename": "fountain.png",
-    "x": 550,
-    "y": 328.5,
-    "width": 44,
-    "height": 44,
-    "depth": 140
-  },
-  {
-    "key": "objGithub",
-    "filename": "github_house.png",
-    "x": 394.5,
-    "y": 469.5,
-    "width": 100,
-    "height": 98,
-    "depth": 127,
-    "poiId": "github-house",
-    "collision": true,
-    "hitbox": { "x": 0, "y": 0, "width": 80, "height": 55 }
-  },
-  {
-    "key": "objLinkedin",
-    "filename": "linkedin_house.png",
-    "x": 732.4,
-    "y": 186.4,
-    "width": 72,
-    "height": 88,
-    "depth": 127,
-    "poiId": "linkedin-house",
-    "collision": true,
-    "hitbox": { "x": 0, "y": 6, "width": 60, "height": 55 }
-  },
-  {
-    "key": "objTree1",
-    "filename": "tree.png",
-    "x": 249,
-    "y": 486,
-    "width": 80,
-    "height": 112,
-    "depth": 145
-  },
-  {
-    "key": "objTree2",
-    "filename": "tree.png",
-    "x": 544,
-    "y": 174,
-    "width": 80,
-    "height": 112,
-    "depth": 145
-  },
-  {
-    "key": "objTree3",
-    "filename": "tree.png",
-    "x": 439,
-    "y": 204,
-    "width": 80,
-    "height": 112,
-    "depth": 145
+    "hitbox": {
+      "x": 0,
+      "y": 0,
+      "width": 70,
+      "height": 60
+    }
   },
   {
     "key": "objTwitterRuin",
@@ -3038,9 +2996,18 @@ export const MAP_OBJECTS: MapObject[] = [
     "y": 449.5,
     "width": 104,
     "height": 97,
-    "depth": 127,
+    "depth": 478,
     "poiId": "twitter-house",
     "collision": true
+  },
+  {
+    "key": "objFlowerPatch",
+    "filename": "flower_patch.png",
+    "x": 695.5,
+    "y": 309.5,
+    "width": 60,
+    "height": 59,
+    "depth": 327
   },
   {
     "key": "objYoutubeRuin",
@@ -3049,22 +3016,70 @@ export const MAP_OBJECTS: MapObject[] = [
     "y": 281,
     "width": 99,
     "height": 93,
-    "depth": 127,
+    "depth": 308,
     "poiId": "youtube-house",
     "collision": true
+  },
+  {
+    "key": "objTree1",
+    "filename": "tree.png",
+    "x": 250,
+    "y": 471,
+    "width": 77,
+    "height": 84,
+    "depth": 496
+  },
+  {
+    "key": "objGithub",
+    "filename": "github_house.png",
+    "x": 382,
+    "y": 450,
+    "width": 74,
+    "height": 71,
+    "depth": 471,
+    "poiId": "github-house",
+    "collision": true,
+    "hitbox": {
+      "x": 0,
+      "y": 0,
+      "width": 80,
+      "height": 55
+    }
+  },
+  {
+    "key": "objTree2",
+    "filename": "tree.png",
+    "x": 562,
+    "y": 162,
+    "width": 77,
+    "height": 84,
+    "depth": 187
+  },
+  {
+    "key": "objTree3",
+    "filename": "tree.png",
+    "x": 425,
+    "y": 172,
+    "width": 77,
+    "height": 84,
+    "depth": 197
   }
 ]
 
 export const MAP_OVERLAY = {
   "filename": "overlay_0.png",
   "x": 320,
-  "y": 144,
+  "y": 80,
   "width": 560,
   "height": 368,
   "depth": 9
 }
 
 export const NPC_POSITIONS = {
+  "playerSpawn": {
+    "x": 629,
+    "y": 245
+  },
   "guide": {
     "x": 513.5,
     "y": 312.5
@@ -3073,17 +3088,17 @@ export const NPC_POSITIONS = {
     "x": 363.5,
     "y": 324
   },
-  "villageNpc": {
-    "x": 240,
-    "y": 391
-  },
   "guideNpc2": {
     "x": 748,
     "y": 512
   },
-  "playerSpawn": {
-    "x": 629,
-    "y": 245
+  "villageNpc": {
+    "x": 240,
+    "y": 391
+  },
+  "cuteGirl": {
+    "x": 491,
+    "y": 165
   }
 }
 

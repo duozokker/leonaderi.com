@@ -27,6 +27,10 @@ const t = {
         npcVillagerText: "I heard Leo uses modern tech stacks like React, TypeScript, and Vite. He even built a custom map compiler for this world to parse Wang tiles seamlessly!",
         npcProjectsTitle: "Architect",
         npcProjectsText: "Leo is obsessed with clean UX. Notice how smoothly the camera follows you and how snappy the dialogs feel? That's his signature frontend polish.",
+        npcCuteGirlTitle: "Tourist",
+        npcCuteGirlText: "I'm just visiting! The weather is lovely here. I heard Leo built all of this in just a few days. That's incredible!",
+        npcFisherTitle: "Fisherman",
+        npcFisherText: "The sea is quiet today... Sometimes I see a bug float by, but Leo usually squashes them before I can catch 'em.",
         pois: {
             "company-hq": {
                 title: "Artesiana HQ",
@@ -90,6 +94,10 @@ const t = {
         npcVillagerText: "Ich habe gehört, Leo nutzt moderne Tech-Stacks wie React, TypeScript und Vite. Er hat sogar einen eigenen Map-Compiler für diese Welt geschrieben, um die Wang-Tiles nahtlos zu parsen!",
         npcProjectsTitle: "Architekt",
         npcProjectsText: "Leo liebt saubere UX. Bemerkst du, wie flüssig die Kamera dir folgt und wie snappy die Dialoge sind? Das ist sein typischer Frontend-Polish.",
+        npcCuteGirlTitle: "Touristin",
+        npcCuteGirlText: "Ich bin nur zu Besuch! Das Wetter ist toll hier. Ich habe gehört, dass Leo all das hier in nur wenigen Tagen gebaut hat. Unglaublich!",
+        npcFisherTitle: "Fischer",
+        npcFisherText: "Das Meer ist heute ruhig... Manchmal treibt ein Bug vorbei, aber Leo behebt ihn meistens, bevor ich ihn fangen kann.",
         pois: {
             "company-hq": {
                 title: "Artesiana HQ",
@@ -166,6 +174,8 @@ async function loadAssets() {
     k.loadSprite("guide", "/assets/game/pixellab/characters/npc/guide/south.png");
     k.loadSprite("recruiter", "/assets/game/pixellab/characters/npc/recruiter/south.png");
     k.loadSprite("villager", "/assets/game/pixellab/characters/npc/south.png");
+    k.loadSprite("villager-east", "/assets/game/pixellab/characters/npc/east.png");
+    k.loadSprite("cuteGirl", "/assets/game/pixellab/characters/npc/cute_girl.png");
 
     // Map Overlays
     k.loadSprite("mapOverlay", `/assets/game/map/map-composite.png`);
@@ -262,12 +272,13 @@ k.scene("main", async () => {
         // Create explicit hitboxes if provided (to handle large transparent sprites like the Github house), otherwise fallback to the full sprite size
         // Using offset with a center-anchored Rect shape allows precise control relative to the sprite center.
         const customHitbox = obj.hitbox ? k.area({ shape: new k.Rect(k.vec2(0), obj.hitbox.width, obj.hitbox.height), offset: k.vec2(obj.hitbox.x, obj.hitbox.y) }) : k.area();
+        const hitboxBottomY = obj.hitbox ? (obj.hitbox.y + obj.hitbox.height / 2) : (obj.height / 2 - 4);
 
         k.add([
             k.sprite(obj.key),
             k.pos(obj.x, obj.y),
             k.anchor("center"),
-            k.z(obj.filename.includes("bridge") ? -5 : obj.y + obj.height / 2 - 8), // Bridge should always be behind player
+            k.z(obj.filename.includes("bridge") ? -5 : obj.y + hitboxBottomY), // Bridge should always be behind player
             hasCol ? customHitbox : k.area({ shape: new k.Rect(k.vec2(0), 0, 0) }),
             hasCol ? k.body({ isStatic: true }) : null,
             // Tag determines if player can interact with space
@@ -299,7 +310,8 @@ k.scene("main", async () => {
         { key: "guide", pos: NPC_POSITIONS.guide, id: "guide_fountain" }, // The guy at the fountain
         { key: "recruiter", pos: NPC_POSITIONS.recruiter, id: "recruiter" }, // The recruiter at the HQ
         { key: "villager", pos: NPC_POSITIONS.villageNpc, id: "villager_ruins" }, // Left ruins
-        { key: "villager", pos: NPC_POSITIONS.guideNpc2, id: "villager_projects" } // Bottom right
+        { key: "villager-east", pos: NPC_POSITIONS.guideNpc2, id: "fisher" }, // Bottom right
+        { key: "cuteGirl", pos: NPC_POSITIONS.cuteGirl, id: "cute_girl" }
     ];
 
     for (const npc of npcs) {
@@ -309,7 +321,7 @@ k.scene("main", async () => {
             k.anchor("center"),
             k.area({ shape: new k.Rect(k.vec2(0, 10), 12, 12) }),
             k.body({ isStatic: true }),
-            k.z(npc.pos.y + 6), // Perfect top-down Y-sorting
+            k.z(npc.pos.y + 16), // Perfect top-down Y-sorting matching physics hitbox bottom
             "npc",
             { npcId: npc.id }
         ]);
@@ -322,7 +334,7 @@ k.scene("main", async () => {
         k.anchor("center"),
         k.area({ shape: new k.Rect(k.vec2(0, 10), 12, 12) }),
         k.body(),
-        k.z(PLAYER_SPAWN.y + 10),
+        k.z(PLAYER_SPAWN.y + 16),
         "player"
     ]);
 
@@ -552,7 +564,8 @@ k.scene("main", async () => {
     }
 
     // Zero-allocation camera variables
-    let currentZoom = window.innerWidth < 768 ? 1.8 : 3.5;
+    let baseZoom = window.innerWidth < 768 ? 1.8 : 3.5;
+    let currentZoom = baseZoom;
     const camScaleCache = k.vec2(currentZoom);
     const camPosCache = k.vec2(0, 0);
 
@@ -560,18 +573,48 @@ k.scene("main", async () => {
     k.camScale(camScaleCache);
 
     k.onResize(() => {
-        // Only run responsive check on actual browser resize, not every frame
-        currentZoom = window.innerWidth < 768 ? 1.8 : 3.5;
-        camScaleCache.x = currentZoom;
-        camScaleCache.y = currentZoom;
-        k.camScale(camScaleCache);
-        
-        // Keeps camera in bounds correctly if viewport changes bounds significantly
-        k.camPos(k.camPos()); 
+        // Only update base zoom, maintain relative scale if user zoomed
+        const newBaseZoom = window.innerWidth < 768 ? 1.8 : 3.5;
+        if (baseZoom !== newBaseZoom) {
+             const ratio = currentZoom / baseZoom;
+             baseZoom = newBaseZoom;
+             currentZoom = baseZoom * ratio;
+             camScaleCache.x = currentZoom;
+             camScaleCache.y = currentZoom;
+             k.camScale(camScaleCache);
+             k.camPos(k.camPos());
+        }
     });
+
+    // Zoom Controls
+    const btnZoomIn = document.getElementById("btn-zoom-in");
+    const btnZoomOut = document.getElementById("btn-zoom-out");
+    
+    if (btnZoomIn) {
+        btnZoomIn.addEventListener("click", () => {
+            currentZoom = Math.min(currentZoom * 1.2, 6.0); // Max zoom
+            camScaleCache.x = currentZoom;
+            camScaleCache.y = currentZoom;
+            k.camScale(camScaleCache);
+            k.camPos(k.camPos()); // Re-clamp position
+        });
+    }
+    
+    if (btnZoomOut) {
+        btnZoomOut.addEventListener("click", () => {
+            currentZoom = Math.max(currentZoom / 1.2, window.innerWidth < 768 ? 1.0 : 1.5); // Min zoom
+            camScaleCache.x = currentZoom;
+            camScaleCache.y = currentZoom;
+            k.camScale(camScaleCache);
+            k.camPos(k.camPos()); // Re-clamp position
+        });
+    }
 
     // Camera follow with lerp and clamp to never show black borders
     player.onUpdate(() => {
+        // Dynamic Y-Sorting for player
+        player.z = player.pos.y + 16;
+
         // Clamp boundaries
         const viewW = k.width() / currentZoom / 2;
         const viewH = k.height() / currentZoom / 2;
@@ -757,9 +800,12 @@ k.scene("main", async () => {
                 } else if (target.npcId === "villager_ruins") {
                     title = tr.npcVillagerTitle;
                     text = tr.npcVillagerText;
-                } else if (target.npcId === "villager_projects") {
-                    title = tr.npcProjectsTitle;
-                    text = tr.npcProjectsText;
+                } else if (target.npcId === "fisher") {
+                    title = tr.npcFisherTitle;
+                    text = tr.npcFisherText;
+                } else if (target.npcId === "cute_girl") {
+                    title = tr.npcCuteGirlTitle;
+                    text = tr.npcCuteGirlText;
                 } else if (target.npcId === "recruiter") {
                     title = tr.npcRecruiterTitle;
                     recruiterTalkCount++;
