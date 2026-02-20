@@ -34,9 +34,9 @@ export const portfolioGlossary: PoiEntry[] = [
     "actions": [
       {
         "id": "company-website",
-        "label": "Firmenwebsite oeffnen",
+        "label": "Firmenwebsite öffnen",
         "type": "open_link",
-        "href": "https://example.com",
+        "href": "https://artesiana.de",
         "confirmMessage": "Zur Firmenwebsite wechseln?"
       },
       {
@@ -51,12 +51,12 @@ export const portfolioGlossary: PoiEntry[] = [
     "name": "Ruinen",
     "kind": "coming_soon",
     "status": "ruins",
-    "description": "Verstaubtes Haus als Platzhalter fuer zukuenftige Releases.",
+    "description": "Verstaubtes Haus als Platzhalter für zukünftige Releases.",
     "accentColor": "#7b7b7b",
     "spriteHint": "house_ruins",
     "dialog": {
       "title": "Production Zone",
-      "body": "Dieses Haus wird spaeter mit neuem Content repariert und freigeschaltet."
+      "body": "Dieses Haus wird später mit neuem Content repariert und freigeschaltet."
     },
     "tags": [
       "ruins",
@@ -111,10 +111,10 @@ export const portfolioGlossary: PoiEntry[] = [
     "actions": [
       {
         "id": "github-open",
-        "label": "GitHub oeffnen",
+        "label": "GitHub öffnen",
         "type": "open_link",
-        "href": "https://github.com/your-handle",
-        "confirmMessage": "GitHub in neuem Tab oeffnen?"
+        "href": "https://github.com/duozokker",
+        "confirmMessage": "GitHub in neuem Tab öffnen?"
       }
     ]
   },
@@ -148,10 +148,10 @@ export const portfolioGlossary: PoiEntry[] = [
     "actions": [
       {
         "id": "linkedin-open",
-        "label": "LinkedIn oeffnen",
+        "label": "LinkedIn öffnen",
         "type": "open_link",
-        "href": "https://www.linkedin.com/in/your-handle",
-        "confirmMessage": "LinkedIn in neuem Tab oeffnen?"
+        "href": "https://www.linkedin.com/in/leo-naderi-3a9761307",
+        "confirmMessage": "LinkedIn in neuem Tab öffnen?"
       }
     ]
   },
@@ -160,7 +160,7 @@ export const portfolioGlossary: PoiEntry[] = [
     "name": "Guide NPC",
     "kind": "npc",
     "status": "live",
-    "description": "Der Start-NPC erklaert die Welt, Steuerung und Ziele.",
+    "description": "Der Start-NPC erklärt die Welt, Steuerung und Ziele.",
     "accentColor": "#69b578",
     "spriteHint": "npc_guide",
     "dialog": {
@@ -194,7 +194,7 @@ export const portfolioGlossary: PoiEntry[] = [
     "name": "Recruiter NPC",
     "kind": "npc",
     "status": "live",
-    "description": "Geheimer NPC mit Mini-Quest fuer neugierige Besucher.",
+    "description": "Geheimer NPC mit Mini-Quest für neugierige Besucher.",
     "accentColor": "#c3b85f",
     "spriteHint": "npc_recruiter",
     "dialog": {
@@ -269,7 +269,7 @@ export const portfolioGlossary: PoiEntry[] = [
     "spriteHint": "sign_about",
     "dialog": {
       "title": "About This World",
-      "body": "Diese Website ist deine Portfolio-Welt. Jede Location repraesentiert einen Teil deiner Arbeit."
+      "body": "Diese Website ist deine Portfolio-Welt. Jede Location repräsentiert einen Teil deiner Arbeit."
     },
     "tags": [
       "sign",
@@ -298,7 +298,7 @@ export const portfolioGlossary: PoiEntry[] = [
     "name": "Steuerungs-Schild",
     "kind": "sign",
     "status": "live",
-    "description": "Kurze Steuerungsinfo fuer Desktop und Mobile.",
+    "description": "Kurze Steuerungsinfo für Desktop und Mobile.",
     "accentColor": "#8b6b4a",
     "spriteHint": "sign_controls",
     "dialog": {
@@ -337,7 +337,7 @@ export const portfolioGlossary: PoiEntry[] = [
     "spriteHint": "house_twitter",
     "dialog": {
       "title": "Twitter Kiosk",
-      "body": "Der Kanal wird vorbereitet. Du kannst ihn spaeter einfach per Glossar aktivieren."
+      "body": "Der Kanal wird vorbereitet. Du kannst ihn später einfach per Glossar aktivieren."
     },
     "tags": [
       "twitter",
@@ -357,10 +357,10 @@ export const portfolioGlossary: PoiEntry[] = [
     "actions": [
       {
         "id": "twitter-open",
-        "label": "Twitter oeffnen",
+        "label": "Twitter öffnen",
         "type": "open_link",
         "href": "https://x.com/your-handle",
-        "confirmMessage": "Twitter in neuem Tab oeffnen?"
+        "confirmMessage": "Twitter in neuem Tab öffnen?"
       }
     ]
   },
@@ -369,7 +369,7 @@ export const portfolioGlossary: PoiEntry[] = [
     "name": "YouTube Studio",
     "kind": "social",
     "status": "coming_soon",
-    "description": "Geplantes Studio fuer Videos, Devlogs und Tutorials.",
+    "description": "Geplantes Studio für Videos, Devlogs und Tutorials.",
     "accentColor": "#c4302b",
     "spriteHint": "house_youtube",
     "dialog": {

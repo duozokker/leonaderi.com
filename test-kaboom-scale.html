@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }
+        canvas { display: block; width: 100vw; height: 100vh; }
+    </style>
+</head>
+<body>
+    <canvas id="game-canvas"></canvas>
+    <script src="https://unpkg.com/kaboom@3000.1.17/dist/kaboom.js"></script>
+    <script>
+        const k = kaboom({
+            global: false,
+            canvas: document.getElementById("game-canvas")
+        });
+        k.add([k.rect(100, 100), k.pos(k.center()), k.anchor("center"), k.color(255, 0, 0)]);
+        k.onUpdate(() => {
+            console.log(k.width(), k.canvas.width);
+        });
+    </script>
+</body>
+</html>

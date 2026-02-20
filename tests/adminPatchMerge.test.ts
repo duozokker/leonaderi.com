@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { portfolioGlossary } from '../src/content/glossary'
+import { MAP_OBJECT_OFFSET_X, MAP_OBJECT_OFFSET_Y } from '../src/game/world/mapData'
 import { buildMergedAdminData } from '../src/ui/admin/services/patchMerge'
 import { createEmptyPatch } from '../src/ui/admin/services/patchStorage'
 
@@ -35,5 +36,11 @@ describe('buildMergedAdminData', () => {
     expect(bridge?.y).toBe(701)
     expect(merged.npcPositions.guide.x).toBe(200)
     expect(merged.npcPositions.guide.y).toBe(201)
+  })
+
+  it('uses compiled map offset as default global offset', () => {
+    const merged = buildMergedAdminData(portfolioGlossary, createEmptyPatch())
+    expect(merged.globalOffset.x).toBe(MAP_OBJECT_OFFSET_X)
+    expect(merged.globalOffset.y).toBe(MAP_OBJECT_OFFSET_Y)
   })
 })

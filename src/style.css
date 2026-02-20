@@ -1,0 +1,552 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+:root {
+  --font-pixel: 'Press Start 2P', monospace;
+  /* Cozy Retro RPG Palette - Pokemon / Stardew Inspired */
+  --bg-dark: #2d3748; /* Dark border color */
+  --bg-panel: #fffae8; /* Cream paper background */
+  --border-dark: #2d3748; /* Thick dark outline */
+  --text-main: #2d3748; /* Readable dark text */
+  --text-muted: #718096; /* Subtle info text */
+  --accent: #e53e3e; /* Pokedex Red */
+  --accent-hover: #c53030;
+  --success: #38a169; /* Health green */
+  --hud-bg: #e2e8f0; /* Light gray for HUD */
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body, html {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: #1a202c;
+  font-family: var(--font-pixel);
+  color: var(--text-main);
+  text-rendering: optimizeSpeed;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#game-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  background-color: #2b6cb0; /* Ocean blue background behind map */
+  overflow: hidden;
+}
+
+canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  image-rendering: pixelated;
+  outline: none; /* No ugly focus ring */
+}
+
+/* Common Retro Window Style */
+.retro-window {
+  background: var(--bg-panel);
+  border: 4px solid var(--border-dark);
+  border-radius: 8px; /* Cute slightly rounded corners */
+  /* Extra inner box-shadow for double-border retro style */
+  box-shadow: 
+    inset 0 0 0 4px var(--bg-panel), 
+    inset 0 0 0 6px var(--border-dark), 
+    6px 6px 0px rgba(45, 55, 72, 0.4); 
+  color: var(--text-main);
+  position: relative; /* to ensure the inner shadow sits above the background properly */
+}
+
+/* Debug Inspection Panel */
+#debug-panel {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  background: rgba(0, 0, 0, 0.85);
+  border: 4px solid var(--success);
+  border-radius: 0;
+  box-shadow: 4px 4px 0px rgba(0,0,0,0.9);
+  padding: 16px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+  min-width: 250px;
+}
+
+#debug-panel.hidden {
+  display: none;
+}
+
+#debug-panel h3 {
+  color: #fff;
+  font-size: 0.8rem;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  border-bottom: 2px dashed var(--success);
+  padding-bottom: 4px;
+}
+
+.debug-row {
+  font-size: 0.6rem;
+  color: var(--success);
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.debug-val {
+  color: #fff;
+}
+
+.debug-hint {
+  font-size: 0.5rem;
+  color: #888;
+  margin-top: 12px;
+  text-align: right;
+}
+
+/* Dialog UI */
+#dialog-ui {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 640px;
+  max-width: 95vw;
+  padding: 24px;
+  z-index: 1000;
+  display: flex;
+  opacity: 1;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+#dialog-ui.hidden {
+  opacity: 0;
+  transform: translate(-50%, 20px);
+  pointer-events: none;
+}
+
+.dialog-box {
+  display: flex;
+  gap: 20px;
+  width: 100%;
+}
+
+.dialog-avatar {
+  width: 72px;
+  height: 72px;
+  background-color: var(--hud-bg);
+  border-radius: 8px;
+  border: 4px solid var(--border-dark);
+  flex-shrink: 0;
+  background-image: url('/assets/pictures/leo-headshot.png');
+  background-size: cover;
+  background-position: center;
+  image-rendering: pixelated;
+}
+
+.dialog-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#dialog-title {
+  color: var(--text-main);
+  font-family: var(--font-pixel);
+  font-size: 1rem;
+  margin: 0;
+  line-height: 1.4;
+  text-transform: uppercase;
+  border-bottom: 4px dashed #cbd5e0;
+  padding-bottom: 8px;
+}
+
+#dialog-body {
+  font-family: var(--font-pixel);
+  font-size: 0.75rem;
+  line-height: 1.8;
+  color: var(--text-main);
+}
+
+/* Buttons */
+.retro-btn {
+  background: var(--accent);
+  color: white;
+  border: 4px solid var(--border-dark);
+  border-radius: 8px;
+  padding: 14px 20px;
+  font-family: var(--font-pixel);
+  font-size: 0.7rem;
+  cursor: pointer;
+  text-transform: uppercase;
+  box-shadow: 0px 6px 0px var(--border-dark); /* Push down effect base */
+  transition: transform 0.1s, box-shadow 0.1s;
+  margin-right: 8px; /* For dialog actions */
+}
+
+.retro-btn:hover {
+  background: var(--accent-hover);
+}
+
+.retro-btn:active {
+  box-shadow: 0px 0px 0px var(--border-dark);
+  transform: translateY(6px);
+}
+
+/* Editor Overlay */
+#editor-ui {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 380px;
+  height: 100%;
+  border-left: 4px solid var(--border-dark);
+  border-radius: 0; /* Override window radius to stick to edge */
+  box-shadow: -6px 0px 0px rgba(45, 55, 72, 0.4);
+  padding: 24px;
+  transform: translateX(0);
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+#editor-ui.hidden {
+  transform: translateX(100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.editor-panel h2 {
+  font-size: 1rem;
+  margin-bottom: 12px;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+
+.editor-panel p {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+#inspector {
+  background: var(--hud-bg);
+  border: 4px solid var(--border-dark);
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+#inspector.hidden {
+  display: none;
+}
+
+#inspector h3, #inspector h4 {
+  font-size: 0.8rem;
+  color: var(--text-main);
+  text-transform: uppercase;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field-row {
+  display: flex;
+  gap: 12px;
+}
+
+label {
+  font-size: 0.6rem;
+  color: var(--text-main);
+  text-transform: uppercase;
+}
+
+input[type="text"],
+input[type="number"],
+textarea {
+  background: #fff;
+  border: 4px solid var(--border-dark);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--text-main);
+  font-family: var(--font-pixel);
+  font-size: 0.7rem;
+  outline: none;
+}
+
+textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+input:focus,
+textarea:focus {
+  border-color: var(--accent);
+}
+
+button.primary-btn {
+  background: var(--accent);
+  color: white;
+  border: 4px solid var(--border-dark);
+  border-radius: 8px;
+  padding: 14px;
+  font-size: 0.7rem;
+  font-family: var(--font-pixel);
+  cursor: pointer;
+  margin-top: 12px;
+  text-transform: uppercase;
+  box-shadow: 0px 4px 0px var(--border-dark);
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+button.primary-btn:active {
+  transform: translateY(4px);
+  box-shadow: 0px 0px 0px var(--border-dark);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 12px; }
+::-webkit-scrollbar-track { background: var(--bg-panel); border-left: 4px solid var(--border-dark); }
+::-webkit-scrollbar-thumb { background: var(--accent); border: 2px solid var(--border-dark); border-radius: 8px; }
+
+/* Onboarding Screen */
+#onboarding-ui {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7); /* Deep dark overlay */
+  z-index: 2000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+#onboarding-ui.hidden {
+  display: none;
+}
+
+.onboarding-content {
+  padding: 40px;
+  max-width: 600px;
+  width: 90vw;
+}
+
+.onboarding-content h2 {
+  font-size: 1.4rem;
+  margin-bottom: 24px;
+  color: var(--text-main);
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+
+.onboarding-content p {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 40px;
+  line-height: 2;
+}
+
+.onboarding-content .retro-btn {
+  font-size: 1rem;
+  padding: 16px 32px;
+}
+
+/* HUD Overlay */
+#hud-ui {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 24px;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+  z-index: 500;
+}
+
+.hud-profile {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--bg-panel);
+  border: 4px solid var(--border-dark);
+  border-radius: 8px;
+  box-shadow: 6px 6px 0px rgba(45, 55, 72, 0.4);
+  padding: 12px 20px 12px 12px;
+  pointer-events: auto;
+}
+
+.hud-avatar {
+  width: 48px;
+  height: 48px;
+  background-image: url('/assets/pictures/leo-headshot.png');
+  background-size: cover;
+  background-position: center;
+  border: 4px solid var(--border-dark);
+  border-radius: 8px;
+  background-color: var(--hud-bg);
+  image-rendering: pixelated;
+}
+
+.hud-info h4 {
+  font-family: var(--font-pixel);
+  font-size: 0.8rem;
+  color: var(--text-main);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.hud-info p {
+  font-family: var(--font-pixel);
+  font-size: 0.5rem;
+  color: var(--text-muted);
+}
+
+.hud-links {
+  display: flex;
+  gap: 12px;
+  pointer-events: auto;
+}
+
+.hud-link {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 48px;
+  height: 48px;
+  background-color: var(--bg-panel);
+  border: 4px solid var(--border-dark);
+  border-radius: 8px;
+  box-shadow: 6px 6px 0px rgba(45, 55, 72, 0.4);
+  color: var(--text-main);
+  text-decoration: none;
+  font-family: var(--font-pixel);
+  font-size: 0.7rem;
+  transition: transform 0.1s;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+
+.hud-link:hover {
+  background-color: var(--hud-bg);
+}
+
+.hud-link:active {
+  box-shadow: 0px 0px 0px var(--border-dark);
+  transform: translateY(6px);
+}
+
+/* Mobile Controls */
+#mobile-controls {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  right: 20px;
+  display: none;
+  justify-content: space-between;
+  align-items: flex-end;
+  z-index: 500;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
+}
+
+.dpad {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  pointer-events: auto;
+}
+
+.dpad-btn {
+  position: absolute;
+  width: 46px;
+  height: 46px;
+  background: var(--bg-panel);
+  border: 4px solid var(--border-dark);
+  border-radius: 8px;
+  color: var(--border-dark);
+  box-shadow: 0px 4px 0px var(--border-dark);
+}
+
+.dpad-btn:active {
+  background: var(--hud-bg);
+  box-shadow: 0px 0px 0px var(--border-dark);
+  transform: translateY(4px);
+}
+
+.dpad-btn.up { top: 0; left: 46px; }
+.dpad-btn.down { bottom: 0; left: 46px; }
+.dpad-btn.left { top: 46px; left: 0; }
+.dpad-btn.right { top: 46px; right: 0; }
+.dpad-center {
+  position: absolute;
+  top: 46px; left: 46px; width: 46px; height: 46px;
+  background: var(--hud-bg);
+  border: 4px solid var(--border-dark);
+  border-radius: 8px;
+}
+
+.action-buttons {
+  pointer-events: auto;
+}
+
+.action-btn {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 4px solid var(--border-dark);
+  color: white;
+  font-family: var(--font-pixel);
+  font-size: 1.4rem;
+  box-shadow: 0px 6px 0px var(--border-dark);
+}
+.action-btn:active {
+  transform: translateY(6px);
+  box-shadow: 0px 0px 0px var(--border-dark);
+}
+
+@media (hover: none) and (pointer: coarse) {
+  #mobile-controls {
+    display: flex;
+  }
+}
+
+#dialog-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+#dialog-actions.hidden {
+  display: none;
+}

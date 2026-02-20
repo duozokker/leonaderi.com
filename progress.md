@@ -409,3 +409,15 @@ Original prompt: verbessere den weiter! der ist immer noch buggy und viele sache
   - Figma keyboard shortcuts (selection + workflow speed patterns): https://help.figma.com/hc/en-us/articles/360040328653-Use-keyboard-shortcuts-in-Figma
   - VS Code command palette behavior model: https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette
   - Tiled layout/layer editing expectations: https://doc.mapeditor.org/en/stable/manual/layers/
+- 2026-02-17 movement/offset hotfix pass:
+  - Fixed admin merge default offset to compile output (`MAP_OBJECT_OFFSET_X/Y`) instead of `0/0`.
+  - Hardened patch storage normalization + one-time legacy migration key (`admin:worldBuilder:offset-migration:v1`) so old drafts with `mapOffset: {0,0}` are auto-corrected to compile defaults.
+  - Added safe player spawn resolver in `OverworldScene` to relocate to nearest walkable tile if spawn would land in blocked terrain/solid POI.
+  - Debug offset reset key (`B`) now resets to compile defaults instead of `0/0`.
+  - Added/updated tests in `tests/adminPatchMerge.test.ts` and `tests/adminPatchStorage.test.ts`.
+  - Verification:
+    - `npm test -- tests/adminPatchMerge.test.ts tests/adminPatchStorage.test.ts` ✅
+    - `npm run lint` ✅
+    - `npm run build` ✅
+    - Playwright run: `output/portfolio-loop/offset-move-fix` + `output/portfolio-loop/offset-idle-default`.
+    - Browser migration check via devtools: legacy localStorage patch with `0/0` migrated to `{16,16}` and gameplay unblocked.

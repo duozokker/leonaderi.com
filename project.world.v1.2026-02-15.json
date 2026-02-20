@@ -2,8 +2,8 @@
   "meta": {
     "projectId": "leonaderi-world",
     "version": 1,
-    "createdAt": "2026-02-19T20:59:40.815Z",
-    "updatedAt": "2026-02-19T20:59:40.815Z",
+    "createdAt": "2026-02-14T20:16:22.916Z",
+    "updatedAt": "2026-02-15T00:52:26.394Z",
     "appVersion": "0.2.0"
   },
   "map": {
@@ -1133,8 +1133,8 @@
         1,
         2,
         2,
-        2,
         7,
+        2,
         2,
         2,
         2,
@@ -1201,7 +1201,7 @@
         1,
         2,
         2,
-        7,
+        2,
         2,
         2,
         3,
@@ -2940,10 +2940,10 @@
       "key": "objCompanyHall",
       "filename": "company_hall.png",
       "x": 550.5,
-      "y": 248.5,
+      "y": 247.5,
       "width": 95,
       "height": 79,
-      "depth": 127,
+      "depth": 248,
       "poiId": "company-hq",
       "collision": true,
       "renderGroup": "default",
@@ -2957,7 +2957,7 @@
       "y": 186.4,
       "width": 72,
       "height": 88,
-      "depth": 127,
+      "depth": 186,
       "poiId": "linkedin-house",
       "collision": true,
       "renderGroup": "default",
@@ -2967,11 +2967,11 @@
       "id": "obj-github",
       "key": "objGithub",
       "filename": "github_house.png",
-      "x": 394.5,
-      "y": 469.5,
-      "width": 100,
-      "height": 98,
-      "depth": 127,
+      "x": 382,
+      "y": 453,
+      "width": 74,
+      "height": 71,
+      "depth": 453,
       "poiId": "github-house",
       "collision": true,
       "renderGroup": "default",
@@ -2985,7 +2985,7 @@
       "y": 302,
       "width": 96,
       "height": 97,
-      "depth": 127,
+      "depth": 302,
       "poiId": "projects-lab",
       "collision": true,
       "renderGroup": "default",
@@ -2999,7 +2999,7 @@
       "y": 449.5,
       "width": 104,
       "height": 97,
-      "depth": 127,
+      "depth": 450,
       "poiId": "twitter-house",
       "collision": true,
       "renderGroup": "default",
@@ -3009,11 +3009,11 @@
       "id": "obj-youtube-ruin",
       "key": "objYoutubeRuin",
       "filename": "youtube_ruin.png",
-      "x": 291.5,
+      "x": 290.49,
       "y": 281,
       "width": 99,
       "height": 93,
-      "depth": 127,
+      "depth": 281,
       "poiId": "youtube-house",
       "collision": true,
       "renderGroup": "default",
@@ -3027,8 +3027,8 @@
       "y": 351,
       "width": 73,
       "height": 56,
-      "depth": 110,
-      "renderGroup": "default",
+      "depth": 351,
+      "renderGroup": "ground",
       "visible": true
     },
     {
@@ -3039,7 +3039,7 @@
       "y": 328.5,
       "width": 44,
       "height": 44,
-      "depth": 140,
+      "depth": 329,
       "renderGroup": "default",
       "visible": true
     },
@@ -3051,7 +3051,7 @@
       "y": 309.5,
       "width": 60,
       "height": 59,
-      "depth": 115,
+      "depth": 310,
       "renderGroup": "default",
       "visible": true
     },
@@ -3059,12 +3059,13 @@
       "id": "obj-tree1",
       "key": "objTree1",
       "filename": "tree.png",
-      "x": 249,
-      "y": 486,
-      "width": 80,
-      "height": 112,
-      "depth": 145,
-      "renderGroup": "default",
+      "x": 250.24,
+      "y": 491.87,
+      "width": 34.77,
+      "height": 35.35,
+      "depth": 492,
+      "collision": true,
+      "renderGroup": "foreground",
       "visible": true
     },
     {
@@ -3072,23 +3073,25 @@
       "key": "objTree2",
       "filename": "tree.png",
       "x": 544,
-      "y": 174,
-      "width": 80,
-      "height": 112,
-      "depth": 145,
-      "renderGroup": "default",
+      "y": 176,
+      "width": 25.09,
+      "height": 28.65,
+      "depth": 176,
+      "collision": true,
+      "renderGroup": "foreground",
       "visible": true
     },
     {
       "id": "obj-tree3",
       "key": "objTree3",
       "filename": "tree.png",
-      "x": 439,
-      "y": 204,
-      "width": 80,
-      "height": 112,
-      "depth": 145,
-      "renderGroup": "default",
+      "x": 438.33,
+      "y": 213.18,
+      "width": 20.04,
+      "height": 28.06,
+      "depth": 213,
+      "collision": true,
+      "renderGroup": "foreground",
       "visible": true
     }
   ],
@@ -3099,37 +3102,10 @@
       "shape": {
         "type": "rect",
         "rect": {
-          "x": 503,
-          "y": 208,
-          "width": 95,
-          "height": 79
-        }
-      },
-      "solid": true
-    },
-    {
-      "id": "col-construction-ruins",
-      "shape": {
-        "type": "rect",
-        "rect": {
-          "x": 250,
-          "y": 464,
-          "width": 64,
-          "height": 64
-        }
-      },
-      "solid": true
-    },
-    {
-      "id": "col-github-house",
-      "objectId": "obj-github",
-      "shape": {
-        "type": "rect",
-        "rect": {
-          "x": 345,
-          "y": 417.5,
-          "width": 74,
-          "height": 71
+          "x": 503.04,
+          "y": 227.99,
+          "width": 89.22,
+          "height": 59.34
         }
       },
       "solid": true
@@ -3141,35 +3117,23 @@
         "type": "rect",
         "rect": {
           "x": 696.4,
-          "y": 142.4,
+          "y": 168.23,
           "width": 72,
-          "height": 88
+          "height": 62.6
         }
       },
       "solid": true
     },
     {
-      "id": "col-npc-guide",
+      "id": "col-github-house",
+      "objectId": "obj-github",
       "shape": {
         "type": "rect",
         "rect": {
-          "x": 497.5,
-          "y": 296.5,
-          "width": 32,
-          "height": 32
-        }
-      },
-      "solid": true
-    },
-    {
-      "id": "col-npc-recruiter-secret",
-      "shape": {
-        "type": "rect",
-        "rect": {
-          "x": 347.5,
-          "y": 308,
-          "width": 32,
-          "height": 32
+          "x": 345,
+          "y": 433.33,
+          "width": 74,
+          "height": 55.49
         }
       },
       "solid": true
@@ -3181,23 +3145,9 @@
         "type": "rect",
         "rect": {
           "x": 752.5,
-          "y": 253.5,
+          "y": 272.4,
           "width": 96,
-          "height": 97
-        }
-      },
-      "solid": true
-    },
-    {
-      "id": "col-twitter-house",
-      "objectId": "obj-twitter-ruin",
-      "shape": {
-        "type": "rect",
-        "rect": {
-          "x": 580,
-          "y": 401,
-          "width": 104,
-          "height": 97
+          "height": 78.38
         }
       },
       "solid": true
@@ -3209,9 +3159,105 @@
         "type": "rect",
         "rect": {
           "x": 242,
-          "y": 234.5,
+          "y": 260.36,
           "width": 99,
-          "height": 93
+          "height": 67.54
+        }
+      },
+      "solid": true
+    },
+    {
+      "id": "col-twitter-house",
+      "objectId": "obj-twitter-ruin",
+      "shape": {
+        "type": "rect",
+        "rect": {
+          "x": 580,
+          "y": 417.91,
+          "width": 104,
+          "height": 80.34
+        }
+      },
+      "solid": true
+    },
+    {
+      "id": "col-npc-guide",
+      "shape": {
+        "type": "rect",
+        "rect": {
+          "x": 508.74,
+          "y": 307.87,
+          "width": 7.61,
+          "height": 10.74
+        }
+      },
+      "solid": true
+    },
+    {
+      "id": "col-npc-recruiter-secret",
+      "shape": {
+        "type": "rect",
+        "rect": {
+          "x": 354.12,
+          "y": 315.63,
+          "width": 17.75,
+          "height": 17.75
+        }
+      },
+      "solid": true
+    },
+    {
+      "id": "col-auto-1771109251177",
+      "objectId": "obj-fountain",
+      "shape": {
+        "type": "rect",
+        "rect": {
+          "x": 532,
+          "y": 324.98,
+          "width": 36,
+          "height": 22
+        }
+      },
+      "solid": true
+    },
+    {
+      "id": "col-auto-1771109271477",
+      "objectId": "obj-tree1",
+      "shape": {
+        "type": "rect",
+        "rect": {
+          "x": 236.85500000000002,
+          "y": 489.042,
+          "width": 26.770000000000003,
+          "height": 17.675
+        }
+      },
+      "solid": true
+    },
+    {
+      "id": "col-auto-1771109275139",
+      "objectId": "obj-tree3",
+      "shape": {
+        "type": "rect",
+        "rect": {
+          "x": 432.31,
+          "y": 210.9352,
+          "width": 12.04,
+          "height": 14.03
+        }
+      },
+      "solid": true
+    },
+    {
+      "id": "col-auto-1771109279148",
+      "objectId": "obj-tree2",
+      "shape": {
+        "type": "rect",
+        "rect": {
+          "x": 535.46,
+          "y": 173.71,
+          "width": 17.09,
+          "height": 14.32
         }
       },
       "solid": true
@@ -3225,10 +3271,10 @@
       "shape": {
         "type": "rect",
         "rect": {
-          "x": 503,
-          "y": 208,
-          "width": 95,
-          "height": 79
+          "x": 503.23,
+          "y": 208.81,
+          "width": 87.7,
+          "height": 72.93
         }
       },
       "objectId": "obj-company-hall",
@@ -3236,19 +3282,20 @@
       "enabled": true
     },
     {
-      "id": "trigger-construction-ruins",
+      "id": "trigger-linkedin-house",
       "type": "door",
-      "label": "Ruinen",
+      "label": "LinkedIn Haus",
       "shape": {
         "type": "rect",
         "rect": {
-          "x": 250,
-          "y": 464,
-          "width": 64,
-          "height": 64
+          "x": 696.4,
+          "y": 144.61,
+          "width": 72,
+          "height": 85.62
         }
       },
-      "interactionId": "int-construction-ruins",
+      "objectId": "obj-linkedin",
+      "interactionId": "int-linkedin-house",
       "enabled": true
     },
     {
@@ -3269,55 +3316,6 @@
       "enabled": true
     },
     {
-      "id": "trigger-linkedin-house",
-      "type": "door",
-      "label": "LinkedIn Haus",
-      "shape": {
-        "type": "rect",
-        "rect": {
-          "x": 696.4,
-          "y": 142.4,
-          "width": 72,
-          "height": 88
-        }
-      },
-      "objectId": "obj-linkedin",
-      "interactionId": "int-linkedin-house",
-      "enabled": true
-    },
-    {
-      "id": "trigger-npc-guide",
-      "type": "proximity",
-      "label": "Guide NPC",
-      "shape": {
-        "type": "rect",
-        "rect": {
-          "x": 497.5,
-          "y": 296.5,
-          "width": 32,
-          "height": 32
-        }
-      },
-      "interactionId": "int-npc-guide",
-      "enabled": true
-    },
-    {
-      "id": "trigger-npc-recruiter-secret",
-      "type": "proximity",
-      "label": "Recruiter NPC",
-      "shape": {
-        "type": "rect",
-        "rect": {
-          "x": 347.5,
-          "y": 308,
-          "width": 32,
-          "height": 32
-        }
-      },
-      "interactionId": "int-npc-recruiter-secret",
-      "enabled": true
-    },
-    {
       "id": "trigger-projects-lab",
       "type": "door",
       "label": "Fun Projects Lab",
@@ -3335,35 +3333,20 @@
       "enabled": true
     },
     {
-      "id": "trigger-sign-about",
-      "type": "interact",
-      "label": "About-Schild",
+      "id": "trigger-youtube-house",
+      "type": "door",
+      "label": "YouTube Studio",
       "shape": {
         "type": "rect",
         "rect": {
-          "x": 430,
-          "y": 304,
-          "width": 24,
-          "height": 26
+          "x": 242,
+          "y": 233.58,
+          "width": 99,
+          "height": 93.83
         }
       },
-      "interactionId": "int-sign-about",
-      "enabled": true
-    },
-    {
-      "id": "trigger-sign-controls",
-      "type": "interact",
-      "label": "Steuerungs-Schild",
-      "shape": {
-        "type": "rect",
-        "rect": {
-          "x": 540,
-          "y": 264,
-          "width": 24,
-          "height": 26
-        }
-      },
-      "interactionId": "int-sign-controls",
+      "objectId": "obj-youtube-ruin",
+      "interactionId": "int-youtube-house",
       "enabled": true
     },
     {
@@ -3374,9 +3357,9 @@
         "type": "rect",
         "rect": {
           "x": 580,
-          "y": 401,
+          "y": 398.04,
           "width": 104,
-          "height": 97
+          "height": 99.91
         }
       },
       "objectId": "obj-twitter-ruin",
@@ -3384,20 +3367,35 @@
       "enabled": true
     },
     {
-      "id": "trigger-youtube-house",
-      "type": "door",
-      "label": "YouTube Studio",
+      "id": "trigger-npc-guide",
+      "type": "proximity",
+      "label": "Guide NPC",
       "shape": {
         "type": "rect",
         "rect": {
-          "x": 242,
-          "y": 234.5,
-          "width": 99,
-          "height": 93
+          "x": 512,
+          "y": 304,
+          "width": 16.61,
+          "height": 15.82
         }
       },
-      "objectId": "obj-youtube-ruin",
-      "interactionId": "int-youtube-house",
+      "interactionId": "int-npc-guide",
+      "enabled": true
+    },
+    {
+      "id": "trigger-npc-recruiter-secret",
+      "type": "proximity",
+      "label": "Recruiter NPC",
+      "shape": {
+        "type": "rect",
+        "rect": {
+          "x": 352,
+          "y": 320,
+          "width": 18.69,
+          "height": 12.61
+        }
+      },
+      "interactionId": "int-npc-recruiter-secret",
       "enabled": true
     }
   ],
@@ -3422,14 +3420,15 @@
       ]
     },
     {
-      "id": "int-construction-ruins",
-      "triggerId": "trigger-construction-ruins",
+      "id": "int-linkedin-house",
+      "triggerId": "trigger-linkedin-house",
       "actions": [
         {
-          "id": "ruins-soon",
-          "label": "Noch geschlossen",
-          "type": "show_toast",
-          "message": "Noch geschlossen ist noch nicht verfuegbar."
+          "id": "linkedin-open",
+          "label": "LinkedIn oeffnen",
+          "type": "open_link_confirm",
+          "href": "https://www.linkedin.com/in/your-handle",
+          "confirmMessage": "LinkedIn in neuem Tab oeffnen?"
         }
       ]
     },
@@ -3447,15 +3446,39 @@
       ]
     },
     {
-      "id": "int-linkedin-house",
-      "triggerId": "trigger-linkedin-house",
+      "id": "int-projects-lab",
+      "triggerId": "trigger-projects-lab",
       "actions": [
         {
-          "id": "linkedin-open",
-          "label": "LinkedIn oeffnen",
+          "id": "projects-list",
+          "label": "Projektliste anzeigen",
+          "type": "open_modal",
+          "modalKey": "projects-list"
+        }
+      ]
+    },
+    {
+      "id": "int-youtube-house",
+      "triggerId": "trigger-youtube-house",
+      "actions": [
+        {
+          "id": "youtube-soon",
+          "label": "Coming Soon",
+          "type": "show_toast",
+          "message": "Coming Soon ist noch nicht verfuegbar."
+        }
+      ]
+    },
+    {
+      "id": "int-twitter-house",
+      "triggerId": "trigger-twitter-house",
+      "actions": [
+        {
+          "id": "twitter-open",
+          "label": "Twitter oeffnen",
           "type": "open_link_confirm",
-          "href": "https://www.linkedin.com/in/your-handle",
-          "confirmMessage": "LinkedIn in neuem Tab oeffnen?"
+          "href": "https://x.com/your-handle",
+          "confirmMessage": "Twitter in neuem Tab oeffnen?"
         }
       ]
     },
@@ -3482,67 +3505,6 @@
           "modalKey": "quest-modal"
         }
       ]
-    },
-    {
-      "id": "int-projects-lab",
-      "triggerId": "trigger-projects-lab",
-      "actions": [
-        {
-          "id": "projects-list",
-          "label": "Projektliste anzeigen",
-          "type": "open_modal",
-          "modalKey": "projects-list"
-        }
-      ]
-    },
-    {
-      "id": "int-sign-about",
-      "triggerId": "trigger-sign-about",
-      "actions": [
-        {
-          "id": "action-sign-about-coming-soon",
-          "label": "Coming soon",
-          "type": "show_toast",
-          "message": "Coming soon ist noch nicht verfuegbar."
-        }
-      ]
-    },
-    {
-      "id": "int-sign-controls",
-      "triggerId": "trigger-sign-controls",
-      "actions": [
-        {
-          "id": "action-sign-controls-coming-soon",
-          "label": "Coming soon",
-          "type": "show_toast",
-          "message": "Coming soon ist noch nicht verfuegbar."
-        }
-      ]
-    },
-    {
-      "id": "int-twitter-house",
-      "triggerId": "trigger-twitter-house",
-      "actions": [
-        {
-          "id": "twitter-open",
-          "label": "Twitter oeffnen",
-          "type": "open_link_confirm",
-          "href": "https://x.com/your-handle",
-          "confirmMessage": "Twitter in neuem Tab oeffnen?"
-        }
-      ]
-    },
-    {
-      "id": "int-youtube-house",
-      "triggerId": "trigger-youtube-house",
-      "actions": [
-        {
-          "id": "youtube-soon",
-          "label": "Coming Soon",
-          "type": "show_toast",
-          "message": "Coming Soon ist noch nicht verfuegbar."
-        }
-      ]
     }
   ],
   "dialogues": [
@@ -3564,18 +3526,18 @@
       ]
     },
     {
-      "id": "dlg-construction-ruins",
-      "title": "Production Zone",
-      "startNodeId": "line-construction-ruins",
+      "id": "dlg-linkedin-house",
+      "title": "LinkedIn",
+      "startNodeId": "line-linkedin-house",
       "nodes": [
         {
-          "id": "line-construction-ruins",
+          "id": "line-linkedin-house",
           "type": "line",
-          "speaker": "Ruinen",
-          "text": "Dieses Haus wird spaeter mit neuem Content repariert und freigeschaltet."
+          "speaker": "LinkedIn Haus",
+          "text": "Hier geht es direkt zu deinem Lebenslauf und professionellen Profil."
         },
         {
-          "id": "end-construction-ruins",
+          "id": "end-linkedin-house",
           "type": "end"
         }
       ]
@@ -3598,18 +3560,52 @@
       ]
     },
     {
-      "id": "dlg-linkedin-house",
-      "title": "LinkedIn",
-      "startNodeId": "line-linkedin-house",
+      "id": "dlg-projects-lab",
+      "title": "Fun Projects Lab",
+      "startNodeId": "line-projects-lab",
       "nodes": [
         {
-          "id": "line-linkedin-house",
+          "id": "line-projects-lab",
           "type": "line",
-          "speaker": "LinkedIn Haus",
-          "text": "Hier geht es direkt zu deinem Lebenslauf und professionellen Profil."
+          "speaker": "Fun Projects Lab",
+          "text": "Hier liegen deine coolen Experimente, Side Projects und Demos."
         },
         {
-          "id": "end-linkedin-house",
+          "id": "end-projects-lab",
+          "type": "end"
+        }
+      ]
+    },
+    {
+      "id": "dlg-youtube-house",
+      "title": "YouTube Studio",
+      "startNodeId": "line-youtube-house",
+      "nodes": [
+        {
+          "id": "line-youtube-house",
+          "type": "line",
+          "speaker": "YouTube Studio",
+          "text": "Diese Location ist noch im Bau. Bald erscheinen hier Video-Formate."
+        },
+        {
+          "id": "end-youtube-house",
+          "type": "end"
+        }
+      ]
+    },
+    {
+      "id": "dlg-twitter-house",
+      "title": "Twitter Kiosk",
+      "startNodeId": "line-twitter-house",
+      "nodes": [
+        {
+          "id": "line-twitter-house",
+          "type": "line",
+          "speaker": "Twitter Kiosk",
+          "text": "Der Kanal wird vorbereitet. Du kannst ihn spaeter einfach per Glossar aktivieren."
+        },
+        {
+          "id": "end-twitter-house",
           "type": "end"
         }
       ]
@@ -3649,18 +3645,18 @@
       ]
     },
     {
-      "id": "dlg-projects-lab",
-      "title": "Fun Projects Lab",
-      "startNodeId": "line-projects-lab",
+      "id": "dlg-sign-controls",
+      "title": "Controls",
+      "startNodeId": "line-sign-controls",
       "nodes": [
         {
-          "id": "line-projects-lab",
+          "id": "line-sign-controls",
           "type": "line",
-          "speaker": "Fun Projects Lab",
-          "text": "Hier liegen deine coolen Experimente, Side Projects und Demos."
+          "speaker": "Steuerungs-Schild",
+          "text": "Desktop: WASD oder Pfeiltasten. Interaktion: E, Enter, Space oder Klick. Mobile: D-Pad + Interact."
         },
         {
-          "id": "end-projects-lab",
+          "id": "end-sign-controls",
           "type": "end"
         }
       ]
@@ -3683,53 +3679,45 @@
       ]
     },
     {
-      "id": "dlg-sign-controls",
-      "title": "Controls",
-      "startNodeId": "line-sign-controls",
+      "id": "dlg-construction-ruins",
+      "title": "Production Zone",
+      "startNodeId": "line-construction-ruins",
       "nodes": [
         {
-          "id": "line-sign-controls",
+          "id": "line-construction-ruins",
           "type": "line",
-          "speaker": "Steuerungs-Schild",
-          "text": "Desktop: WASD oder Pfeiltasten. Interaktion: E, Enter, Space oder Klick. Mobile: D-Pad + Interact."
+          "speaker": "Ruinen",
+          "text": "Dieses Haus wird spaeter mit neuem Content repariert und freigeschaltet."
         },
         {
-          "id": "end-sign-controls",
+          "id": "end-construction-ruins",
           "type": "end"
         }
       ]
     },
     {
-      "id": "dlg-twitter-house",
-      "title": "Twitter Kiosk",
-      "startNodeId": "line-twitter-house",
+      "id": "dlg-1771108290779",
+      "title": "Neuer Dialog",
+      "startNodeId": "line-1771108290779",
       "nodes": [
         {
-          "id": "line-twitter-house",
+          "id": "line-1771108290779",
           "type": "line",
-          "speaker": "Twitter Kiosk",
-          "text": "Der Kanal wird vorbereitet. Du kannst ihn spaeter einfach per Glossar aktivieren."
-        },
-        {
-          "id": "end-twitter-house",
-          "type": "end"
+          "speaker": "Narrator",
+          "text": "Neuer Dialog"
         }
       ]
     },
     {
-      "id": "dlg-youtube-house",
-      "title": "YouTube Studio",
-      "startNodeId": "line-youtube-house",
+      "id": "dlg-1771108295480",
+      "title": "Neuer Dialog",
+      "startNodeId": "line-1771108295480",
       "nodes": [
         {
-          "id": "line-youtube-house",
+          "id": "line-1771108295480",
           "type": "line",
-          "speaker": "YouTube Studio",
-          "text": "Diese Location ist noch im Bau. Bald erscheinen hier Video-Formate."
-        },
-        {
-          "id": "end-youtube-house",
-          "type": "end"
+          "speaker": "Narrator",
+          "text": "Neuer Dialog"
         }
       ]
     }
@@ -3822,40 +3810,43 @@
       "linkedInteractionId": "int-company-hq"
     },
     {
-      "id": "construction-ruins",
-      "name": "Ruinen",
-      "kind": "coming_soon",
-      "status": "ruins",
-      "description": "Verstaubtes Haus als Platzhalter fuer zukuenftige Releases.",
-      "accentColor": "#7b7b7b",
-      "spriteHint": "house_ruins",
+      "id": "linkedin-house",
+      "name": "LinkedIn Haus",
+      "kind": "external_link",
+      "status": "live",
+      "description": "Lebenslauf und professionelle Timeline sind ueber LinkedIn erreichbar.",
+      "accentColor": "#0a66c2",
+      "spriteHint": "house_linkedin",
       "dialog": {
-        "title": "Production Zone",
-        "body": "Dieses Haus wird spaeter mit neuem Content repariert und freigeschaltet."
+        "title": "LinkedIn",
+        "body": "Hier geht es direkt zu deinem Lebenslauf und professionellen Profil."
       },
       "tags": [
-        "ruins",
-        "coming-soon",
-        "future"
+        "linkedin",
+        "cv",
+        "career"
       ],
-      "district": "South",
+      "district": "Career Lane",
       "world": {
-        "x": 250,
-        "y": 464,
-        "width": 64,
-        "height": 64,
+        "x": 696.4,
+        "y": 142.4,
+        "width": 72,
+        "height": 88,
         "interactRadius": 68,
         "visual": "house",
         "solid": true
       },
       "actions": [
         {
-          "id": "ruins-soon",
-          "label": "Noch geschlossen",
-          "type": "coming_soon"
+          "id": "linkedin-open",
+          "label": "LinkedIn oeffnen",
+          "type": "open_link",
+          "href": "https://www.linkedin.com/in/your-handle",
+          "confirmMessage": "LinkedIn in neuem Tab oeffnen?"
         }
       ],
-      "linkedInteractionId": "int-construction-ruins"
+      "linkedObjectId": "obj-linkedin",
+      "linkedInteractionId": "int-linkedin-house"
     },
     {
       "id": "github-house",
@@ -3897,43 +3888,117 @@
       "linkedInteractionId": "int-github-house"
     },
     {
-      "id": "linkedin-house",
-      "name": "LinkedIn Haus",
-      "kind": "external_link",
+      "id": "projects-lab",
+      "name": "Fun Projects Lab",
+      "kind": "project_showcase",
       "status": "live",
-      "description": "Lebenslauf und professionelle Timeline sind ueber LinkedIn erreichbar.",
-      "accentColor": "#0a66c2",
-      "spriteHint": "house_linkedin",
+      "description": "Spielerische und kreative Projekte mit kurzen Erklaerungen und Links.",
+      "accentColor": "#2ca58d",
+      "spriteHint": "house_projects",
       "dialog": {
-        "title": "LinkedIn",
-        "body": "Hier geht es direkt zu deinem Lebenslauf und professionellen Profil."
+        "title": "Fun Projects Lab",
+        "body": "Hier liegen deine coolen Experimente, Side Projects und Demos."
       },
       "tags": [
-        "linkedin",
-        "cv",
-        "career"
+        "projects",
+        "creative",
+        "experiments"
       ],
-      "district": "Career Lane",
+      "district": "East Quarter",
       "world": {
-        "x": 696.4,
-        "y": 142.4,
-        "width": 72,
-        "height": 88,
-        "interactRadius": 68,
+        "x": 752.5,
+        "y": 253.5,
+        "width": 96,
+        "height": 97,
+        "interactRadius": 72,
         "visual": "house",
         "solid": true
       },
       "actions": [
         {
-          "id": "linkedin-open",
-          "label": "LinkedIn oeffnen",
-          "type": "open_link",
-          "href": "https://www.linkedin.com/in/your-handle",
-          "confirmMessage": "LinkedIn in neuem Tab oeffnen?"
+          "id": "projects-list",
+          "label": "Projektliste anzeigen",
+          "type": "open_modal"
         }
       ],
-      "linkedObjectId": "obj-linkedin",
-      "linkedInteractionId": "int-linkedin-house"
+      "linkedObjectId": "obj-cv-archive",
+      "linkedInteractionId": "int-projects-lab"
+    },
+    {
+      "id": "youtube-house",
+      "name": "YouTube Studio",
+      "kind": "social",
+      "status": "coming_soon",
+      "description": "Geplantes Studio fuer Videos, Devlogs und Tutorials.",
+      "accentColor": "#c4302b",
+      "spriteHint": "house_youtube",
+      "dialog": {
+        "title": "YouTube Studio",
+        "body": "Diese Location ist noch im Bau. Bald erscheinen hier Video-Formate."
+      },
+      "tags": [
+        "youtube",
+        "content",
+        "coming-soon"
+      ],
+      "district": "West Island",
+      "world": {
+        "x": 242,
+        "y": 234.5,
+        "width": 99,
+        "height": 93,
+        "interactRadius": 72,
+        "visual": "house",
+        "solid": true
+      },
+      "actions": [
+        {
+          "id": "youtube-soon",
+          "label": "Coming Soon",
+          "type": "coming_soon"
+        }
+      ],
+      "linkedObjectId": "obj-youtube-ruin",
+      "linkedInteractionId": "int-youtube-house"
+    },
+    {
+      "id": "twitter-house",
+      "name": "Twitter Kiosk",
+      "kind": "social",
+      "status": "wip",
+      "description": "Kurze Updates, Build-in-public und spontane Gedanken.",
+      "accentColor": "#1d9bf0",
+      "spriteHint": "house_twitter",
+      "dialog": {
+        "title": "Twitter Kiosk",
+        "body": "Der Kanal wird vorbereitet. Du kannst ihn spaeter einfach per Glossar aktivieren."
+      },
+      "tags": [
+        "twitter",
+        "social",
+        "wip"
+      ],
+      "district": "South East",
+      "world": {
+        "x": 580,
+        "y": 401,
+        "width": 104,
+        "height": 97,
+        "interactRadius": 72,
+        "visual": "house",
+        "solid": true
+      },
+      "actions": [
+        {
+          "id": "twitter-open",
+          "label": "Twitter oeffnen",
+          "type": "open_link",
+          "href": "https://x.com/your-handle",
+          "confirmMessage": "Twitter in neuem Tab oeffnen?"
+        }
+      ],
+      "linkedObjectId": "obj-twitter-ruin",
+      "linkedInteractionId": "int-twitter-house"
     },
     {
       "id": "npc-guide",
@@ -4007,41 +4072,33 @@
       "linkedInteractionId": "int-npc-recruiter-secret"
     },
     {
-      "id": "projects-lab",
-      "name": "Fun Projects Lab",
-      "kind": "project_showcase",
+      "id": "sign-controls",
+      "name": "Steuerungs-Schild",
+      "kind": "sign",
       "status": "live",
-      "description": "Spielerische und kreative Projekte mit kurzen Erklaerungen und Links.",
-      "accentColor": "#2ca58d",
-      "spriteHint": "house_projects",
+      "description": "Kurze Steuerungsinfo fuer Desktop und Mobile.",
+      "accentColor": "#8b6b4a",
+      "spriteHint": "sign_controls",
       "dialog": {
-        "title": "Fun Projects Lab",
-        "body": "Hier liegen deine coolen Experimente, Side Projects und Demos."
+        "title": "Controls",
+        "body": "Desktop: WASD oder Pfeiltasten. Interaktion: E, Enter, Space oder Klick. Mobile: D-Pad + Interact."
       },
       "tags": [
-        "projects",
-        "creative",
-        "experiments"
+        "sign",
+        "controls"
       ],
-      "district": "East Quarter",
+      "district": "Town Plaza",
       "world": {
-        "x": 752.5,
-        "y": 253.5,
-        "width": 96,
-        "height": 97,
-        "interactRadius": 72,
-        "visual": "house",
-        "solid": true
+        "x": 540,
+        "y": 264,
+        "width": 24,
+        "height": 26,
+        "interactRadius": 48,
+        "visual": "sign",
+        "solid": false
       },
-      "actions": [
-        {
-          "id": "projects-list",
-          "label": "Projektliste anzeigen",
-          "type": "open_modal"
-        }
-      ],
-      "linkedObjectId": "obj-cv-archive",
-      "linkedInteractionId": "int-projects-lab"
+      "actions": [],
+      "linkedInteractionId": "int-sign-controls"
     },
     {
       "id": "sign-about",
@@ -4069,125 +4126,44 @@
         "visual": "sign",
         "solid": false
       },
-      "actions": [
-        {
-          "id": "action-sign-about-coming-soon",
-          "label": "Coming soon",
-          "type": "coming_soon"
-        }
-      ],
+      "actions": [],
       "linkedInteractionId": "int-sign-about"
     },
     {
-      "id": "sign-controls",
-      "name": "Steuerungs-Schild",
-      "kind": "sign",
-      "status": "live",
-      "description": "Kurze Steuerungsinfo fuer Desktop und Mobile.",
-      "accentColor": "#8b6b4a",
-      "spriteHint": "sign_controls",
+      "id": "construction-ruins",
+      "name": "Ruinen",
+      "kind": "coming_soon",
+      "status": "ruins",
+      "description": "Verstaubtes Haus als Platzhalter fuer zukuenftige Releases.",
+      "accentColor": "#7b7b7b",
+      "spriteHint": "house_ruins",
       "dialog": {
-        "title": "Controls",
-        "body": "Desktop: WASD oder Pfeiltasten. Interaktion: E, Enter, Space oder Klick. Mobile: D-Pad + Interact."
+        "title": "Production Zone",
+        "body": "Dieses Haus wird spaeter mit neuem Content repariert und freigeschaltet."
       },
       "tags": [
-        "sign",
-        "controls"
+        "ruins",
+        "coming-soon",
+        "future"
       ],
-      "district": "Town Plaza",
+      "district": "South",
       "world": {
-        "x": 540,
-        "y": 264,
-        "width": 24,
-        "height": 26,
-        "interactRadius": 48,
-        "visual": "sign",
-        "solid": false
-      },
-      "actions": [
-        {
-          "id": "action-sign-controls-coming-soon",
-          "label": "Coming soon",
-          "type": "coming_soon"
-        }
-      ],
-      "linkedInteractionId": "int-sign-controls"
-    },
-    {
-      "id": "twitter-house",
-      "name": "Twitter Kiosk",
-      "kind": "social",
-      "status": "wip",
-      "description": "Kurze Updates, Build-in-public und spontane Gedanken.",
-      "accentColor": "#1d9bf0",
-      "spriteHint": "house_twitter",
-      "dialog": {
-        "title": "Twitter Kiosk",
-        "body": "Der Kanal wird vorbereitet. Du kannst ihn spaeter einfach per Glossar aktivieren."
-      },
-      "tags": [
-        "twitter",
-        "social",
-        "wip"
-      ],
-      "district": "South East",
-      "world": {
-        "x": 580,
-        "y": 401,
-        "width": 104,
-        "height": 97,
-        "interactRadius": 72,
+        "x": 250,
+        "y": 464,
+        "width": 64,
+        "height": 64,
+        "interactRadius": 68,
         "visual": "house",
         "solid": true
       },
       "actions": [
         {
-          "id": "twitter-open",
-          "label": "Twitter oeffnen",
-          "type": "open_link",
-          "href": "https://x.com/your-handle",
-          "confirmMessage": "Twitter in neuem Tab oeffnen?"
-        }
-      ],
-      "linkedObjectId": "obj-twitter-ruin",
-      "linkedInteractionId": "int-twitter-house"
-    },
-    {
-      "id": "youtube-house",
-      "name": "YouTube Studio",
-      "kind": "social",
-      "status": "coming_soon",
-      "description": "Geplantes Studio fuer Videos, Devlogs und Tutorials.",
-      "accentColor": "#c4302b",
-      "spriteHint": "house_youtube",
-      "dialog": {
-        "title": "YouTube Studio",
-        "body": "Diese Location ist noch im Bau. Bald erscheinen hier Video-Formate."
-      },
-      "tags": [
-        "youtube",
-        "content",
-        "coming-soon"
-      ],
-      "district": "West Island",
-      "world": {
-        "x": 242,
-        "y": 234.5,
-        "width": 99,
-        "height": 93,
-        "interactRadius": 72,
-        "visual": "house",
-        "solid": true
-      },
-      "actions": [
-        {
-          "id": "youtube-soon",
-          "label": "Coming Soon",
+          "id": "ruins-soon",
+          "label": "Noch geschlossen",
           "type": "coming_soon"
         }
       ],
-      "linkedObjectId": "obj-youtube-ruin",
-      "linkedInteractionId": "int-youtube-house"
+      "linkedInteractionId": "int-construction-ruins"
     }
   ],
   "uiTexts": {

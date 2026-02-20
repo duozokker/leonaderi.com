@@ -1141,8 +1141,8 @@ export const TERRAIN_GRID: number[][] = [
     1,
     2,
     2,
-    7,
     2,
+    7,
     2,
     2,
     2,
@@ -1209,7 +1209,7 @@ export const TERRAIN_GRID: number[][] = [
     1,
     2,
     2,
-    2,
+    7,
     2,
     2,
     3,
@@ -2926,6 +2926,7 @@ export interface MapObject {
   depth: number
   poiId?: string
   collision?: boolean
+  hitbox?: { x: number, y: number, width: number, height: number }
 }
 
 export const MAP_OBJECTS: MapObject[] = [
@@ -2942,12 +2943,13 @@ export const MAP_OBJECTS: MapObject[] = [
     "key": "objCompanyHall",
     "filename": "company_hall.png",
     "x": 550.5,
-    "y": 247.5,
+    "y": 248.5,
     "width": 95,
     "height": 79,
     "depth": 127,
     "poiId": "company-hq",
-    "collision": true
+    "collision": true,
+    "hitbox": { "x": 0, "y": 14, "width": 85, "height": 55 }
   },
   {
     "key": "objCvArchive",
@@ -2958,7 +2960,8 @@ export const MAP_OBJECTS: MapObject[] = [
     "height": 97,
     "depth": 127,
     "poiId": "projects-lab",
-    "collision": true
+    "collision": true,
+    "hitbox": { "x": 0, "y": 0, "width": 70, "height": 60 }
   },
   {
     "key": "objFlowerPatch",
@@ -2981,13 +2984,14 @@ export const MAP_OBJECTS: MapObject[] = [
   {
     "key": "objGithub",
     "filename": "github_house.png",
-    "x": 382,
-    "y": 453,
-    "width": 74,
-    "height": 71,
+    "x": 394.5,
+    "y": 469.5,
+    "width": 100,
+    "height": 98,
     "depth": 127,
     "poiId": "github-house",
-    "collision": true
+    "collision": true,
+    "hitbox": { "x": 0, "y": 0, "width": 80, "height": 55 }
   },
   {
     "key": "objLinkedin",
@@ -2998,7 +3002,8 @@ export const MAP_OBJECTS: MapObject[] = [
     "height": 88,
     "depth": 127,
     "poiId": "linkedin-house",
-    "collision": true
+    "collision": true,
+    "hitbox": { "x": 0, "y": 6, "width": 60, "height": 55 }
   },
   {
     "key": "objTree1",
