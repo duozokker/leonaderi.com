@@ -1,8 +1,14 @@
 import kaboom from "kaboom";
-import type { KaboomCtx, Key } from "kaboom";
+import type { GameObj, KaboomCtx, Key } from "kaboom";
 import { MAP_OBJECTS, PLAYER_SPAWN, NPC_POSITIONS, TERRAIN_GRID, T_WATER, MAP_TILE_SIZE } from "./game/world/mapData";
 import { portfolioGlossary } from "./content/glossary";
 import { setupEditorUI } from "./editor";
+
+declare global {
+    interface Window {
+        _injectDialogButtons?: () => void;
+    }
+}
 
 let currentLang: "en" | "de" = "en";
 
@@ -348,7 +354,7 @@ k.scene("main", async () => {
             if (dCam) dCam.innerText = `${Math.round(k.camPos().x)}, ${Math.round(k.camPos().y)}`;
             if (dPlayer) dPlayer.innerText = `${Math.round(player.pos.x)}, ${Math.round(player.pos.y)}`;
             
-            let stateStr = isDialogActive ? "DIALOG" : (gameStarted ? "PLAYING" : "ONBOARDING");
+            const stateStr = isDialogActive ? "DIALOG" : (gameStarted ? "PLAYING" : "ONBOARDING");
             if (dState) dState.innerText = stateStr;
         }
     });
@@ -522,7 +528,7 @@ k.scene("main", async () => {
         typeWriterRaf = requestAnimationFrame(typeWriter);
         
         // Expose inject method to global state for the fast-forward skip
-        (window as any)._injectDialogButtons = injectButtons;
+        window._injectDialogButtons = injectButtons;
     }
 
     function closeDialog() {
@@ -596,7 +602,7 @@ k.scene("main", async () => {
     let isMoving = false;
 
     // Mobile Controls State
-    let mobileDir = { x: 0, y: 0 };
+    const mobileDir = { x: 0, y: 0 };
 
     const btnUp = document.getElementById("btn-up");
     const btnDown = document.getElementById("btn-down");
@@ -629,8 +635,8 @@ k.scene("main", async () => {
                 if (dialogBody) dialogBody.textContent = currentDialogText;
                 
                 // Show actions instantly if they exist, otherwise the user can close the dialog next click
-                if ((window as any)._injectDialogButtons) {
-                    (window as any)._injectDialogButtons();
+                if (window._injectDialogButtons) {
+                    window._injectDialogButtons();
                 }
             } else {
                 // Only close the dialog if it's NOT displaying active buttons, to prevent accidentally skipping the choice
@@ -641,43 +647,53 @@ k.scene("main", async () => {
             return;
         }
 
+        type InteractableObj = GameObj & {
+            poiId?: string;
+            npcId?: string;
+            pos: typeof player.pos;
+            is: (tag: string) => boolean;
+        };
+
         // Find closest interactable object without allocating new arrays
-        let closestObj: any = null;
+        let closestObj: InteractableObj | null = null;
         let closestDist = Infinity;
 
-        k.get("mapObject").forEach(obj => {
-            if (!obj.pos) return;
-            const dist = player.pos.dist(obj.pos);
-            const entry = obj.poiId ? portfolioGlossary.find(e => e.id === obj.poiId) : null;
+        for (const obj of k.get("mapObject")) {
+            const mapObj = obj as InteractableObj;
+            if (!mapObj.pos) continue;
+            const dist = player.pos.dist(mapObj.pos);
+            const entry = mapObj.poiId ? portfolioGlossary.find((e) => e.id === mapObj.poiId) : null;
             const interactionRange = entry?.world?.interactRadius || 80;
 
             if (dist <= interactionRange && dist < closestDist) {
                 closestDist = dist;
-                closestObj = obj;
+                closestObj = mapObj;
             }
-        });
+        }
         
-        k.get("npc").forEach(obj => {
-            if (!obj.pos) return;
-            const dist = player.pos.dist(obj.pos);
+        for (const obj of k.get("npc")) {
+            const npcObj = obj as InteractableObj;
+            if (!npcObj.pos) continue;
+            const dist = player.pos.dist(npcObj.pos);
             const interactionRange = 60; // NPCs are smaller and easier to reach
 
             if (dist <= interactionRange && dist < closestDist) {
                 closestDist = dist;
-                closestObj = obj;
+                closestObj = npcObj;
             }
-        });
+        }
 
         if (closestObj) {
+            const target = closestObj;
             const tr = t[currentLang];
             // Determine what to say based on POI or NPC data
-            let title = closestObj.is("npc") ? tr.npcVillagerTitle : "Sign";
+            let title = target.is("npc") ? tr.npcVillagerTitle : "Sign";
             let text = "Hello there!";
-            let actions: {text: string, link: string}[] = [];
+            const actions: {text: string, link: string}[] = [];
 
-            if (closestObj.poiId) {
-                const entry = portfolioGlossary.find(e => e.id === closestObj.poiId);
-                const translatedEntry = tr.pois[closestObj.poiId as keyof typeof tr.pois];
+            if (target.poiId) {
+                const entry = portfolioGlossary.find(e => e.id === target.poiId);
+                const translatedEntry = tr.pois[target.poiId as keyof typeof tr.pois];
                 
                 if (entry && translatedEntry) {
                     title = translatedEntry.title;
@@ -685,10 +701,10 @@ k.scene("main", async () => {
                     
                     if (entry.actions) {
                         for (const action of entry.actions) {
-                            if (action.type === 'open_link' && 'href' in action) {
+                            if (action.type === 'open_link' && typeof action.href === "string") {
                                 // Find translation for action label based on action id, default to translated action mapping
                                 const label = translatedEntry.actions[action.id as keyof typeof translatedEntry.actions] || action.label;
-                                actions.push({ text: label, link: (action as any).href });
+                                actions.push({ text: label, link: action.href });
                             }
                         }
                     }
@@ -698,23 +714,23 @@ k.scene("main", async () => {
                     text = entry.dialog.body;
                     if (entry.actions) {
                         for (const action of entry.actions) {
-                            if (action.type === 'open_link' && 'href' in action) {
-                                actions.push({ text: action.label, link: (action as any).href });
+                            if (action.type === 'open_link' && typeof action.href === "string") {
+                                actions.push({ text: action.label, link: action.href });
                             }
                         }
                     }
                 }
-            } else if (closestObj.is("npc")) {
-                if (closestObj.npcId === "guide_fountain") {
+            } else if (target.is("npc")) {
+                if (target.npcId === "guide_fountain") {
                     title = tr.npcGuideTitle;
                     text = tr.npcGuideText;
-                } else if (closestObj.npcId === "villager_ruins") {
+                } else if (target.npcId === "villager_ruins") {
                     title = tr.npcVillagerTitle;
                     text = tr.npcVillagerText;
-                } else if (closestObj.npcId === "villager_projects") {
+                } else if (target.npcId === "villager_projects") {
                     title = tr.npcProjectsTitle;
                     text = tr.npcProjectsText;
-                } else if (closestObj.npcId === "recruiter") {
+                } else if (target.npcId === "recruiter") {
                     title = tr.npcRecruiterTitle;
                     recruiterTalkCount++;
                     if (recruiterTalkCount === 3) {
@@ -722,7 +738,7 @@ k.scene("main", async () => {
                         for (let i = 0; i < 50; i++) {
                             k.add([
                                 k.rect(4, 4),
-                                k.pos(closestObj.pos.x, closestObj.pos.y),
+                                k.pos(target.pos.x, target.pos.y),
                                 k.color(k.rand(0, 255), k.rand(0, 255), k.rand(0, 255)),
                                 k.move(k.choose([k.LEFT, k.RIGHT, k.UP, k.DOWN]), k.rand(20, 60)),
                                 k.lifespan(1, { fade: 0.5 }),
@@ -799,7 +815,7 @@ k.scene("main", async () => {
         k.onKeyPress(key as Key, triggerInteraction);
     }
 
-    setupEditorUI(k, player);
+    setupEditorUI(k);
 });
 
 loadAssets().then(() => {

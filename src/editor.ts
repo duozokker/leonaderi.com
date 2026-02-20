@@ -1,7 +1,21 @@
 import type { KaboomCtx, GameObj } from "kaboom";
 import { portfolioGlossary } from "./content/glossary";
+import type { PoiEntry } from "./content/types";
 
-export function setupEditorUI(k: KaboomCtx, _player: GameObj) {
+type MapObjectWithPoi = GameObj & {
+    id: string;
+    poiId?: string;
+    area?: {
+        shape?: {
+            bbox: () => {
+                p1: { x: number; y: number };
+                p2: { x: number; y: number };
+            };
+        };
+    };
+};
+
+export function setupEditorUI(k: KaboomCtx) {
     const editorUI = document.getElementById("editor-ui");
     const inspector = document.getElementById("inspector");
     const saveBtn = document.getElementById("save-btn");
@@ -17,8 +31,8 @@ export function setupEditorUI(k: KaboomCtx, _player: GameObj) {
     const hhInput = document.getElementById("prop-hh") as HTMLInputElement;
 
     let isEditorOpen = false;
-    let selectedObj: any = null;
-    let selectedPoi: any = null;
+    let selectedObj: MapObjectWithPoi | null = null;
+    let selectedPoi: PoiEntry | null = null;
 
     k.onKeyPress("e", () => {
         isEditorOpen = !isEditorOpen;
@@ -33,18 +47,19 @@ export function setupEditorUI(k: KaboomCtx, _player: GameObj) {
         }
     });
 
-    k.onClick("mapObject", (obj: any) => {
+    k.onClick("mapObject", (obj) => {
         if (!isEditorOpen) return;
+        const mapObj = obj as MapObjectWithPoi;
 
         // Visual selection feedback
         k.get("mapObject").forEach((o) => {
             o.unuse("color");
             o.color = k.WHITE;
         });
-        obj.use(k.color(255, 150, 150)); // highlight
+        mapObj.use(k.color(255, 150, 150)); // highlight
 
-        selectedObj = obj;
-        selectedPoi = portfolioGlossary.find(p => p.id === obj.poiId);
+        selectedObj = mapObj;
+        selectedPoi = portfolioGlossary.find((p) => p.id === mapObj.poiId) ?? null;
 
         inspector?.classList.remove("hidden");
 
@@ -52,17 +67,17 @@ export function setupEditorUI(k: KaboomCtx, _player: GameObj) {
         if (selectedPoi) {
             nameInput.value = selectedPoi.name || "";
             descInput.value = selectedPoi.dialog?.body || "";
-            const linkAction = selectedPoi.actions?.find((a: any) => a.type === "open_link");
-            hrefInput.value = linkAction ? linkAction.href : "";
+            const linkAction = selectedPoi.actions?.find((a) => a.type === "open_link");
+            hrefInput.value = linkAction?.href ?? "";
         } else {
-            nameInput.value = obj.id;
+            nameInput.value = mapObj.id;
             descInput.value = "";
             hrefInput.value = "";
         }
 
         // Parse object's existing area shape bounds if they exist
-        if (obj.area && obj.area.shape) {
-            const bb = obj.area.shape.bbox();
+        if (mapObj.area && mapObj.area.shape) {
+            const bb = mapObj.area.shape.bbox();
             hxInput.value = "0"; // Default, to simplify
             hyInput.value = "0";
             hwInput.value = (bb.p2.x - bb.p1.x).toString();
@@ -81,7 +96,7 @@ export function setupEditorUI(k: KaboomCtx, _player: GameObj) {
             if (selectedPoi) {
                 selectedPoi.name = nameInput.value;
                 selectedPoi.dialog.body = descInput.value;
-                const linkAction = selectedPoi.actions?.find((a: any) => a.type === "open_link");
+                const linkAction = selectedPoi.actions?.find((a) => a.type === "open_link");
                 if (linkAction) {
                     linkAction.href = hrefInput.value;
                 }
