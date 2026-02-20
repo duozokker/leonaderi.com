@@ -149,6 +149,7 @@ const k: KaboomCtx = kaboom({
     // By omitting width/height and letterbox, Kaboom natively fills the exact available screen 
     // space continuously without cropping or black bars.
 });
+k.setGravity(0);
 
 // Native Kaboom event for resizing without manual projection matrix hacks
 // Moved inside scene to properly handle zoom scaling on resize
@@ -177,6 +178,7 @@ async function loadAssets() {
 
 k.scene("main", async () => {
     let gameStarted = false;
+    const poiById = new Map(portfolioGlossary.map((entry) => [entry.id, entry]));
 
     // Map Background
     k.add([
@@ -276,7 +278,7 @@ k.scene("main", async () => {
         // Create POI Banners
         if (obj.poiId && isInteractable) {
             k.add([
-                k.text(portfolioGlossary.find(e => e.id === obj.poiId)?.name || "", {
+                k.text((obj.poiId ? poiById.get(obj.poiId)?.name : "") || "", {
                     size: 6,
                     font: '"Press Start 2P", monospace',
                     align: "center"
@@ -611,16 +613,45 @@ k.scene("main", async () => {
 
     const setupBtn = (btn: HTMLElement | null, dx: number, dy: number) => {
         if (!btn) return;
+        btn.style.touchAction = "none";
         btn.addEventListener("touchstart", (e) => { e.preventDefault(); mobileDir.x = dx; mobileDir.y = dy; });
         btn.addEventListener("touchend", (e) => { e.preventDefault(); mobileDir.x = 0; mobileDir.y = 0; });
+        btn.addEventListener("touchcancel", (e) => { e.preventDefault(); mobileDir.x = 0; mobileDir.y = 0; });
         btn.addEventListener("mousedown", (e) => { e.preventDefault(); mobileDir.x = dx; mobileDir.y = dy; });
         btn.addEventListener("mouseup", (e) => { e.preventDefault(); mobileDir.x = 0; mobileDir.y = 0; });
+        btn.addEventListener("mouseleave", () => { mobileDir.x = 0; mobileDir.y = 0; });
     };
 
     setupBtn(btnUp, 0, -1);
     setupBtn(btnDown, 0, 1);
     setupBtn(btnLeft, -1, 0);
     setupBtn(btnRight, 1, 0);
+    k.canvas.style.touchAction = "none";
+
+    const resetMovement = () => {
+        mobileDir.x = 0;
+        mobileDir.y = 0;
+        if (isMoving) {
+            if (currentDir === "south") player.use(k.sprite("player"));
+            player.stop();
+            isMoving = false;
+        }
+    };
+
+    window.addEventListener("blur", resetMovement);
+    window.addEventListener("pointerup", () => {
+        mobileDir.x = 0;
+        mobileDir.y = 0;
+    });
+    document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+            resetMovement();
+            return;
+        }
+        if (gameStarted) {
+            k.canvas.focus();
+        }
+    });
 
     let recruiterTalkCount = 0;
 
@@ -661,7 +692,7 @@ k.scene("main", async () => {
             const mapObj = obj as InteractableObj;
             if (!mapObj.pos) continue;
             const dist = player.pos.dist(mapObj.pos);
-            const entry = mapObj.poiId ? portfolioGlossary.find((e) => e.id === mapObj.poiId) : null;
+            const entry = mapObj.poiId ? poiById.get(mapObj.poiId) : null;
             const interactionRange = entry?.world?.interactRadius || 80;
 
             if (dist <= interactionRange && dist < closestDist) {
@@ -691,7 +722,7 @@ k.scene("main", async () => {
             const actions: {text: string, link: string}[] = [];
 
             if (target.poiId) {
-                const entry = portfolioGlossary.find(e => e.id === target.poiId);
+                const entry = poiById.get(target.poiId);
                 const translatedEntry = tr.pois[target.poiId as keyof typeof tr.pois];
                 
                 if (entry && translatedEntry) {
