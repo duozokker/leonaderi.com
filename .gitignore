@@ -23,3 +23,8 @@ output/
 *.njsproj
 *.sln
 *.sw?
+
+# Secrets and local environment overrides
+.env
+.env.*
+!.env.example
