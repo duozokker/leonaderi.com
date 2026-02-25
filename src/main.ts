@@ -69,12 +69,12 @@ const t = {
             },
             "twitter-house": {
                 title: "Twitter Kiosk",
-                body: "This channel is being prepared. You can activate it later via the glossary.",
-                actions: { "twitter-open": "Open Twitter" }
+                body: "I'm just a broken ruin... leave me alone. I used to tweet, now I only collect dust.",
+                actions: { "twitter-soon": "Ruin Is Offline" }
             },
             "youtube-house": {
                 title: "YouTube Studio",
-                body: "This location is under construction. Video formats will appear here soon.",
+                body: "This studio is all rubble and bad acoustics right now. Come back when the roof stops leaking.",
                 actions: { "youtube-soon": "Coming Soon" }
             }
         }
@@ -136,12 +136,12 @@ const t = {
             },
             "twitter-house": {
                 title: "Twitter Kiosk",
-                body: "Der Kanal wird vorbereitet. Du kannst ihn später einfach per Glossar aktivieren.",
-                actions: { "twitter-open": "Twitter öffnen" }
+                body: "Ich bin nur eine kaputte Ruine... lass mich in Ruhe. Früher wurde hier getwittert, jetzt nur noch Staub.",
+                actions: { "twitter-soon": "Ruine ist offline" }
             },
             "youtube-house": {
                 title: "YouTube Studio",
-                body: "Diese Location ist noch im Bau. Bald erscheinen hier Video-Formate.",
+                body: "Dieses Studio ist gerade nur Schutt und schlechte Akustik. Komm wieder, wenn das Dach nicht mehr leckt.",
                 actions: { "youtube-soon": "Coming Soon" }
             }
         }
@@ -161,6 +161,21 @@ k.setGravity(0);
 
 // Native Kaboom event for resizing without manual projection matrix hacks
 // Moved inside scene to properly handle zoom scaling on resize
+
+function openExternalLinkSafely(link: string): void {
+    let parsedUrl: URL;
+    try {
+        parsedUrl = new URL(link, window.location.href);
+    } catch {
+        return;
+    }
+
+    if (parsedUrl.protocol !== "https:" && parsedUrl.protocol !== "http:") {
+        return;
+    }
+
+    window.open(parsedUrl.toString(), "_blank", "noopener,noreferrer");
+}
 
 async function loadAssets() {
     // Player
@@ -189,6 +204,16 @@ async function loadAssets() {
 k.scene("main", async () => {
     let gameStarted = false;
     const poiById = new Map(portfolioGlossary.map((entry) => [entry.id, entry]));
+    const domCleanup: Array<() => void> = [];
+    const addDomListener = (
+        target: Window | Document | HTMLElement,
+        type: string,
+        listener: EventListenerOrEventListenerObject,
+        options?: boolean | AddEventListenerOptions,
+    ) => {
+        target.addEventListener(type, listener, options);
+        domCleanup.push(() => target.removeEventListener(type, listener, options));
+    };
 
     // Map Background
     k.add([
@@ -267,7 +292,7 @@ k.scene("main", async () => {
         const hasCol = isFountain ? false : obj.collision;
 
         // Ensure only buildings and specific POIs are interactable. Trees, bridges, etc. become props.
-        const isInteractable = obj.poiId && obj.key !== "objTwitterRuin" && obj.key !== "objYoutubeRuin" && !isFountain;
+        const isInteractable = !!obj.poiId && !isFountain;
 
         // Create explicit hitboxes if provided (to handle large transparent sprites like the Github house), otherwise fallback to the full sprite size
         // Using offset with a center-anchored Rect shape allows precise control relative to the sprite center.
@@ -500,7 +525,7 @@ k.scene("main", async () => {
                     btn.className = "retro-btn";
                     btn.textContent = action.text;
                     btn.onclick = () => {
-                        window.open(action.link, "_blank");
+                        openExternalLinkSafely(action.link);
                         // Refocus game to avoid getting stuck if user clicks back to the window
                         if (gameStarted) k.canvas.focus();
                     };
@@ -590,7 +615,7 @@ k.scene("main", async () => {
     const btnZoomOut = document.getElementById("btn-zoom-out");
     
     if (btnZoomIn) {
-        btnZoomIn.addEventListener("click", () => {
+        addDomListener(btnZoomIn, "click", () => {
             currentZoom = Math.min(currentZoom * 1.2, 6.0); // Max zoom
             camScaleCache.x = currentZoom;
             camScaleCache.y = currentZoom;
@@ -600,7 +625,7 @@ k.scene("main", async () => {
     }
     
     if (btnZoomOut) {
-        btnZoomOut.addEventListener("click", () => {
+        addDomListener(btnZoomOut, "click", () => {
             currentZoom = Math.max(currentZoom / 1.2, window.innerWidth < 768 ? 1.0 : 1.5); // Min zoom
             camScaleCache.x = currentZoom;
             camScaleCache.y = currentZoom;
@@ -656,12 +681,12 @@ k.scene("main", async () => {
     const setupBtn = (btn: HTMLElement | null, dx: number, dy: number) => {
         if (!btn) return;
         btn.style.touchAction = "none";
-        btn.addEventListener("touchstart", (e) => { e.preventDefault(); mobileDir.x = dx; mobileDir.y = dy; });
-        btn.addEventListener("touchend", (e) => { e.preventDefault(); mobileDir.x = 0; mobileDir.y = 0; });
-        btn.addEventListener("touchcancel", (e) => { e.preventDefault(); mobileDir.x = 0; mobileDir.y = 0; });
-        btn.addEventListener("mousedown", (e) => { e.preventDefault(); mobileDir.x = dx; mobileDir.y = dy; });
-        btn.addEventListener("mouseup", (e) => { e.preventDefault(); mobileDir.x = 0; mobileDir.y = 0; });
-        btn.addEventListener("mouseleave", () => { mobileDir.x = 0; mobileDir.y = 0; });
+        addDomListener(btn, "touchstart", (e: Event) => { e.preventDefault(); mobileDir.x = dx; mobileDir.y = dy; }, { passive: false });
+        addDomListener(btn, "touchend", (e: Event) => { e.preventDefault(); mobileDir.x = 0; mobileDir.y = 0; }, { passive: false });
+        addDomListener(btn, "touchcancel", (e: Event) => { e.preventDefault(); mobileDir.x = 0; mobileDir.y = 0; }, { passive: false });
+        addDomListener(btn, "mousedown", (e: Event) => { e.preventDefault(); mobileDir.x = dx; mobileDir.y = dy; });
+        addDomListener(btn, "mouseup", (e: Event) => { e.preventDefault(); mobileDir.x = 0; mobileDir.y = 0; });
+        addDomListener(btn, "mouseleave", () => { mobileDir.x = 0; mobileDir.y = 0; });
     };
 
     setupBtn(btnUp, 0, -1);
@@ -674,18 +699,23 @@ k.scene("main", async () => {
         mobileDir.x = 0;
         mobileDir.y = 0;
         if (isMoving) {
-            if (currentDir === "south") player.use(k.sprite("player"));
+            if (currentDir === "south") {
+                player.use(k.sprite("player"));
+            } else {
+                player.use(k.sprite(`player-walk-${currentDir}`));
+            }
+            player.frame = 0;
             player.stop();
             isMoving = false;
         }
     };
 
-    window.addEventListener("blur", resetMovement);
-    window.addEventListener("pointerup", () => {
+    addDomListener(window, "blur", resetMovement);
+    addDomListener(window, "pointerup", () => {
         mobileDir.x = 0;
         mobileDir.y = 0;
     });
-    document.addEventListener("visibilitychange", () => {
+    addDomListener(document, "visibilitychange", () => {
         if (document.hidden) {
             resetMovement();
             return;
@@ -831,15 +861,20 @@ k.scene("main", async () => {
     }
 
     if (btnA) {
-        btnA.addEventListener("mousedown", (e) => { e.preventDefault(); triggerInteraction(); });
-        btnA.addEventListener("touchstart", (e) => { e.preventDefault(); triggerInteraction(); });
+        addDomListener(btnA, "mousedown", (e: Event) => { e.preventDefault(); triggerInteraction(); });
+        addDomListener(btnA, "touchstart", (e: Event) => { e.preventDefault(); triggerInteraction(); }, { passive: false });
     }
 
     // Movement Logic
     k.onUpdate(() => {
         if (!gameStarted || isDialogActive) {
             if (isMoving) {
-                if (currentDir === "south") player.use(k.sprite("player"));
+                if (currentDir === "south") {
+                    player.use(k.sprite("player"));
+                } else {
+                    player.use(k.sprite(`player-walk-${currentDir}`));
+                }
+                player.frame = 0;
                 player.stop();
                 isMoving = false;
             }
@@ -878,7 +913,12 @@ k.scene("main", async () => {
         } else {
             if (isMoving) {
                 // Stop moving, revert to idle sprite
-                if (currentDir === "south") player.use(k.sprite("player"));
+                if (currentDir === "south") {
+                    player.use(k.sprite("player"));
+                } else {
+                    player.use(k.sprite(`player-walk-${currentDir}`));
+                }
+                player.frame = 0;
                 player.stop();
                 isMoving = false;
             }
@@ -886,9 +926,20 @@ k.scene("main", async () => {
     });
 
     // Interaction Action (Space bar or Enter)
-    for (const key of ["space", "enter"]) {
+    for (const key of ["space", "enter", "e"]) {
         k.onKeyPress(key as Key, triggerInteraction);
     }
+    k.onMousePress("left", triggerInteraction);
+
+    k.onSceneLeave(() => {
+        for (const cleanup of domCleanup) cleanup();
+        domCleanup.length = 0;
+        if (typeWriterRaf) {
+            cancelAnimationFrame(typeWriterRaf);
+            typeWriterRaf = null;
+        }
+        window._injectDialogButtons = undefined;
+    });
 
 });
 

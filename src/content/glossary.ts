@@ -355,11 +355,9 @@ export const portfolioGlossary: PoiEntry[] = [
     },
     "actions": [
       {
-        "id": "twitter-open",
-        "label": "Twitter öffnen",
-        "type": "open_link",
-        "href": "https://x.com/your-handle",
-        "confirmMessage": "Twitter in neuem Tab öffnen?"
+        "id": "twitter-soon",
+        "label": "Noch im Schutt",
+        "type": "coming_soon"
       }
     ]
   },
