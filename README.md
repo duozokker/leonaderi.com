@@ -1,21 +1,21 @@
 # Leonaderi Interactive Portfolio World
 
-Playable, Pokemon-like pixel portfolio website with modular content architecture.
+Playable retro-style portfolio world built with Vite + TypeScript + Kaboom.
 
 Live page: <https://leonaderi.com/>
 
-## What Is Implemented
-- 2D explorable overworld with retro pixel styling
-- PixelLab autotile terrain overlays (water shoreline + dirt path transitions)
-- Character spawn + movement (`WASD` / arrows)
-- Mouse hover tooltips for houses, NPCs, and signs
-- Interaction via `E`, `Enter`, `Space`, or click
-- Mobile controls (on-screen D-pad + interact button)
-- Modular content registry for houses/NPCs/signs in `src/content/glossary.ts`
-- Dialog windows with pixel preview and contextual actions
-- Confirm-before-redirect flow for external links
-- Company HQ, LinkedIn, GitHub, projects, social buildings, coming-soon + ruins states
-- Vercel deployment workflow
+## Runtime Source of Truth
+The website is defined by:
+
+- `index.html`
+- `src/main.ts`
+- `src/style.css`
+- `src/content/glossary.ts`
+- `src/content/types.ts`
+- `src/game/world/mapData.ts`
+- `public/assets/**` (sprites, map, pictures)
+
+Everything else is optional tooling or deployment metadata.
 
 ## Quick Start
 ```bash
@@ -23,41 +23,22 @@ npm install
 npm run dev
 ```
 
-Build + preview:
+## Verification
 ```bash
+npm test
 npm run build
+```
+
+Preview the production build:
+```bash
 npm run preview
 ```
 
-## Configure Your Real Links
-Edit only this file:
-- `src/content/profile.ts`
-
-Then adjust content or add new houses in:
-- `src/content/glossary.ts`
-
-## Project Structure
-```txt
-src/
-├─ content/            # Canonical portfolio entries and metadata
-├─ game/               # Runtime world, entities, systems
-├─ main.ts             # Game bootstrap
-└─ style.css           # UI overlay styles
-```
+## Content Editing
+- Edit POIs, links, dialogs, metadata in `src/content/glossary.ts`.
+- Edit map objects, NPC/player positions, terrain constants in `src/game/world/mapData.ts`.
 
 ## Deployment
-Vercel config:
-- `vercel.json`
-
-Build command:
-- `npm run build`
-
-Output directory:
-- `dist`
-
-## Asset + IP Note
-Use CC0 or properly licensed assets. Avoid shipping direct Pokemon/Nintendo sprite IP without explicit permission.
-See:
-- `docs/05-assets-and-licensing.md`
-- `docs/10-pixellab-prompt-cookbook.md`
-- `assets/ASSET_LICENSES.md`
+- Vercel config: `vercel.json`
+- Build command: `npm run build`
+- Output directory: `dist`

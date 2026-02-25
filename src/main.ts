@@ -291,7 +291,6 @@ k.scene("main", async () => {
             k.add([
                 k.text((obj.poiId ? poiById.get(obj.poiId)?.name : "") || "", {
                     size: 6,
-                    font: '"Press Start 2P", monospace',
                     align: "center"
                 }),
                 k.pos(obj.x, obj.y - obj.height / 2 - 4),
