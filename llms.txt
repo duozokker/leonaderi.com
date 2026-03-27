@@ -1,0 +1,51 @@
+# llms.txt
+
+Project: Leonaderi Interactive Portfolio World
+Repository type: Static Vite + TypeScript + Kaboom single-page app
+Primary goal: Preserve the current playable portfolio experience while making small, low-risk improvements.
+Secondary goal: Let other developers reuse this repo as a base for their own interactive portfolio worlds.
+
+## Architecture
+
+- `src/main.ts`: game runtime, interaction handling, onboarding, HUD, dialogs, camera, movement, language toggle.
+- `src/game/world/mapData.ts`: world layout, tile/collision constants, map objects, NPC coordinates.
+- `src/content/glossary.ts`: portfolio POIs, dialogs, links, labels, and world metadata.
+- `src/style.css`: all runtime styling for HUD, dialogs, onboarding, and mobile controls.
+- `public/assets/`: sprites, map imagery, portraits, and social preview assets.
+- `index.html`: app shell and metadata.
+
+## Working Rules
+
+- Treat this as a release-oriented repo: make incremental, reversible edits.
+- Do not redesign core gameplay, controls, or map layout unless explicitly asked.
+- Prefer data-driven fixes over string-based UI heuristics.
+- Keep the app statically hostable; do not introduce required backend services.
+- Verify changes with `npm run verify`.
+
+## Deployment
+
+- Build command: `npm run build`
+- Output directory: `dist`
+- Vercel config exists in `vercel.json`
+- GitHub Pages subpath support exists in `vite.config.ts`
+
+## Safe Edit Zones
+
+- Copy and link updates: `src/content/glossary.ts`
+- Small UI/runtime fixes: `src/main.ts`, `src/style.css`, `index.html`
+- Asset swaps/additions: `public/assets/**`
+- Repo documentation: `README.md`, `llms.txt`
+
+## How To Fork This Into A Similar Project
+
+- Replace profile and social preview images first.
+- Update `portfolioGlossary` to reflect the new owner, links, and POIs.
+- Keep Kaboom runtime changes narrow unless the requested feature truly needs engine work.
+- Reuse the existing map/object/NPC structure instead of introducing a second content system.
+- Preserve public static hosting compatibility.
+
+## Known Intent
+
+- Keep the project easy to clone, inspect, and redeploy.
+- Keep behavior matching the published experience.
+- Clean up inconsistencies before broadening scope.

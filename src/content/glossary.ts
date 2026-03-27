@@ -5,10 +5,10 @@ import type { PoiEntry } from './types'
 export const portfolioGlossary: PoiEntry[] = [
   {
     "id": "company-hq",
-    "name": "Company HQ",
+    "name": "Artesiana HQ",
     "kind": "company",
     "status": "live",
-    "description": "Das Hauptgebaeude deiner Firma: Leistungen, Cases, Kontakt und wie man mit dir arbeitet.",
+    "description": "Main company building for services, case studies, contact paths, and project inquiries.",
     "accentColor": "#e59d39",
     "spriteHint": "hq_gold",
     "dialog": {
@@ -33,36 +33,36 @@ export const portfolioGlossary: PoiEntry[] = [
     "actions": [
       {
         "id": "company-website",
-        "label": "Firmenwebsite öffnen",
+        "label": "Open company website",
         "type": "open_link",
         "href": "https://artesiana.de",
-        "confirmMessage": "Zur Firmenwebsite wechseln?"
+        "confirmMessage": "Open the company website?"
       },
       {
         "id": "company-services",
-        "label": "Leistungen anzeigen",
+        "label": "Show services",
         "type": "open_modal"
       }
     ]
   },
   {
     "id": "construction-ruins",
-    "name": "Ruinen",
+    "name": "Ruins",
     "kind": "coming_soon",
     "status": "ruins",
-    "description": "Verstaubtes Haus als Platzhalter für zukünftige Releases.",
+    "description": "Placeholder building reserved for a future release.",
     "accentColor": "#7b7b7b",
     "spriteHint": "house_ruins",
     "dialog": {
       "title": "Production Zone",
-      "body": "Dieses Haus wird später mit neuem Content repariert und freigeschaltet."
+      "body": "This building will be repaired and unlocked with new content later."
     },
     "tags": [
       "ruins",
       "coming-soon",
       "future"
     ],
-    "district": "South",
+    "district": "South District",
     "world": {
       "x": 250,
       "y": 464,
@@ -75,7 +75,7 @@ export const portfolioGlossary: PoiEntry[] = [
     "actions": [
       {
         "id": "ruins-soon",
-        "label": "Noch geschlossen",
+        "label": "Currently closed",
         "type": "coming_soon"
       }
     ]
@@ -85,12 +85,12 @@ export const portfolioGlossary: PoiEntry[] = [
     "name": "GitHub Werkstatt",
     "kind": "external_link",
     "status": "live",
-    "description": "Code, Repositories und Open-Source-Projekte als technischer Nachweis.",
+    "description": "Code, repositories, and open-source work as proof of craft.",
     "accentColor": "#24292f",
     "spriteHint": "house_github",
     "dialog": {
       "title": "GitHub Werkstatt",
-      "body": "Hier sehen Besucher deinen Code, Commit-Historie und aktive Projekte."
+      "body": "Visitors can browse code, commit history, and active projects here."
     },
     "tags": [
       "github",
@@ -127,7 +127,7 @@ export const portfolioGlossary: PoiEntry[] = [
     "spriteHint": "house_linkedin",
     "dialog": {
       "title": "LinkedIn",
-      "body": "Hier geht es direkt zu deinem Lebenslauf und professionellen Profil."
+      "body": "This leads directly to the CV and professional profile."
     },
     "tags": [
       "linkedin",
@@ -156,15 +156,15 @@ export const portfolioGlossary: PoiEntry[] = [
   },
   {
     "id": "npc-guide",
-    "name": "Guide NPC",
+    "name": "Guide",
     "kind": "npc",
     "status": "live",
-    "description": "Der Start-NPC erklärt die Welt, Steuerung und Ziele.",
+    "description": "Starter NPC explaining the world, controls, and basic goals.",
     "accentColor": "#69b578",
     "spriteHint": "npc_guide",
     "dialog": {
-      "title": "Welcome Trainer",
-      "body": "Erkunde die Stadt, rede mit NPCs und entdecke Links zu Profil, Projekten und deiner Firma."
+      "title": "Welcome Guide",
+      "body": "Explore the town, talk to NPCs, and discover links to profile, projects, and company work."
     },
     "tags": [
       "npc",
@@ -183,22 +183,22 @@ export const portfolioGlossary: PoiEntry[] = [
     "actions": [
       {
         "id": "guide-controls",
-        "label": "Controls anzeigen",
+        "label": "Show controls",
         "type": "open_modal"
       }
     ]
   },
   {
     "id": "npc-recruiter-secret",
-    "name": "Recruiter NPC",
+    "name": "Recruiter",
     "kind": "npc",
     "status": "live",
-    "description": "Geheimer NPC mit Mini-Quest für neugierige Besucher.",
+    "description": "Hidden NPC with a small easter-egg interaction for curious visitors.",
     "accentColor": "#c3b85f",
     "spriteHint": "npc_recruiter",
     "dialog": {
       "title": "Secret Quest",
-      "body": "Finde die drei spannendsten Orte in der Stadt. Dann bist du offiziell Explorer."
+      "body": "Find the three most interesting places in town and you officially become an explorer."
     },
     "tags": [
       "npc",
@@ -218,7 +218,7 @@ export const portfolioGlossary: PoiEntry[] = [
     "actions": [
       {
         "id": "quest-modal",
-        "label": "Quest lesen",
+        "label": "Read quest",
         "type": "open_modal"
       }
     ]
@@ -228,12 +228,12 @@ export const portfolioGlossary: PoiEntry[] = [
     "name": "Fun Projects Lab",
     "kind": "project_showcase",
     "status": "live",
-    "description": "Spielerische und kreative Projekte mit kurzen Erklaerungen und Links.",
+    "description": "Playful side projects, experiments, and creative demos.",
     "accentColor": "#2ca58d",
     "spriteHint": "house_projects",
     "dialog": {
       "title": "Fun Projects Lab",
-      "body": "Hier liegen deine coolen Experimente, Side Projects und Demos."
+      "body": "This lab contains experiments, side projects, and demos."
     },
     "tags": [
       "projects",
@@ -253,22 +253,22 @@ export const portfolioGlossary: PoiEntry[] = [
     "actions": [
       {
         "id": "projects-list",
-        "label": "Projektliste anzeigen",
+        "label": "Show project list",
         "type": "open_modal"
       }
     ]
   },
   {
     "id": "sign-about",
-    "name": "About-Schild",
+    "name": "About Sign",
     "kind": "sign",
     "status": "live",
-    "description": "Ein kurzer Pitch ueber dich und die Idee der Seite.",
+    "description": "Short explanation of the site concept and portfolio world.",
     "accentColor": "#8d7d58",
     "spriteHint": "sign_about",
     "dialog": {
       "title": "About This World",
-      "body": "Diese Website ist deine Portfolio-Welt. Jede Location repräsentiert einen Teil deiner Arbeit."
+      "body": "This site is a portfolio world. Each location represents a different part of the work."
     },
     "tags": [
       "sign",
@@ -294,15 +294,15 @@ export const portfolioGlossary: PoiEntry[] = [
   },
   {
     "id": "sign-controls",
-    "name": "Steuerungs-Schild",
+    "name": "Controls Sign",
     "kind": "sign",
     "status": "live",
-    "description": "Kurze Steuerungsinfo für Desktop und Mobile.",
+    "description": "Quick controls reference for desktop and mobile.",
     "accentColor": "#8b6b4a",
     "spriteHint": "sign_controls",
     "dialog": {
       "title": "Controls",
-      "body": "Desktop: WASD oder Pfeiltasten. Interaktion: E, Enter, Space oder Klick. Mobile: D-Pad + Interact."
+      "body": "Desktop: WASD or arrow keys. Interact: E, Enter, Space, or click. Mobile: D-pad plus interact."
     },
     "tags": [
       "sign",
@@ -331,12 +331,12 @@ export const portfolioGlossary: PoiEntry[] = [
     "name": "Twitter Kiosk",
     "kind": "social",
     "status": "wip",
-    "description": "Kurze Updates, Build-in-public und spontane Gedanken.",
+    "description": "Short updates, build-in-public notes, and spontaneous thoughts.",
     "accentColor": "#1d9bf0",
     "spriteHint": "house_twitter",
     "dialog": {
       "title": "Twitter Kiosk",
-      "body": "Der Kanal wird vorbereitet. Du kannst ihn später einfach per Glossar aktivieren."
+      "body": "This channel is not active yet, but the location is ready for later activation."
     },
     "tags": [
       "twitter",
@@ -356,7 +356,7 @@ export const portfolioGlossary: PoiEntry[] = [
     "actions": [
       {
         "id": "twitter-soon",
-        "label": "Noch im Schutt",
+        "label": "Still in ruins",
         "type": "coming_soon"
       }
     ]
@@ -366,12 +366,12 @@ export const portfolioGlossary: PoiEntry[] = [
     "name": "YouTube Studio",
     "kind": "social",
     "status": "coming_soon",
-    "description": "Geplantes Studio für Videos, Devlogs und Tutorials.",
+    "description": "Planned studio for videos, devlogs, and tutorials.",
     "accentColor": "#c4302b",
     "spriteHint": "house_youtube",
     "dialog": {
       "title": "YouTube Studio",
-      "body": "Diese Location ist noch im Bau. Bald erscheinen hier Video-Formate."
+      "body": "This location is still under construction. Video formats can go live here later."
     },
     "tags": [
       "youtube",
@@ -391,7 +391,7 @@ export const portfolioGlossary: PoiEntry[] = [
     "actions": [
       {
         "id": "youtube-soon",
-        "label": "Coming Soon",
+        "label": "Coming soon",
         "type": "coming_soon"
       }
     ]

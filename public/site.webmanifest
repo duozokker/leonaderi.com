@@ -1,0 +1,21 @@
+{
+  "name": "Leo Naderi | Interactive Portfolio World",
+  "short_name": "Leo's World",
+  "description": "Playable retro-style portfolio world built with Vite, TypeScript, and Kaboom.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a202c",
+  "theme_color": "#2b6cb0",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

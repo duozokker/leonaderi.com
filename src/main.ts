@@ -1,7 +1,7 @@
 import kaboom from "kaboom";
 import type { GameObj, KaboomCtx, Key } from "kaboom";
 import { MAP_OBJECTS, PLAYER_SPAWN, NPC_POSITIONS, TERRAIN_GRID, T_WATER, MAP_TILE_SIZE } from "./game/world/mapData";
-import { portfolioGlossary } from "./content/glossary";
+import { portfolioById } from "./content/glossary";
 
 declare global {
     interface Window {
@@ -10,6 +10,20 @@ declare global {
 }
 
 let currentLang: "en" | "de" = "en";
+
+const DEFAULT_DIALOG_AVATAR = "/assets/pictures/leo-headshot.png";
+
+const DIALOG_AVATAR_BY_NPC_ID: Record<string, string> = {
+    guide_fountain: "/assets/game/pixellab/characters/npc/guide/south.png",
+    recruiter: "/assets/game/pixellab/characters/npc/recruiter/south.png",
+    villager_ruins: "/assets/game/pixellab/characters/npc/south.png",
+    fisher: "/assets/game/pixellab/characters/npc/east.png",
+    cute_girl: "/assets/game/pixellab/characters/npc/cute_girl.png",
+};
+
+const DIALOG_AVATAR_BY_POI_ID: Record<string, string> = {
+    "company-hq": "/assets/pictures/artesiana-pixelimg.png",
+};
 
 const t = {
     en: {
@@ -82,7 +96,7 @@ const t = {
     de: {
         onboardingTitle: "Willkommen in Leos Welt",
         onboardingBody: "Nutze WASD oder tippe auf den Bildschirm / Joystick, um dich zu bewegen.<br>Drücke SPACE an Gebäuden für Infos.",
-        startGame: "Start Game",
+        startGame: "Spiel starten",
         profileDesc: "Entwickler & Creator",
         cancel: "Abbrechen",
         npcGuideTitle: "Guide",
@@ -105,7 +119,7 @@ const t = {
                 actions: { "company-website": "Artesiana öffnen", "company-services": "Leistungen anzeigen" }
             },
             "construction-ruins": {
-                title: "Production Zone",
+                title: "Baustelle",
                 body: "Dieses Haus wird später mit neuem Content repariert und freigeschaltet.",
                 actions: { "ruins-soon": "Noch geschlossen" }
             },
@@ -120,19 +134,19 @@ const t = {
                 actions: { "linkedin-open": "LinkedIn öffnen" }
             },
             "projects-lab": {
-                title: "Fun Projects Lab",
+                title: "Projektlabor",
                 body: "Hier liegen deine coolen Experimente, Side Projects und Demos.",
                 actions: { "projects-list": "Projektliste anzeigen" }
             },
             "sign-about": {
-                title: "About This World",
+                title: "Über diese Welt",
                 body: "Diese Website ist deine Portfolio-Welt. Jede Location repräsentiert einen Teil deiner Arbeit.",
-                actions: { "action-sign-about-coming-soon": "Coming soon" }
+                actions: { "action-sign-about-coming-soon": "Bald verfügbar" }
             },
             "sign-controls": {
-                title: "Controls",
-                body: "Desktop: WASD oder Pfeiltasten. Interaktion: E, Enter, Space oder Klick. Mobile: D-Pad + Interact.",
-                actions: { "action-sign-controls-coming-soon": "Coming soon" }
+                title: "Steuerung",
+                body: "Desktop: WASD oder Pfeiltasten. Interaktion: E, Enter, Space oder Klick. Mobile: D-Pad + Interagieren.",
+                actions: { "action-sign-controls-coming-soon": "Bald verfügbar" }
             },
             "twitter-house": {
                 title: "Twitter Kiosk",
@@ -142,7 +156,7 @@ const t = {
             "youtube-house": {
                 title: "YouTube Studio",
                 body: "Dieses Studio ist gerade nur Schutt und schlechte Akustik. Komm wieder, wenn das Dach nicht mehr leckt.",
-                actions: { "youtube-soon": "Coming Soon" }
+                actions: { "youtube-soon": "Bald verfügbar" }
             }
         }
     }
@@ -177,6 +191,23 @@ function openExternalLinkSafely(link: string): void {
     window.open(parsedUrl.toString(), "_blank", "noopener,noreferrer");
 }
 
+function getDialogAvatar(options: { poiId?: string; npcId?: string }): string | null {
+    if (options.npcId) {
+        return DIALOG_AVATAR_BY_NPC_ID[options.npcId] ?? DEFAULT_DIALOG_AVATAR;
+    }
+
+    if (options.poiId) {
+        const entry = portfolioById.get(options.poiId);
+        if (entry?.world.visual === "sign") {
+            return null;
+        }
+
+        return DIALOG_AVATAR_BY_POI_ID[options.poiId] ?? DEFAULT_DIALOG_AVATAR;
+    }
+
+    return DEFAULT_DIALOG_AVATAR;
+}
+
 async function loadAssets() {
     // Player
     k.loadSprite("player", "/assets/game/pixellab/characters/player/south.png");
@@ -203,7 +234,7 @@ async function loadAssets() {
 
 k.scene("main", async () => {
     let gameStarted = false;
-    const poiById = new Map(portfolioGlossary.map((entry) => [entry.id, entry]));
+    const poiById = portfolioById;
     const domCleanup: Array<() => void> = [];
     const addDomListener = (
         target: Window | Document | HTMLElement,
@@ -486,7 +517,7 @@ k.scene("main", async () => {
 
     const dialogAvatar = document.querySelector(".dialog-avatar") as HTMLElement;
 
-    function showDialog(title: string, body: string, actions?: { text: string, link: string }[]) {
+    function showDialog(title: string, body: string, actions?: { text: string, link: string }[], avatarImage?: string | null) {
         if (!dialogUI || !dialogTitle || !dialogBody) return;
         isDialogActive = true;
         currentDialogText = body;
@@ -494,15 +525,11 @@ k.scene("main", async () => {
         dialogBody.textContent = "";
 
         if (dialogAvatar) {
-            if (title.toLowerCase() === "sign" || title.toLowerCase().includes("schild")) {
+            if (!avatarImage) {
                 dialogAvatar.style.display = "none";
             } else {
                 dialogAvatar.style.display = "block";
-                if (title.includes("Artesiana")) {
-                    dialogAvatar.style.backgroundImage = "url('/assets/pictures/artesiana-pixelimg.png')";
-                } else {
-                    dialogAvatar.style.backgroundImage = "url('/assets/pictures/leo-headshot.png')";
-                }
+                dialogAvatar.style.backgroundImage = `url('${avatarImage}')`;
             }
         }
         
@@ -856,7 +883,7 @@ k.scene("main", async () => {
                 }
             }
 
-            showDialog(title, text, actions);
+            showDialog(title, text, actions, getDialogAvatar({ poiId: target.poiId, npcId: target.npcId }));
         }
     }
 
