@@ -1,5 +1,5 @@
 import kaboom from "kaboom";
-import type { GameObj, KaboomCtx, Key } from "kaboom";
+import type { EventController, GameObj, KaboomCtx, Key } from "kaboom";
 import { MAP_OBJECTS, PLAYER_SPAWN, NPC_POSITIONS, TERRAIN_GRID, T_WATER, MAP_TILE_SIZE } from "./game/world/mapData";
 import { portfolioById } from "./content/glossary";
 
@@ -236,6 +236,7 @@ k.scene("main", async () => {
     let gameStarted = false;
     const poiById = portfolioById;
     const domCleanup: Array<() => void> = [];
+    const kaboomCleanup: EventController[] = [];
     const addDomListener = (
         target: Window | Document | HTMLElement,
         type: string,
@@ -244,6 +245,11 @@ k.scene("main", async () => {
     ) => {
         target.addEventListener(type, listener, options);
         domCleanup.push(() => target.removeEventListener(type, listener, options));
+    };
+    const trackKaboom = (controller: EventController | void) => {
+        if (controller) {
+            kaboomCleanup.push(controller);
+        }
     };
 
     // Map Background
@@ -404,7 +410,7 @@ k.scene("main", async () => {
     const dState = document.getElementById("debug-state");
     let isDebugVisible = false;
 
-    k.onKeyPress("f3", () => {
+    trackKaboom(k.onKeyPress("f3", () => {
         isDebugVisible = !isDebugVisible;
         if (isDebugVisible) {
             debugPanel?.classList.remove("hidden");
@@ -413,9 +419,9 @@ k.scene("main", async () => {
             debugPanel?.classList.add("hidden");
             k.debug.inspect = false;
         }
-    });
+    }));
 
-    k.loop(1, () => {
+    trackKaboom(k.loop(1, () => {
         if (isDebugVisible && debugPanel) {
             if (dFps) dFps.innerText = `${k.debug.fps()}`;
             if (dObjs) dObjs.innerText = `${k.get("*").length}`;
@@ -425,14 +431,14 @@ k.scene("main", async () => {
             const stateStr = isDialogActive ? "DIALOG" : (gameStarted ? "PLAYING" : "ONBOARDING");
             if (dState) dState.innerText = stateStr;
         }
-    });
+    }));
 
     // State for Map Banners
     let showBanners = true;
     const bannerBtn = document.getElementById("banner-btn");
 
     if (bannerBtn) {
-        bannerBtn.onclick = () => {
+        addDomListener(bannerBtn, "click", () => {
             showBanners = !showBanners;
             bannerBtn.style.color = showBanners ? "var(--text-main)" : "var(--text-muted)";
             
@@ -446,7 +452,7 @@ k.scene("main", async () => {
                 k.canvas.focus();
                 window.focus();
             }
-        };
+        });
     }
 
     // Language logic
@@ -479,7 +485,7 @@ k.scene("main", async () => {
     };
 
     if (langBtn) {
-        langBtn.onclick = () => {
+        addDomListener(langBtn, "click", () => {
             currentLang = currentLang === "en" ? "de" : "en";
             updateLanguageUI();
             
@@ -488,7 +494,7 @@ k.scene("main", async () => {
                 k.canvas.focus();
                 window.focus();
             }
-        };
+        });
     }
     updateLanguageUI(); // Set initial text
 
@@ -496,14 +502,14 @@ k.scene("main", async () => {
     const onboardingUI = document.getElementById("onboarding-ui");
     const startBtn = document.getElementById("start-btn");
     if (startBtn && onboardingUI) {
-        startBtn.onclick = () => {
+        addDomListener(startBtn, "click", () => {
             onboardingUI.classList.add("hidden");
             gameStarted = true;
             // Fix: Focus canvas immediately to capture WASD input without extra click
             k.canvas.setAttribute("tabindex", "0");
             k.canvas.focus();
             window.focus();
-        };
+        });
     }
 
     // Dialog System State
@@ -599,14 +605,19 @@ k.scene("main", async () => {
         if (!dialogUI) return;
         isDialogActive = false;
         dialogUI.classList.add("hidden");
+        currentDialogText = "";
         if (typeWriterRaf) {
             cancelAnimationFrame(typeWriterRaf);
             typeWriterRaf = null;
+        }
+        if (dialogBody) {
+            dialogBody.textContent = "";
         }
         if (dialogActions) {
             dialogActions.classList.add("hidden");
             dialogActions.innerHTML = "";
         }
+        window._injectDialogButtons = undefined;
         
         // Auto-refocus canvas to allow immediate WASD movement
         if (gameStarted) {
@@ -623,7 +634,7 @@ k.scene("main", async () => {
     // Initial camera scale
     k.camScale(camScaleCache);
 
-    k.onResize(() => {
+    const syncCameraScale = () => {
         // Only update base zoom, maintain relative scale if user zoomed
         const newBaseZoom = window.innerWidth < 768 ? 1.8 : 3.5;
         if (baseZoom !== newBaseZoom) {
@@ -635,7 +646,8 @@ k.scene("main", async () => {
              k.camScale(camScaleCache);
              k.camPos(k.camPos());
         }
-    });
+    };
+    addDomListener(window, "resize", syncCameraScale);
 
     // Zoom Controls
     const btnZoomIn = document.getElementById("btn-zoom-in");
@@ -662,7 +674,7 @@ k.scene("main", async () => {
     }
 
     // Camera follow with lerp and clamp to never show black borders
-    player.onUpdate(() => {
+    trackKaboom(player.onUpdate(() => {
         // Dynamic Y-Sorting for player
         player.z = player.pos.y + 16;
 
@@ -691,7 +703,7 @@ k.scene("main", async () => {
         }
         
         player.z = player.pos.y + 10;
-    });
+    }));
 
     let currentDir = "south";
     let isMoving = false;
@@ -893,7 +905,7 @@ k.scene("main", async () => {
     }
 
     // Movement Logic
-    k.onUpdate(() => {
+    trackKaboom(k.onUpdate(() => {
         if (!gameStarted || isDialogActive) {
             if (isMoving) {
                 if (currentDir === "south") {
@@ -950,21 +962,26 @@ k.scene("main", async () => {
                 isMoving = false;
             }
         }
-    });
+    }));
 
     // Interaction Action (Space bar or Enter)
     for (const key of ["space", "enter", "e"]) {
-        k.onKeyPress(key as Key, triggerInteraction);
+        trackKaboom(k.onKeyPress(key as Key, triggerInteraction));
     }
-    k.onMousePress("left", triggerInteraction);
+    trackKaboom(k.onMousePress("left", triggerInteraction));
 
     k.onSceneLeave(() => {
+        for (const controller of kaboomCleanup) {
+            controller.cancel();
+        }
+        kaboomCleanup.length = 0;
         for (const cleanup of domCleanup) cleanup();
         domCleanup.length = 0;
         if (typeWriterRaf) {
             cancelAnimationFrame(typeWriterRaf);
             typeWriterRaf = null;
         }
+        currentDialogText = "";
         window._injectDialogButtons = undefined;
     });
 
