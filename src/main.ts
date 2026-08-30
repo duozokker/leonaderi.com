@@ -1,166 +1,65 @@
 import kaboom from "kaboom";
 import type { EventController, GameObj, KaboomCtx, Key } from "kaboom";
 import { MAP_OBJECTS, PLAYER_SPAWN, NPC_POSITIONS, TERRAIN_GRID, T_WATER, MAP_TILE_SIZE } from "./game/world/mapData";
-import { portfolioById } from "./content/glossary";
+import { portfolioById, npcGlossary, npcById, recruiterEasterEgg, projects } from "./content/glossary";
+import { birthdayConfig, birthdayGifts } from "./content/birthday";
+import type { Lang, LocalizedText, PoiAction } from "./content/types";
 
-declare global {
-    interface Window {
-        _injectDialogButtons?: () => void;
+const LANG_STORAGE_KEY = "lang";
+
+function readStorage(key: string): string | null {
+    try {
+        return localStorage.getItem(key);
+    } catch {
+        return null;
     }
 }
 
-let currentLang: "en" | "de" = "en";
+function writeStorage(key: string, value: string): void {
+    try {
+        localStorage.setItem(key, value);
+    } catch {
+        // Private mode or blocked storage: the feature simply doesn't persist.
+    }
+}
+
+function detectInitialLang(): Lang {
+    const stored = readStorage(LANG_STORAGE_KEY);
+    if (stored === "en" || stored === "de") return stored;
+    return navigator.language?.toLowerCase().startsWith("de") ? "de" : "en";
+}
+
+let currentLang: Lang = detectInitialLang();
+
+const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const DEFAULT_DIALOG_AVATAR = "/assets/pictures/leo-headshot.png";
-
-const DIALOG_AVATAR_BY_NPC_ID: Record<string, string> = {
-    guide_fountain: "/assets/game/pixellab/characters/npc/guide/south.png",
-    recruiter: "/assets/game/pixellab/characters/npc/recruiter/south.png",
-    villager_ruins: "/assets/game/pixellab/characters/npc/south.png",
-    fisher: "/assets/game/pixellab/characters/npc/east.png",
-    cute_girl: "/assets/game/pixellab/characters/npc/cute_girl.png",
-};
 
 const DIALOG_AVATAR_BY_POI_ID: Record<string, string> = {
     "company-hq": "/assets/pictures/artesiana-pixelimg.png",
 };
 
+// UI chrome only. All POI/NPC copy lives in src/content/.
 const t = {
     en: {
         onboardingTitle: "Welcome to Leo's World",
-        onboardingBody: "Use WASD or tap the screen / joystick to move.<br>Press SPACE at the buildings for info.",
+        onboardingBody: "Use WASD, arrows, or the on-screen D-pad to move.<br>Press E, Enter, or SPACE near buildings and people.",
         startGame: "Start Game",
         profileDesc: "Developer & Creator",
         cancel: "Cancel",
-        npcGuideTitle: "Guide",
-        npcGuideText: "Hey there! Did you know Leo built this entire engine from scratch using Kaboom.js? He specializes in high-performance web apps and interactive experiences. Take a look around!",
-        npcRecruiterTitle: "Recruiter",
-        npcRecruiterText: "I've been looking for a 10x engineer everywhere! Leo's architecture here is pristine – zero-allocation game loops, perfect memory management... it's a masterpiece.",
-        npcRecruiterEasterEgg: "You're persistent, I like that! You're hired! Have some celebration confetti! 🎉",
-        npcVillagerTitle: "Local Dev",
-        npcVillagerText: "I heard Leo uses modern tech stacks like React, TypeScript, and Vite. He even built a custom map compiler for this world to parse Wang tiles seamlessly!",
-        npcProjectsTitle: "Architect",
-        npcProjectsText: "Leo is obsessed with clean UX. Notice how smoothly the camera follows you and how snappy the dialogs feel? That's his signature frontend polish.",
-        npcCuteGirlTitle: "Tourist",
-        npcCuteGirlText: "I'm just visiting! The weather is lovely here. I heard Leo built all of this in just a few days. That's incredible!",
-        npcFisherTitle: "Fisherman",
-        npcFisherText: "The sea is quiet today... Sometimes I see a bug float by, but Leo usually squashes them before I can catch 'em.",
-        pois: {
-            "company-hq": {
-                title: "Artesiana HQ",
-                body: "Here you can see my business profile, services, and how to start a project with me.",
-                actions: { "company-website": "Open Artesiana Website", "company-services": "Show Services" }
-            },
-            "construction-ruins": {
-                title: "Production Zone",
-                body: "This house will be repaired and unlocked with new content later.",
-                actions: { "ruins-soon": "Currently Closed" }
-            },
-            "github-house": {
-                title: "GitHub Workshop",
-                body: "Here visitors can see my code, commit history, and active projects.",
-                actions: { "github-open": "Open GitHub" }
-            },
-            "linkedin-house": {
-                title: "LinkedIn",
-                body: "This leads directly to my CV and professional profile.",
-                actions: { "linkedin-open": "Open LinkedIn" }
-            },
-            "projects-lab": {
-                title: "Fun Projects Lab",
-                body: "Here are my cool experiments, side projects, and demos.",
-                actions: { "projects-list": "Show Project List" }
-            },
-            "sign-about": {
-                title: "About This World",
-                body: "This website is my portfolio world. Every location represents a part of my work.",
-                actions: { "action-sign-about-coming-soon": "Coming soon" }
-            },
-            "sign-controls": {
-                title: "Controls",
-                body: "Desktop: WASD or Arrows. Interact: E, Enter, Space or Click. Mobile: D-Pad + Interact.",
-                actions: { "action-sign-controls-coming-soon": "Coming soon" }
-            },
-            "twitter-house": {
-                title: "Twitter Kiosk",
-                body: "I'm just a broken ruin... leave me alone. I used to tweet, now I only collect dust.",
-                actions: { "twitter-soon": "Ruin Is Offline" }
-            },
-            "youtube-house": {
-                title: "YouTube Studio",
-                body: "This studio is all rubble and bad acoustics right now. Come back when the roof stops leaking.",
-                actions: { "youtube-soon": "Coming Soon" }
-            }
-        }
     },
     de: {
         onboardingTitle: "Willkommen in Leos Welt",
-        onboardingBody: "Nutze WASD oder tippe auf den Bildschirm / Joystick, um dich zu bewegen.<br>Drücke SPACE an Gebäuden für Infos.",
+        onboardingBody: "Nutze WASD, Pfeiltasten oder das D-Pad, um dich zu bewegen.<br>Drücke E, Enter oder SPACE bei Gebäuden und Personen.",
         startGame: "Spiel starten",
         profileDesc: "Entwickler & Creator",
         cancel: "Abbrechen",
-        npcGuideTitle: "Guide",
-        npcGuideText: "Hallo! Wusstest du, dass Leo diese ganze Engine von Grund auf mit Kaboom.js gebaut hat? Er ist Experte für hochperformante Web-Apps und interaktive Erlebnisse. Schau dich ruhig um!",
-        npcRecruiterTitle: "Recruiter",
-        npcRecruiterText: "Ich suche überall nach einem 10x Engineer! Leos Architektur hier ist makellos – Zero-Allocation Game Loops, perfektes Speichermanagement... Ein Meisterwerk.",
-        npcRecruiterEasterEgg: "Du bist hartnäckig, das gefällt mir! Du bist eingestellt! Nimm etwas Konfetti! 🎉",
-        npcVillagerTitle: "Local Dev",
-        npcVillagerText: "Ich habe gehört, Leo nutzt moderne Tech-Stacks wie React, TypeScript und Vite. Er hat sogar einen eigenen Map-Compiler für diese Welt geschrieben, um die Wang-Tiles nahtlos zu parsen!",
-        npcProjectsTitle: "Architekt",
-        npcProjectsText: "Leo liebt saubere UX. Bemerkst du, wie flüssig die Kamera dir folgt und wie snappy die Dialoge sind? Das ist sein typischer Frontend-Polish.",
-        npcCuteGirlTitle: "Touristin",
-        npcCuteGirlText: "Ich bin nur zu Besuch! Das Wetter ist toll hier. Ich habe gehört, dass Leo all das hier in nur wenigen Tagen gebaut hat. Unglaublich!",
-        npcFisherTitle: "Fischer",
-        npcFisherText: "Das Meer ist heute ruhig... Manchmal treibt ein Bug vorbei, aber Leo behebt ihn meistens, bevor ich ihn fangen kann.",
-        pois: {
-            "company-hq": {
-                title: "Artesiana HQ",
-                body: "Hier sieht man dein Business-Profil, Leistungen und wie man ein Projekt mit dir startet.",
-                actions: { "company-website": "Artesiana öffnen", "company-services": "Leistungen anzeigen" }
-            },
-            "construction-ruins": {
-                title: "Baustelle",
-                body: "Dieses Haus wird später mit neuem Content repariert und freigeschaltet.",
-                actions: { "ruins-soon": "Noch geschlossen" }
-            },
-            "github-house": {
-                title: "GitHub Werkstatt",
-                body: "Hier sehen Besucher deinen Code, Commit-Historie und aktive Projekte.",
-                actions: { "github-open": "GitHub öffnen" }
-            },
-            "linkedin-house": {
-                title: "LinkedIn",
-                body: "Hier geht es direkt zu deinem Lebenslauf und professionellen Profil.",
-                actions: { "linkedin-open": "LinkedIn öffnen" }
-            },
-            "projects-lab": {
-                title: "Projektlabor",
-                body: "Hier liegen deine coolen Experimente, Side Projects und Demos.",
-                actions: { "projects-list": "Projektliste anzeigen" }
-            },
-            "sign-about": {
-                title: "Über diese Welt",
-                body: "Diese Website ist deine Portfolio-Welt. Jede Location repräsentiert einen Teil deiner Arbeit.",
-                actions: { "action-sign-about-coming-soon": "Bald verfügbar" }
-            },
-            "sign-controls": {
-                title: "Steuerung",
-                body: "Desktop: WASD oder Pfeiltasten. Interaktion: E, Enter, Space oder Klick. Mobile: D-Pad + Interagieren.",
-                actions: { "action-sign-controls-coming-soon": "Bald verfügbar" }
-            },
-            "twitter-house": {
-                title: "Twitter Kiosk",
-                body: "Ich bin nur eine kaputte Ruine... lass mich in Ruhe. Früher wurde hier getwittert, jetzt nur noch Staub.",
-                actions: { "twitter-soon": "Ruine ist offline" }
-            },
-            "youtube-house": {
-                title: "YouTube Studio",
-                body: "Dieses Studio ist gerade nur Schutt und schlechte Akustik. Komm wieder, wenn das Dach nicht mehr leckt.",
-                actions: { "youtube-soon": "Bald verfügbar" }
-            }
-        }
-    }
+    },
 };
+
+function tr(text: LocalizedText): string {
+    return text[currentLang];
+}
 
 // Initialize Game
 const k: KaboomCtx = kaboom({
@@ -168,13 +67,10 @@ const k: KaboomCtx = kaboom({
     scale: 2, // Keep retro chunky scaling
     background: [37, 99, 235], // Ocean Blue
     canvas: document.getElementById("game-canvas") as HTMLCanvasElement,
-    // By omitting width/height and letterbox, Kaboom natively fills the exact available screen 
+    // By omitting width/height and letterbox, Kaboom natively fills the exact available screen
     // space continuously without cropping or black bars.
 });
 k.setGravity(0);
-
-// Native Kaboom event for resizing without manual projection matrix hacks
-// Moved inside scene to properly handle zoom scaling on resize
 
 function openExternalLinkSafely(link: string): void {
     let parsedUrl: URL;
@@ -193,7 +89,7 @@ function openExternalLinkSafely(link: string): void {
 
 function getDialogAvatar(options: { poiId?: string; npcId?: string }): string | null {
     if (options.npcId) {
-        return DIALOG_AVATAR_BY_NPC_ID[options.npcId] ?? DEFAULT_DIALOG_AVATAR;
+        return npcById.get(options.npcId)?.avatar ?? DEFAULT_DIALOG_AVATAR;
     }
 
     if (options.poiId) {
@@ -260,10 +156,8 @@ k.scene("main", async () => {
     ]);
 
     // Water Collisions (Performance optimized)
-    // Instead of creating a body for every single tile, we use Kaboom's tile map parsing
-    // or just let the boundaries handle it if water is only on the edges.
-    // For now, to reduce thousands of bodies, we only create bodies for water tiles
-    // if we really need them, or we group them.
+    // Instead of creating a body for every single tile, greedy meshing merges
+    // horizontal runs of water tiles into single static bodies.
     const OFFSET_X = 0;
     const OFFSET_Y = 0;
 
@@ -290,13 +184,13 @@ k.scene("main", async () => {
         }
         return false;
     };
-    
+
     // Simple greedy meshing for rows to reduce collider count drastically
     for (let r = 0; r < TERRAIN_GRID.length; r++) {
         let startCol = -1;
         for (let c = 0; c <= TERRAIN_GRID[r].length; c++) {
             const isWater = c < TERRAIN_GRID[r].length && TERRAIN_GRID[r][c] === T_WATER && !isUnderBridge(c, r);
-            
+
             if (isWater) {
                 if (startCol === -1) startCol = c;
             } else {
@@ -350,8 +244,9 @@ k.scene("main", async () => {
 
         // Create POI Banners
         if (obj.poiId && isInteractable) {
+            const entry = poiById.get(obj.poiId);
             k.add([
-                k.text((obj.poiId ? poiById.get(obj.poiId)?.name : "") || "", {
+                k.text(entry ? tr(entry.dialog.title) : "", {
                     size: 6,
                     align: "center"
                 }),
@@ -366,23 +261,17 @@ k.scene("main", async () => {
         }
     }
 
-    // NPCs
-    const npcs = [
-        { key: "guide", pos: NPC_POSITIONS.guide, id: "guide_fountain" }, // The guy at the fountain
-        { key: "recruiter", pos: NPC_POSITIONS.recruiter, id: "recruiter" }, // The recruiter at the HQ
-        { key: "villager", pos: NPC_POSITIONS.villageNpc, id: "villager_ruins" }, // Left ruins
-        { key: "villager-east", pos: NPC_POSITIONS.guideNpc2, id: "fisher" }, // Bottom right
-        { key: "cuteGirl", pos: NPC_POSITIONS.cuteGirl, id: "cute_girl" }
-    ];
-
-    for (const npc of npcs) {
+    // NPCs. Copy, avatars, sprites, and spawn points live in npcGlossary.
+    for (const npc of npcGlossary) {
+        const pos = NPC_POSITIONS[npc.positionKey as keyof typeof NPC_POSITIONS];
+        if (!pos) continue;
         k.add([
-            k.sprite(npc.key),
-            k.pos(npc.pos.x, npc.pos.y),
+            k.sprite(npc.spriteKey),
+            k.pos(pos.x, pos.y),
             k.anchor("center"),
             k.area({ shape: new k.Rect(k.vec2(0, 10), 12, 12) }),
             k.body({ isStatic: true }),
-            k.z(npc.pos.y + 16), // Perfect top-down Y-sorting matching physics hitbox bottom
+            k.z(pos.y + 16), // Perfect top-down Y-sorting matching physics hitbox bottom
             "npc",
             { npcId: npc.id }
         ]);
@@ -427,8 +316,8 @@ k.scene("main", async () => {
             if (dObjs) dObjs.innerText = `${k.get("*").length}`;
             if (dCam) dCam.innerText = `${Math.round(k.camPos().x)}, ${Math.round(k.camPos().y)}`;
             if (dPlayer) dPlayer.innerText = `${Math.round(player.pos.x)}, ${Math.round(player.pos.y)}`;
-            
-            const stateStr = isDialogActive ? "DIALOG" : (gameStarted ? "PLAYING" : "ONBOARDING");
+
+            const stateStr = isDialogActive ? "DIALOG" : (isOverlayActive ? "OVERLAY" : (gameStarted ? "PLAYING" : "ONBOARDING"));
             if (dState) dState.innerText = stateStr;
         }
     }));
@@ -441,7 +330,7 @@ k.scene("main", async () => {
         addDomListener(bannerBtn, "click", () => {
             showBanners = !showBanners;
             bannerBtn.style.color = showBanners ? "var(--text-main)" : "var(--text-muted)";
-            
+
             // Toggle all banner objects
             k.get("poi_banner").forEach(b => {
                 b.hidden = !showBanners;
@@ -458,28 +347,29 @@ k.scene("main", async () => {
     // Language logic
     const langBtn = document.getElementById("lang-btn");
     const updateLanguageUI = () => {
-        const tr = t[currentLang];
+        const chrome = t[currentLang];
+        document.documentElement.lang = currentLang;
+
         // Onboarding
         const obTitle = document.querySelector(".onboarding-content h2");
         const obBody = document.querySelector(".onboarding-content p");
         const obStart = document.getElementById("start-btn");
-        if (obTitle) obTitle.textContent = tr.onboardingTitle;
-        if (obBody) obBody.innerHTML = tr.onboardingBody;
-        if (obStart) obStart.textContent = tr.startGame;
+        if (obTitle) obTitle.textContent = chrome.onboardingTitle;
+        if (obBody) obBody.innerHTML = chrome.onboardingBody;
+        if (obStart) obStart.textContent = chrome.startGame;
 
         // Profile
         const profDesc = document.querySelector(".hud-info p");
-        if (profDesc) profDesc.textContent = tr.profileDesc;
+        if (profDesc) profDesc.textContent = chrome.profileDesc;
 
         // Toggle Button Text
         if (langBtn) langBtn.textContent = currentLang === "en" ? "DE" : "EN";
 
         // Update Banners Text
         k.get("poi_banner").forEach(b => {
-            const entryId = b.poiId;
-            if (entryId && tr.pois[entryId as keyof typeof tr.pois]) {
-                const title = tr.pois[entryId as keyof typeof tr.pois].title;
-                b.text = title;
+            const entry = b.poiId ? poiById.get(b.poiId) : null;
+            if (entry) {
+                b.text = tr(entry.dialog.title);
             }
         });
     };
@@ -487,8 +377,9 @@ k.scene("main", async () => {
     if (langBtn) {
         addDomListener(langBtn, "click", () => {
             currentLang = currentLang === "en" ? "de" : "en";
+            writeStorage(LANG_STORAGE_KEY, currentLang);
             updateLanguageUI();
-            
+
             // Re-focus game to prevent WASD unbinding
             if (gameStarted) {
                 k.canvas.focus();
@@ -514,21 +405,57 @@ k.scene("main", async () => {
 
     // Dialog System State
     let isDialogActive = false;
+    let isOverlayActive = false;
     let typeWriterRaf: number | null = null;
     let currentDialogText = "";
+    let pendingInjectButtons: (() => void) | null = null;
     const dialogUI = document.getElementById("dialog-ui");
     const dialogTitle = document.getElementById("dialog-title");
     const dialogBody = document.getElementById("dialog-body");
     const dialogActions = document.getElementById("dialog-actions");
+    const dialogLive = document.getElementById("dialog-live");
 
     const dialogAvatar = document.querySelector(".dialog-avatar") as HTMLElement;
 
-    function showDialog(title: string, body: string, actions?: { text: string, link: string }[], avatarImage?: string | null) {
+    type DialogButton = {
+        text: string;
+        onSelect?: () => void;
+        disabled?: boolean;
+        secondary?: boolean;
+    };
+
+    function makeDialogButton(config: DialogButton): HTMLButtonElement {
+        const btn = document.createElement("button");
+        btn.className = "retro-btn";
+        btn.textContent = config.text;
+        if (config.disabled) {
+            btn.disabled = true;
+            btn.classList.add("retro-btn-disabled");
+        }
+        if (config.secondary) {
+            btn.classList.add("retro-btn-secondary");
+        }
+        if (config.onSelect) {
+            btn.onclick = config.onSelect;
+        }
+        return btn;
+    }
+
+    function showDialog(
+        title: string,
+        body: string,
+        buttons?: DialogButton[],
+        avatarImage?: string | null,
+        buildExtraActions?: (container: HTMLElement) => void,
+    ) {
         if (!dialogUI || !dialogTitle || !dialogBody) return;
         isDialogActive = true;
         currentDialogText = body;
         dialogTitle.textContent = title;
         dialogBody.textContent = "";
+        // Announce the full text right away for assistive tech; the typewriter
+        // below is purely visual.
+        if (dialogLive) dialogLive.textContent = `${title}. ${body}`;
 
         if (dialogAvatar) {
             if (!avatarImage) {
@@ -538,7 +465,7 @@ k.scene("main", async () => {
                 dialogAvatar.style.backgroundImage = `url('${avatarImage}')`;
             }
         }
-        
+
         if (dialogActions) {
             dialogActions.innerHTML = "";
             dialogActions.classList.add("hidden");
@@ -550,32 +477,32 @@ k.scene("main", async () => {
             cancelAnimationFrame(typeWriterRaf);
         }
 
+        const hasActions = (buttons && buttons.length > 0) || !!buildExtraActions;
         const injectButtons = () => {
-            if (dialogActions && actions && actions.length > 0 && dialogActions.childElementCount === 0) {
-                dialogActions.classList.remove("hidden");
-                actions.forEach(action => {
-                    const btn = document.createElement("button");
-                    btn.className = "retro-btn";
-                    btn.textContent = action.text;
-                    btn.onclick = () => {
-                        openExternalLinkSafely(action.link);
-                        // Refocus game to avoid getting stuck if user clicks back to the window
-                        if (gameStarted) k.canvas.focus();
-                    };
-                    dialogActions.appendChild(btn);
-                });
-                
-                const cancelBtn = document.createElement("button");
-                cancelBtn.className = "retro-btn";
-                cancelBtn.style.background = "var(--bg-panel)";
-                cancelBtn.style.color = "var(--text-main)";
-                cancelBtn.textContent = t[currentLang].cancel;
-                cancelBtn.onclick = () => {
-                    closeDialog();
-                };
-                dialogActions.appendChild(cancelBtn);
+            if (!dialogActions || !hasActions || dialogActions.childElementCount > 0) return;
+            dialogActions.classList.remove("hidden");
+            if (buttons) {
+                for (const button of buttons) {
+                    dialogActions.appendChild(makeDialogButton(button));
+                }
             }
+            if (buildExtraActions) {
+                buildExtraActions(dialogActions);
+            }
+            dialogActions.appendChild(makeDialogButton({
+                text: t[currentLang].cancel,
+                secondary: true,
+                onSelect: () => closeDialog(),
+            }));
         };
+        pendingInjectButtons = injectButtons;
+
+        if (prefersReducedMotion) {
+            dialogBody.textContent = body;
+            typeWriterRaf = null;
+            injectButtons();
+            return;
+        }
 
         let index = 0;
         let lastTime = performance.now();
@@ -596,9 +523,6 @@ k.scene("main", async () => {
             typeWriterRaf = requestAnimationFrame(typeWriter);
         }
         typeWriterRaf = requestAnimationFrame(typeWriter);
-        
-        // Expose inject method to global state for the fast-forward skip
-        window._injectDialogButtons = injectButtons;
     }
 
     function closeDialog() {
@@ -613,16 +537,235 @@ k.scene("main", async () => {
         if (dialogBody) {
             dialogBody.textContent = "";
         }
+        if (dialogLive) {
+            dialogLive.textContent = "";
+        }
         if (dialogActions) {
             dialogActions.classList.add("hidden");
             dialogActions.innerHTML = "";
         }
-        window._injectDialogButtons = undefined;
-        
+        pendingInjectButtons = null;
+
         // Auto-refocus canvas to allow immediate WASD movement
+        if (gameStarted && !isOverlayActive) {
+            k.canvas.focus();
+        }
+    }
+
+    // ---------------------------------------------------------------------
+    // Overlays (Projects Lab, Birthday)
+    // ---------------------------------------------------------------------
+
+    const projectsOverlay = document.getElementById("projects-overlay");
+    const projectsList = document.getElementById("projects-list");
+    const projectsTitle = document.getElementById("projects-title");
+    const projectsCloseBtn = document.getElementById("projects-close");
+
+    const birthdayOverlay = document.getElementById("birthday-overlay");
+    const birthdayTitle = document.getElementById("birthday-title");
+    const birthdayIntro = document.getElementById("birthday-intro");
+    const birthdayGiftsEl = document.getElementById("birthday-gifts");
+    const birthdayOutro = document.getElementById("birthday-outro");
+    const birthdaySignature = document.getElementById("birthday-signature");
+    const birthdayHearts = document.getElementById("birthday-hearts");
+    const birthdayCloseBtn = document.getElementById("birthday-close");
+
+    // While an overlay is open, keep keyboard focus inside it: the game UI
+    // behind it becomes inert (unfocusable, unclickable, hidden from AT).
+    const setBackgroundInert = (on: boolean) => {
+        for (const id of ["game-container", "hud-ui", "mobile-controls", "dialog-ui", "debug-panel", "onboarding-ui", "seo-header"]) {
+            document.getElementById(id)?.toggleAttribute("inert", on);
+        }
+    };
+
+    function openOverlay(overlay: HTMLElement | null, focusTarget: HTMLElement | null) {
+        if (!overlay) return;
+        closeDialog();
+        isOverlayActive = true;
+        overlay.classList.remove("hidden");
+        setBackgroundInert(true);
+        // preventScroll: focusing the close button at the bottom must not
+        // scroll the freshly opened window past its header.
+        focusTarget?.focus({ preventScroll: true });
+        overlay.querySelector(".overlay-window")?.scrollTo(0, 0);
+    }
+
+    function closeOverlay(overlay: HTMLElement | null) {
+        if (!overlay) return;
+        overlay.classList.add("hidden");
+        isOverlayActive = false;
+        setBackgroundInert(false);
         if (gameStarted) {
             k.canvas.focus();
         }
+    }
+
+    function openProjectsOverlay() {
+        if (!projectsOverlay || !projectsList) return;
+        if (projectsTitle) {
+            const entry = poiById.get("projects-lab");
+            projectsTitle.textContent = entry ? tr(entry.dialog.title) : "Projects";
+        }
+        projectsList.innerHTML = "";
+        for (const project of projects) {
+            const card = document.createElement("article");
+            card.className = "overlay-card";
+
+            const heading = document.createElement("h3");
+            heading.textContent = tr(project.title);
+            card.appendChild(heading);
+
+            const body = document.createElement("p");
+            body.textContent = tr(project.description);
+            card.appendChild(body);
+
+            if (project.href && project.linkLabel) {
+                const href = project.href;
+                card.appendChild(makeDialogButton({
+                    text: tr(project.linkLabel),
+                    onSelect: () => openExternalLinkSafely(href),
+                }));
+            }
+            projectsList.appendChild(card);
+        }
+        if (projectsCloseBtn) projectsCloseBtn.textContent = t[currentLang].cancel;
+        openOverlay(projectsOverlay, projectsCloseBtn);
+    }
+
+    function spawnBirthdayHearts() {
+        if (!birthdayHearts || prefersReducedMotion) return;
+        birthdayHearts.innerHTML = "";
+        const symbols = ["♥", "✦", "♥"];
+        for (let i = 0; i < 14; i++) {
+            const heart = document.createElement("span");
+            heart.className = "floating-heart";
+            heart.textContent = symbols[i % symbols.length];
+            heart.style.left = `${Math.round(Math.random() * 96)}%`;
+            heart.style.animationDelay = `${(Math.random() * 4).toFixed(2)}s`;
+            heart.style.animationDuration = `${(5 + Math.random() * 4).toFixed(2)}s`;
+            heart.style.fontSize = `${12 + Math.round(Math.random() * 14)}px`;
+            birthdayHearts.appendChild(heart);
+        }
+    }
+
+    function openBirthdayOverlay() {
+        if (!birthdayOverlay || !birthdayGiftsEl) return;
+        if (birthdayTitle) birthdayTitle.textContent = tr(birthdayConfig.title);
+        if (birthdayIntro) birthdayIntro.textContent = tr(birthdayConfig.intro);
+        if (birthdayOutro) birthdayOutro.textContent = tr(birthdayConfig.outro);
+        if (birthdaySignature) birthdaySignature.textContent = tr(birthdayConfig.signature);
+        if (birthdayCloseBtn) birthdayCloseBtn.textContent = tr(birthdayConfig.closeLabel);
+
+        birthdayGiftsEl.innerHTML = "";
+        for (const gift of birthdayGifts) {
+            const card = document.createElement("article");
+            card.className = "overlay-card gift-card";
+
+            const img = document.createElement("img");
+            img.src = gift.image;
+            img.alt = gift.imageAlt;
+            img.className = "gift-image";
+            img.loading = "lazy";
+            card.appendChild(img);
+
+            const heading = document.createElement("h3");
+            heading.textContent = tr(gift.title);
+            card.appendChild(heading);
+
+            const body = document.createElement("p");
+            body.textContent = tr(gift.body);
+            card.appendChild(body);
+
+            if (gift.href && gift.linkLabel) {
+                const href = gift.href;
+                card.appendChild(makeDialogButton({
+                    text: tr(gift.linkLabel),
+                    onSelect: () => openExternalLinkSafely(href),
+                }));
+            }
+
+            birthdayGiftsEl.appendChild(card);
+        }
+
+        spawnBirthdayHearts();
+        openOverlay(birthdayOverlay, birthdayCloseBtn);
+    }
+
+    if (projectsCloseBtn) {
+        addDomListener(projectsCloseBtn, "click", () => closeOverlay(projectsOverlay));
+    }
+    if (birthdayCloseBtn) {
+        addDomListener(birthdayCloseBtn, "click", () => closeOverlay(birthdayOverlay));
+    }
+    addDomListener(window, "keydown", (e: Event) => {
+        if ((e as KeyboardEvent).key !== "Escape") return;
+        if (isOverlayActive) {
+            closeOverlay(projectsOverlay?.classList.contains("hidden") ? birthdayOverlay : projectsOverlay);
+        } else if (isDialogActive) {
+            closeDialog();
+        }
+    });
+
+    const isBirthdayUnlocked = () => readStorage(birthdayConfig.storageKey) === "1";
+
+    function buildBirthdayGate(container: HTMLElement) {
+        const row = document.createElement("div");
+        row.className = "gate-row";
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.className = "retro-input";
+        input.placeholder = tr(birthdayConfig.inputPlaceholder);
+        input.autocomplete = "off";
+        input.autocapitalize = "none";
+        input.spellcheck = false;
+        input.setAttribute("aria-label", tr(birthdayConfig.inputPlaceholder));
+        input.maxLength = 40;
+
+        const submit = () => {
+            const guess = input.value.trim().toLowerCase();
+            if (guess.length === 0) return;
+            if (guess === birthdayConfig.secretWord) {
+                writeStorage(birthdayConfig.storageKey, "1");
+                openBirthdayOverlay();
+            } else {
+                if (dialogBody) dialogBody.textContent = tr(birthdayConfig.wrongCode);
+                if (dialogLive) dialogLive.textContent = tr(birthdayConfig.wrongCode);
+                input.value = "";
+                input.classList.remove("shake");
+                // Force a reflow so the shake animation restarts on repeat mistakes.
+                void input.offsetWidth;
+                input.classList.add("shake");
+                input.focus();
+            }
+        };
+
+        addDomListener(input, "keydown", (e: Event) => {
+            const key = (e as KeyboardEvent).key;
+            if (key === "Escape") {
+                // Let it bubble to the window handler that closes the dialog.
+                return;
+            }
+            e.stopPropagation();
+            if (key === "Enter") {
+                e.preventDefault();
+                submit();
+            }
+        });
+
+        const submitBtn = makeDialogButton({
+            text: tr(birthdayConfig.submitLabel),
+            onSelect: submit,
+        });
+
+        row.appendChild(input);
+        row.appendChild(submitBtn);
+        container.appendChild(row);
+    }
+
+    // Support revisiting the present via leonaderi.com/#alma once unlocked.
+    if (window.location.hash === "#alma" && isBirthdayUnlocked()) {
+        openBirthdayOverlay();
     }
 
     // Zero-allocation camera variables
@@ -652,7 +795,7 @@ k.scene("main", async () => {
     // Zoom Controls
     const btnZoomIn = document.getElementById("btn-zoom-in");
     const btnZoomOut = document.getElementById("btn-zoom-out");
-    
+
     if (btnZoomIn) {
         addDomListener(btnZoomIn, "click", () => {
             currentZoom = Math.min(currentZoom * 1.2, 6.0); // Max zoom
@@ -662,7 +805,7 @@ k.scene("main", async () => {
             k.camPos(k.camPos()); // Re-clamp position
         });
     }
-    
+
     if (btnZoomOut) {
         addDomListener(btnZoomOut, "click", () => {
             currentZoom = Math.max(currentZoom / 1.2, window.innerWidth < 768 ? 1.0 : 1.5); // Min zoom
@@ -675,7 +818,8 @@ k.scene("main", async () => {
 
     // Camera follow with lerp and clamp to never show black borders
     trackKaboom(player.onUpdate(() => {
-        // Dynamic Y-Sorting for player
+        // Dynamic Y-sorting for the player, matching the +16 used for NPCs
+        // (bottom edge of the physics hitbox).
         player.z = player.pos.y + 16;
 
         // Clamp boundaries
@@ -695,14 +839,12 @@ k.scene("main", async () => {
         // Round camera position to prevent subpixel jitter, and ONLY update Kaboom if the pixel actually changed
         const newCamX = Math.round(cx);
         const newCamY = Math.round(cy);
-        
+
         if (camPosCache.x !== newCamX || camPosCache.y !== newCamY) {
             camPosCache.x = newCamX;
             camPosCache.y = newCamY;
             k.camPos(newCamX, newCamY);
         }
-        
-        player.z = player.pos.y + 10;
     }));
 
     let currentDir = "south";
@@ -734,19 +876,22 @@ k.scene("main", async () => {
     setupBtn(btnRight, 1, 0);
     k.canvas.style.touchAction = "none";
 
+    const setIdleSprite = () => {
+        if (!isMoving) return;
+        if (currentDir === "south") {
+            player.use(k.sprite("player"));
+        } else {
+            player.use(k.sprite(`player-walk-${currentDir}`));
+        }
+        player.frame = 0;
+        player.stop();
+        isMoving = false;
+    };
+
     const resetMovement = () => {
         mobileDir.x = 0;
         mobileDir.y = 0;
-        if (isMoving) {
-            if (currentDir === "south") {
-                player.use(k.sprite("player"));
-            } else {
-                player.use(k.sprite(`player-walk-${currentDir}`));
-            }
-            player.frame = 0;
-            player.stop();
-            isMoving = false;
-        }
+        setIdleSprite();
     };
 
     addDomListener(window, "blur", resetMovement);
@@ -759,25 +904,63 @@ k.scene("main", async () => {
             resetMovement();
             return;
         }
-        if (gameStarted) {
+        if (gameStarted && !isDialogActive && !isOverlayActive) {
             k.canvas.focus();
         }
     });
 
     let recruiterTalkCount = 0;
 
+    function spawnConfetti(x: number, y: number) {
+        if (prefersReducedMotion) return;
+        for (let i = 0; i < 50; i++) {
+            k.add([
+                k.rect(4, 4),
+                k.pos(x, y),
+                k.color(k.rand(0, 255), k.rand(0, 255), k.rand(0, 255)),
+                k.move(k.choose([k.LEFT, k.RIGHT, k.UP, k.DOWN]), k.rand(20, 60)),
+                k.lifespan(1, { fade: 0.5 }),
+            ]);
+        }
+    }
+
+    function poiActionButtons(actions: PoiAction[]): DialogButton[] {
+        const buttons: DialogButton[] = [];
+        for (const action of actions) {
+            if (action.type === "open_link" && typeof action.href === "string") {
+                const href = action.href;
+                buttons.push({
+                    text: tr(action.label),
+                    onSelect: () => {
+                        openExternalLinkSafely(href);
+                        // Refocus game to avoid getting stuck if user clicks back to the window
+                        if (gameStarted) k.canvas.focus();
+                    },
+                });
+            } else if (action.type === "open_modal" && action.modalId === "projects") {
+                buttons.push({
+                    text: tr(action.label),
+                    onSelect: () => openProjectsOverlay(),
+                });
+            } else if (action.type === "coming_soon") {
+                buttons.push({ text: tr(action.label), disabled: true });
+            }
+        }
+        return buttons;
+    }
+
     function triggerInteraction() {
-        if (!gameStarted) return;
+        if (!gameStarted || isOverlayActive) return;
         if (isDialogActive) {
             if (typeWriterRaf) {
                 // Complete text instantly
                 cancelAnimationFrame(typeWriterRaf);
                 typeWriterRaf = null;
                 if (dialogBody) dialogBody.textContent = currentDialogText;
-                
+
                 // Show actions instantly if they exist, otherwise the user can close the dialog next click
-                if (window._injectDialogButtons) {
-                    window._injectDialogButtons();
+                if (pendingInjectButtons) {
+                    pendingInjectButtons();
                 }
             } else {
                 // Only close the dialog if it's NOT displaying active buttons, to prevent accidentally skipping the choice
@@ -811,7 +994,7 @@ k.scene("main", async () => {
                 closestObj = mapObj;
             }
         }
-        
+
         for (const obj of k.get("npc")) {
             const npcObj = obj as InteractableObj;
             if (!npcObj.pos) continue;
@@ -824,78 +1007,50 @@ k.scene("main", async () => {
             }
         }
 
-        if (closestObj) {
-            const target = closestObj;
-            const tr = t[currentLang];
-            // Determine what to say based on POI or NPC data
-            let title = target.is("npc") ? tr.npcVillagerTitle : "Sign";
-            let text = "Hello there!";
-            const actions: {text: string, link: string}[] = [];
+        if (!closestObj) return;
+        const target = closestObj;
+        const avatar = getDialogAvatar({ poiId: target.poiId, npcId: target.npcId });
 
-            if (target.poiId) {
-                const entry = poiById.get(target.poiId);
-                const translatedEntry = tr.pois[target.poiId as keyof typeof tr.pois];
-                
-                if (entry && translatedEntry) {
-                    title = translatedEntry.title;
-                    text = translatedEntry.body;
-                    
-                    if (entry.actions) {
-                        for (const action of entry.actions) {
-                            if (action.type === 'open_link' && typeof action.href === "string") {
-                                // Find translation for action label based on action id, default to translated action mapping
-                                const label = translatedEntry.actions[action.id as keyof typeof translatedEntry.actions] || action.label;
-                                actions.push({ text: label, link: action.href });
-                            }
-                        }
-                    }
-                } else if (entry && entry.dialog) {
-                    // Fallback to original
-                    title = entry.dialog.title;
-                    text = entry.dialog.body;
-                    if (entry.actions) {
-                        for (const action of entry.actions) {
-                            if (action.type === 'open_link' && typeof action.href === "string") {
-                                actions.push({ text: action.label, link: action.href });
-                            }
-                        }
-                    }
+        if (target.poiId) {
+            const entry = poiById.get(target.poiId);
+            if (!entry) return;
+            showDialog(
+                tr(entry.dialog.title),
+                tr(entry.dialog.body),
+                poiActionButtons(entry.actions),
+                avatar,
+            );
+            return;
+        }
+
+        if (target.is("npc") && target.npcId) {
+            const npc = npcById.get(target.npcId);
+            if (!npc) return;
+
+            let text = tr(npc.dialog);
+            let buildExtra: ((container: HTMLElement) => void) | undefined;
+            const buttons: DialogButton[] = [];
+
+            if (npc.special === "recruiter_easteregg") {
+                recruiterTalkCount++;
+                if (recruiterTalkCount === 3) {
+                    text = tr(recruiterEasterEgg);
+                    spawnConfetti(target.pos.x, target.pos.y);
+                    recruiterTalkCount = 0;
                 }
-            } else if (target.is("npc")) {
-                if (target.npcId === "guide_fountain") {
-                    title = tr.npcGuideTitle;
-                    text = tr.npcGuideText;
-                } else if (target.npcId === "villager_ruins") {
-                    title = tr.npcVillagerTitle;
-                    text = tr.npcVillagerText;
-                } else if (target.npcId === "fisher") {
-                    title = tr.npcFisherTitle;
-                    text = tr.npcFisherText;
-                } else if (target.npcId === "cute_girl") {
-                    title = tr.npcCuteGirlTitle;
-                    text = tr.npcCuteGirlText;
-                } else if (target.npcId === "recruiter") {
-                    title = tr.npcRecruiterTitle;
-                    recruiterTalkCount++;
-                    if (recruiterTalkCount === 3) {
-                        text = tr.npcRecruiterEasterEgg;
-                        for (let i = 0; i < 50; i++) {
-                            k.add([
-                                k.rect(4, 4),
-                                k.pos(target.pos.x, target.pos.y),
-                                k.color(k.rand(0, 255), k.rand(0, 255), k.rand(0, 255)),
-                                k.move(k.choose([k.LEFT, k.RIGHT, k.UP, k.DOWN]), k.rand(20, 60)),
-                                k.lifespan(1, { fade: 0.5 }),
-                            ]);
-                        }
-                        recruiterTalkCount = 0;
-                    } else {
-                        text = tr.npcRecruiterText;
-                    }
+            } else if (npc.special === "birthday_gate") {
+                if (isBirthdayUnlocked()) {
+                    text = tr(birthdayConfig.unlockedHint);
+                    buttons.push({
+                        text: tr(birthdayConfig.openAgainLabel),
+                        onSelect: () => openBirthdayOverlay(),
+                    });
+                } else {
+                    buildExtra = buildBirthdayGate;
                 }
             }
 
-            showDialog(title, text, actions, getDialogAvatar({ poiId: target.poiId, npcId: target.npcId }));
+            showDialog(tr(npc.name), text, buttons, avatar, buildExtra);
         }
     }
 
@@ -906,17 +1061,8 @@ k.scene("main", async () => {
 
     // Movement Logic
     trackKaboom(k.onUpdate(() => {
-        if (!gameStarted || isDialogActive) {
-            if (isMoving) {
-                if (currentDir === "south") {
-                    player.use(k.sprite("player"));
-                } else {
-                    player.use(k.sprite(`player-walk-${currentDir}`));
-                }
-                player.frame = 0;
-                player.stop();
-                isMoving = false;
-            }
+        if (!gameStarted || isDialogActive || isOverlayActive) {
+            setIdleSprite();
             return;
         }
 
@@ -932,7 +1078,7 @@ k.scene("main", async () => {
             const len = Math.sqrt(mx * mx + my * my);
             const vx = (mx / len) * SPEED;
             const vy = (my / len) * SPEED;
-            
+
             // move uses physics and DT internally
             player.move(vx, vy);
 
@@ -950,17 +1096,7 @@ k.scene("main", async () => {
                 isMoving = true;
             }
         } else {
-            if (isMoving) {
-                // Stop moving, revert to idle sprite
-                if (currentDir === "south") {
-                    player.use(k.sprite("player"));
-                } else {
-                    player.use(k.sprite(`player-walk-${currentDir}`));
-                }
-                player.frame = 0;
-                player.stop();
-                isMoving = false;
-            }
+            setIdleSprite();
         }
     }));
 
@@ -982,7 +1118,7 @@ k.scene("main", async () => {
             typeWriterRaf = null;
         }
         currentDialogText = "";
-        window._injectDialogButtons = undefined;
+        pendingInjectButtons = null;
     });
 
 });

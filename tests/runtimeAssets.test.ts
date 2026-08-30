@@ -2,6 +2,8 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { MAP_OBJECTS } from '../src/game/world/mapData'
+import { npcGlossary } from '../src/content/glossary'
+import { birthdayGifts } from '../src/content/birthday'
 
 const staticRuntimeAssets = [
   '/assets/game/pixellab/characters/player/south.png',
@@ -27,10 +29,22 @@ function toPublicPath(assetPath: string): string {
 describe('runtime assets', () => {
   it('contains every sprite loaded by runtime', () => {
     const mapObjectAssets = MAP_OBJECTS.map((obj) => `/assets/game/map/objects/${obj.filename}`)
-    const requiredAssets = new Set([...staticRuntimeAssets, ...mapObjectAssets])
+    const npcAvatars = npcGlossary.map((npc) => npc.avatar)
+    const giftImages = birthdayGifts.map((gift) => gift.image)
+    const requiredAssets = new Set([
+      ...staticRuntimeAssets,
+      ...mapObjectAssets,
+      ...npcAvatars,
+      ...giftImages,
+    ])
 
     for (const asset of requiredAssets) {
-      expect(existsSync(toPublicPath(asset))).toBe(true)
+      expect(existsSync(toPublicPath(asset)), `missing: ${asset}`).toBe(true)
     }
+  })
+
+  it('ships the self-hosted fonts', () => {
+    expect(existsSync(join(process.cwd(), 'public/fonts/press-start-2p-latin.woff2'))).toBe(true)
+    expect(existsSync(join(process.cwd(), 'public/fonts/press-start-2p-latin-ext.woff2'))).toBe(true)
   })
 })

@@ -27,12 +27,61 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
   <link rel="manifest" href="/site.webmanifest" />
+  <link rel="preload" href="/fonts/press-start-2p-latin.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="/src/style.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "name": "Leo Naderi",
+    "url": "https://leonaderi.com/",
+    "image": "https://leonaderi.com/assets/pictures/leo-headshot-og.jpg",
+    "jobTitle": "Developer & Creator",
+    "worksFor": {
+      "@type": "Organization",
+      "name": "Artesiana",
+      "url": "https://artesiana.de"
+    },
+    "sameAs": [
+      "https://www.linkedin.com/in/leo-naderi-3a9761307",
+      "https://github.com/duozokker"
+    ]
+  }
+  </script>
 </head>
 
 <body>
+  <!-- Crawlable summary of the world for search engines and screen readers. -->
+  <header id="seo-header" class="visually-hidden">
+    <h1>Leo Naderi: Interactive Portfolio World</h1>
+    <p>
+      Leo Naderi is a developer and creator. This website is a playable pixel town:
+      walk around, talk to the townsfolk, and visit the buildings to find his work.
+    </p>
+    <nav aria-label="Profile links">
+      <ul>
+        <li><a href="https://artesiana.de" tabindex="-1">Artesiana (company)</a></li>
+        <li><a href="https://github.com/duozokker" tabindex="-1">GitHub</a></li>
+        <li><a href="https://www.linkedin.com/in/leo-naderi-3a9761307" tabindex="-1">LinkedIn</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <noscript>
+    <div class="noscript-panel">
+      <h2>This portfolio is a small game and needs JavaScript.</h2>
+      <p>
+        Without it, here are the important links:
+        <a href="https://artesiana.de">Artesiana</a>,
+        <a href="https://github.com/duozokker">GitHub</a>,
+        <a href="https://www.linkedin.com/in/leo-naderi-3a9761307">LinkedIn</a>.
+      </p>
+    </div>
+  </noscript>
+
   <div id="game-container">
-    <canvas id="game-canvas"></canvas>
+    <canvas id="game-canvas" aria-label="Leo Naderi's portfolio world. Move with WASD or arrow keys, interact with E, Enter, or Space."></canvas>
   </div>
 
   <!-- Strong Debug Inspection Panel -->
@@ -48,9 +97,9 @@
 
   <!-- Onboarding Screen -->
   <div id="onboarding-ui">
-    <div class="onboarding-content">
+    <div class="onboarding-content retro-window">
       <h2>Welcome to Leo's World</h2>
-      <p>Use WASD or tap the screen / joystick to move.<br>Press SPACE at the buildings for info.</p>
+      <p>Use WASD, arrows, or the on-screen D-pad to move.<br>Press E, Enter, or SPACE near buildings and people.</p>
       <button id="start-btn" class="retro-btn">Start Game</button>
     </div>
   </div>
@@ -59,7 +108,7 @@
   <div id="hud-ui">
     <!-- Top Left: Profile -->
     <div class="hud-profile">
-      <div class="hud-avatar"></div>
+      <div class="hud-avatar" role="img" aria-label="Pixel portrait of Leo Naderi"></div>
       <div class="hud-info">
         <h4>Leo Naderi</h4>
         <p>Developer & Creator</p>
@@ -68,22 +117,22 @@
 
     <!-- Top Right: Quick Links -->
     <div class="hud-links">
-      <button id="banner-btn" class="hud-link" title="Toggle Banners">TAGS</button>
-      <button id="lang-btn" class="hud-link" title="Toggle Language">EN</button>
+      <button id="banner-btn" class="hud-link" title="Toggle Banners" aria-label="Toggle building name tags">TAGS</button>
+      <button id="lang-btn" class="hud-link" title="Toggle Language" aria-label="Toggle language">EN</button>
       <div class="hud-zoom">
-        <button id="btn-zoom-in" class="hud-link" title="Zoom In">+</button>
-        <button id="btn-zoom-out" class="hud-link" title="Zoom Out">-</button>
+        <button id="btn-zoom-in" class="hud-link" title="Zoom In" aria-label="Zoom in">+</button>
+        <button id="btn-zoom-out" class="hud-link" title="Zoom Out" aria-label="Zoom out">-</button>
       </div>
     </div>
   </div>
 
   <!-- Dialog UI (Pokemon Style) -->
-  <div id="dialog-ui" class="hidden retro-window">
+  <div id="dialog-ui" class="hidden retro-window" role="dialog" aria-labelledby="dialog-title">
     <div class="dialog-box">
-      <div class="dialog-avatar"></div>
+      <div class="dialog-avatar" aria-hidden="true"></div>
       <div class="dialog-content">
         <h3 id="dialog-title">Name</h3>
-        <p id="dialog-body">Text goes here...</p>
+        <p id="dialog-body" aria-hidden="true">Text goes here...</p>
         <div id="dialog-actions" class="hidden">
           <!-- Dynamic Action Buttons will spawn here -->
         </div>
@@ -91,18 +140,47 @@
       <div class="dialog-arrow"></div>
     </div>
   </div>
+  <!-- Full dialog text for assistive tech; the visible text types in letter by letter. -->
+  <div id="dialog-live" class="visually-hidden" aria-live="polite"></div>
+
+  <!-- Projects Lab Overlay -->
+  <div id="projects-overlay" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="projects-title">
+    <div class="overlay-window retro-window">
+      <h2 id="projects-title">Projects</h2>
+      <div id="projects-list" class="overlay-cards"></div>
+      <div class="overlay-footer">
+        <button id="projects-close" class="retro-btn retro-btn-secondary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Birthday Overlay (Alma's easter egg) -->
+  <div id="birthday-overlay" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="birthday-title">
+    <div id="birthday-hearts" aria-hidden="true"></div>
+    <div class="overlay-window retro-window birthday-window">
+      <div class="birthday-cake" aria-hidden="true">🎂</div>
+      <h2 id="birthday-title">Happy Birthday!</h2>
+      <p id="birthday-intro"></p>
+      <div id="birthday-gifts" class="overlay-cards"></div>
+      <p id="birthday-outro" class="birthday-outro"></p>
+      <p id="birthday-signature" class="birthday-signature"></p>
+      <div class="overlay-footer">
+        <button id="birthday-close" class="retro-btn">Back to town</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Mobile Virtual Controls -->
   <div id="mobile-controls">
     <div class="dpad">
-      <button id="btn-up" class="dpad-btn up"></button>
-      <button id="btn-left" class="dpad-btn left"></button>
-      <button id="btn-right" class="dpad-btn right"></button>
-      <button id="btn-down" class="dpad-btn down"></button>
+      <button id="btn-up" class="dpad-btn up" aria-label="Move up"></button>
+      <button id="btn-left" class="dpad-btn left" aria-label="Move left"></button>
+      <button id="btn-right" class="dpad-btn right" aria-label="Move right"></button>
+      <button id="btn-down" class="dpad-btn down" aria-label="Move down"></button>
       <div class="dpad-center"></div>
     </div>
     <div class="action-buttons">
-      <button id="btn-a" class="action-btn">A</button>
+      <button id="btn-a" class="action-btn" aria-label="Interact">A</button>
     </div>
   </div>
 
